@@ -56,3 +56,30 @@ gnome-extensions pack .            # produces the zip for upload
   creds or API keys (same secret-discipline as upstream — don't `cat` credential
   files, use `jq 'keys'`).
 - SPDX `GPL-2.0-or-later` header at the top of each JS file (see `extension.js`).
+
+## Testing policy
+
+**Anything that can be tested must be tested.** Ship no code path that has not
+been exercised at least once. In this codebase the boundary between testable
+and not-testable is the `gi://` import line:
+
+- **Pure JS (testable — write automated tests):** response parsers, quota /
+  percentage math, formatters (e.g. `formatTimeRemaining`, label builders),
+  vendor adapters that take a JSON blob and return a normalized struct, config
+  loaders. Keep these in modules with **no `gi://` imports** so they can run
+  under plain `node --test` (or `gjs -m` for ESM parity). Put tests in
+  `tests/*.test.js` mirroring the source path. A new pure-JS module without a
+  matching test file is incomplete.
+- **GJS / Shell-bound (manual — document the check):** anything touching `St`,
+  `PanelMenu`, `Main.panel`, `Soup`, `GLib.timeout_add_seconds`, or
+  `GObject.registerClass`. Reload the extension (see *Develop / test* above),
+  watch `journalctl -f -o cat /usr/bin/gnome-shell` for errors, and verify the
+  panel widget behaves as expected. In the PR / task notes, write the exact
+  reload + observation steps you ran — not "tested manually".
+- **Packaging:** before declaring a release-ready change, run
+  `gnome-extensions pack .` and `gnome-extensions info ai-usagebar@wilfison`
+  and confirm both succeed without warnings.
+- **Never fake a test result.** If something genuinely cannot be tested in the
+  current environment (e.g. no live Claude/OpenRouter credentials), say so
+  explicitly in the response — do not claim "verified" based on code reading
+  alone.
