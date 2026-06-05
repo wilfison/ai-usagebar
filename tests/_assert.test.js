@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 import system from 'system';
 
 import {describe, it, assertEqual, assertDeepEqual, assertThrows, summary} from './_assert.js';

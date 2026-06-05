@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 import system from 'system';
 
 import {defaultTheme, withOverrides, hexBlend} from '../lib/theme.js';

@@ -8,7 +8,7 @@ help:
 	@echo "  reload   Disable then enable in one step"
 	@echo "  logs     Tail gnome-shell logs (journalctl -f)"
 	@echo "  test     Run the gjs unit-test suite (tests/run.js)"
-	@echo "  lint     Check SPDX header, trailing newline, no imports.* in JS files"
+	@echo "  lint     Check trailing newline + no imports.* in JS files"
 	@echo "  pack     Build the upload zip via gnome-extensions pack"
 	@echo "  info     Show gnome-extensions info for $(UUID)"
 

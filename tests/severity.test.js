@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 import system from 'system';
 
 import {severityFor, severityColor, Severity} from '../lib/severity.js';

@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 // Minimal assertion + grouping helpers. US-009 will flesh this out into
 // the full runner; for US-003 we only need enough to drive cache tests.
 

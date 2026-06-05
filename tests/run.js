@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
 // Discovers tests/*.test.js and runs each one as a `gjs -m` subprocess.
 // Each test file is self-contained (calls system.exit(summary()) on its own),
 // so subprocess isolation keeps the existing files runnable standalone AND

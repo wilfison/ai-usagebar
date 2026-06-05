@@ -55,7 +55,6 @@ gnome-extensions pack .            # produces the zip for upload
 - `*.credentials.json` and `*.compiled` are gitignored; never commit real OAuth
   creds or API keys (same secret-discipline as upstream — don't `cat` credential
   files, use `jq 'keys'`).
-- SPDX `GPL-2.0-or-later` header at the top of each JS file (see `extension.js`).
 
 ## Testing policy
 
