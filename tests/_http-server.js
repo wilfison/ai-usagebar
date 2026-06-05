@@ -1,13 +1,40 @@
-// Tiny Soup.Server wrapper used by HTTP-touching tests. Binds to
-// 127.0.0.1 on a kernel-picked port and dispatches every request to a
-// user-supplied `handler({method, path, headers, bodyBytes})` that returns
-// `{status, headers, body, delayMs?}`. `body` may be a string or
-// Uint8Array; `delayMs` (optional) defers the response so timeout/cancel
-// tests have time to act.
+/**
+ * @file Tiny `Soup.Server` wrapper used by HTTP-touching tests. Binds to
+ * 127.0.0.1 on a kernel-picked port and dispatches every request to a
+ * user-supplied handler.
+ */
 
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup';
 
+/**
+ * @typedef {object} ServerRequest
+ * @property {string} method
+ * @property {string} path
+ * @property {Record<string, string>} headers - lowercase-keyed.
+ * @property {Uint8Array} bodyBytes
+ */
+
+/**
+ * @typedef {object} ServerResponse
+ * @property {number} [status=200]
+ * @property {Record<string, string>} [headers]
+ * @property {string | Uint8Array} [body]
+ * @property {number} [delayMs] - defer the response so timeout/cancel tests
+ *   have time to act.
+ */
+
+/**
+ * @callback ServerHandler
+ * @param {ServerRequest} req
+ * @returns {ServerResponse | void}
+ */
+
+/**
+ * Reduce a libsoup `Soup.ServerMessage` into a plain {@link ServerRequest}.
+ * @param {Soup.ServerMessage} msg
+ * @returns {ServerRequest}
+ */
 function collectRequest(msg) {
     const method = msg.get_method();
     const uri = msg.get_uri();
@@ -25,6 +52,14 @@ function collectRequest(msg) {
     return {method, path, headers, bodyBytes};
 }
 
+/**
+ * Apply a {@link ServerResponse} to the outgoing `Soup.ServerMessage`.
+ * Sets a default `content-type` because libsoup3 asserts it is non-NULL for
+ * non-empty bodies.
+ * @param {Soup.ServerMessage} msg
+ * @param {ServerResponse} r
+ * @returns {void}
+ */
 function writeResponse(msg, r) {
     msg.set_status(r.status ?? 200, null);
     const respHeaders = msg.get_response_headers();
@@ -46,6 +81,12 @@ function writeResponse(msg, r) {
     msg.set_response(contentType, Soup.MemoryUse.COPY, body);
 }
 
+/**
+ * Start a local test HTTP server.
+ * @param {ServerHandler} handler
+ * @returns {Promise<{url: string, stop: () => void}>} the bound base URL
+ *   (no trailing slash) and a teardown function.
+ */
 export function startServer(handler) {
     const server = new Soup.Server({});
     server.add_handler(null, (srv, msg /*, path, query */) => {

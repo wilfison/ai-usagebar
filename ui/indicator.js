@@ -1,11 +1,28 @@
+/**
+ * @file Top-panel indicator widget. Holds the shared cancellable used to
+ * abort in-flight vendor fetches when the extension is disabled.
+ */
+
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
+/**
+ * `PanelMenu.Button` subclass that shows AI plan usage in the top panel.
+ *
+ * Construct via `new Indicator()`; `GObject.registerClass` rewires the
+ * constructor to call `_init` for you.
+ * @class Indicator
+ * @extends PanelMenu.Button
+ */
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
+    /**
+     * Build the panel widget and its shared cancellable.
+     * @returns {void}
+     */
     _init() {
         super._init(0.0, 'ai-usagebar');
 
@@ -17,6 +34,11 @@ class Indicator extends PanelMenu.Button {
         this.add_child(this._box);
     }
 
+    /**
+     * Cancel pending I/O, clear the popup menu, and chain to the GObject
+     * destructor. Must remain idempotent.
+     * @returns {void}
+     */
     destroy() {
         if (this._cancellable) {
             this._cancellable.cancel();

@@ -58,6 +58,17 @@ make info      # gnome-extensions info ai-usagebar@wilfison
 - `*.credentials.json` and `*.compiled` are gitignored; never commit real OAuth
   creds or API keys (same secret-discipline as upstream — don't `cat` credential
   files, use `jq 'keys'`).
+- **Source `*.js` files must be documented with JSDoc.** Every file under
+  `lib/`, `ui/`, `tools/`, `extension.js`, and shared test utilities
+  (`tests/_assert.js`, `tests/_http-server.js`, `tests/run.js`) starts with a
+  `@file` block describing the module's purpose. Every exported function,
+  class, and constant carries a JSDoc block with `@param` / `@returns` (and
+  `@throws` when the contract includes throwing). Use `@typedef` for
+  structured shapes reused across functions (HTTP results, OAuth credentials,
+  vendor payloads). **`tests/*.test.js` files do NOT need JSDoc** — the
+  `describe`/`it` names already describe intent, and a `@file` header would
+  just be noise. Keep blocks tight: types and contract first, prose only when
+  the WHY isn't obvious (consistent with the "no useless comments" rule).
 
 ## Testing policy
 
