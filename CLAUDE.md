@@ -35,16 +35,19 @@ GNOME extensions are not "built" — JS is loaded directly by gnome-shell. This
 repo IS the installed extension (it lives under
 `~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison`).
 
+The `Makefile` is the canonical entry point for the dev loop — prefer these
+targets over typing the raw `gnome-extensions` / `journalctl` / `gjs` commands.
+Run `make` (or `make help`) to list them:
+
 ```bash
-# Reload after editing (Wayland needs a full session relog; Xorg can use Alt-F2 'r')
-gnome-extensions disable ai-usagebar@wilfison && gnome-extensions enable ai-usagebar@wilfison
-
-# Live logs — the only real debugger for shell extensions
-journalctl -f -o cat /usr/bin/gnome-shell
-
-# Validate metadata / pack
-gnome-extensions info ai-usagebar@wilfison
-gnome-extensions pack .            # produces the zip for upload
+make enable    # gnome-extensions enable ai-usagebar@wilfison
+make disable   # gnome-extensions disable ai-usagebar@wilfison
+make reload    # disable + enable (Wayland still needs a full relog)
+make logs      # journalctl -f -o cat /usr/bin/gnome-shell
+make test      # gjs -m tests/run.js — pure-JS unit suite
+make lint      # tools/lint.sh — trailing-newline + no-imports.* check
+make pack      # gnome-extensions pack . --force → upload zip
+make info      # gnome-extensions info ai-usagebar@wilfison
 ```
 
 `metadata.json` declares `shell-version: ["50"]` — keep API usage on the GNOME
@@ -67,17 +70,18 @@ and not-testable is the `gi://` import line:
   vendor adapters that take a JSON blob and return a normalized struct, config
   loaders. Keep these in modules with **no `gi://` imports** so they can run
   under plain `node --test` (or `gjs -m` for ESM parity). Put tests in
-  `tests/*.test.js` mirroring the source path. A new pure-JS module without a
-  matching test file is incomplete.
+  `tests/*.test.js` mirroring the source path and run them with `make test`.
+  Also run `make lint` (trailing newline + no `imports.*` legacy syntax) before
+  declaring a change done. A new pure-JS module without a matching test file
+  is incomplete.
 - **GJS / Shell-bound (manual — document the check):** anything touching `St`,
   `PanelMenu`, `Main.panel`, `Soup`, `GLib.timeout_add_seconds`, or
   `GObject.registerClass`. Reload the extension (see *Develop / test* above),
   watch `journalctl -f -o cat /usr/bin/gnome-shell` for errors, and verify the
   panel widget behaves as expected. In the PR / task notes, write the exact
   reload + observation steps you ran — not "tested manually".
-- **Packaging:** before declaring a release-ready change, run
-  `gnome-extensions pack .` and `gnome-extensions info ai-usagebar@wilfison`
-  and confirm both succeed without warnings.
+- **Packaging:** before declaring a release-ready change, run `make pack` and
+  `make info` and confirm both succeed without warnings.
 - **Never fake a test result.** If something genuinely cannot be tested in the
   current environment (e.g. no live Claude/OpenRouter credentials), say so
   explicitly in the response — do not claim "verified" based on code reading
