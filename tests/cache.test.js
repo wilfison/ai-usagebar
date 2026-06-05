@@ -2,7 +2,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import system from 'system';
 
-import {Cache} from '../lib/cache.js';
+import {Cache, atomicWrite} from '../lib/cache.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
 function rmRf(path) {
@@ -143,6 +143,30 @@ describe('Cache', () => {
         const c = Cache.forVendor('test');
         assertEqual(c.readLastError(), null);
         assertEqual(c.maybePayload(), null);
+    }));
+
+    it('atomicWrite: round-trip to an arbitrary path', withTempCache((dir) => {
+        const targetDir = GLib.build_filenamev([dir, 'aw-target']);
+        GLib.mkdir_with_parents(targetDir, 0o700);
+        const targetPath = GLib.build_filenamev([targetDir, 'data.bin']);
+        const file = Gio.File.new_for_path(targetPath);
+        const data = new TextEncoder().encode('hello atomic');
+        atomicWrite(file, data);
+
+        const [ok, contents] = file.load_contents(null);
+        assertEqual(ok, true);
+        assertEqual(bytesToString(contents), 'hello atomic');
+
+        // No tempfile left behind.
+        const en = Gio.File.new_for_path(targetDir).enumerate_children(
+            'standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null
+        );
+        const names = [];
+        let child;
+        while ((child = en.next_file(null)))
+            names.push(child.get_name());
+        en.close(null);
+        assertDeepEqual(names, ['data.bin']);
     }));
 });
 
