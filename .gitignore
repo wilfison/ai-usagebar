@@ -1,5 +1,6 @@
 /tmp
 /docs
+/tasks
 *.compiled
 
 # Local secrets — never commit
