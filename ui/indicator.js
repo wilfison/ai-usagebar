@@ -60,12 +60,15 @@ class Indicator extends PanelMenu.Button {
      * Build the panel widget and popup, kick off an immediate refresh, and start
      * the poll timer at the configured interval.
      * @param {object} settings - the extension's Gio.Settings store.
+     * @param {() => void} [openPreferences] - opens the prefs window (bound
+     *   `Extension.openPreferences`); wired to the "Preferences" popup item.
      * @returns {void}
      */
-    _init(settings) {
+    _init(settings, openPreferences) {
         super._init(0.0, 'ai-usagebar');
 
         this._settings = settings;
+        this._openPreferences = openPreferences;
         this._config = readConfig(settings);
         this._barFormat = this._config.barFormat;
 
@@ -78,6 +81,7 @@ class Indicator extends PanelMenu.Button {
         this._renderTimeoutId = null;
         this._openStateId = null;
         this._scrollId = null;
+        this._settingsChangedId = null;
         this._destroyed = false;
 
         // D4 lazy data: only the active vendor is polled; other sub-sections
@@ -111,6 +115,13 @@ class Indicator extends PanelMenu.Button {
             this._refreshAll().catch(e => console.warn(`ai-usagebar: refresh all failed: ${e}`));
         });
         this.menu.addMenuItem(this._refreshAllItem);
+        this._prefsItem = new PopupMenu.PopupMenuItem('Preferences');
+        this._prefsItem.connect('activate', () => {
+            if (this._destroyed)
+                return;
+            this._openPreferences?.();
+        });
+        this.menu.addMenuItem(this._prefsItem);
 
         // Seed the active vendor with a Loading… state so its sub-section (and an
         // immediately-opened popup) is never empty before the first fetch lands.
@@ -130,13 +141,82 @@ class Indicator extends PanelMenu.Button {
         // Scroll to cycle enabled vendors.
         this._scrollId = this.connect('scroll-event', (actor, event) => this._onScroll(actor, event));
 
+        // React to settings changes (prefs / gsettings / scroll write) immediately.
+        this._settingsChangedId = this._settings.connect('changed', (s, key) => this._onSettingsChanged(s, key));
+
         // One immediate refresh, then poll. A rejected promise must never escape
         // into the timeout callback / event loop.
         this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
-        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._config.refreshIntervalSecs, () => {
+        this._rearmPollTimer(this._config.refreshIntervalSecs);
+    }
+
+    /**
+     * (Re)arm the recurring poll timer at `secs`, removing any existing source
+     * first so there is never a duplicate timer. The tick fetches the active
+     * vendor only; a rejected promise never escapes into the event loop.
+     * @param {number} secs - schema-clamped refresh interval (>= 300).
+     * @returns {void}
+     */
+    _rearmPollTimer(secs) {
+        if (this._timeoutId) {
+            GLib.Source.remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, secs, () => {
             this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
             return GLib.SOURCE_CONTINUE;
         });
+    }
+
+    /**
+     * React to a GSettings change: cheap repaint by default; a full re-resolve +
+     * fetch only when the effective active vendor id actually changed; poll-timer
+     * re-arm only on `refresh-interval`; and `active-vendor := primary-vendor`
+     * sync (D2) on a `primary-vendor` change. Never fetches on a burst of
+     * credential/format edits — those land on the next tick or "Refresh now".
+     * @param {object} settings - the Gio.Settings store (same as this._settings).
+     * @param {string} key - the changed key name.
+     * @returns {void}
+     */
+    _onSettingsChanged(settings, key) {
+        if (this._destroyed)
+            return;
+
+        // D2: a primary change forces active := primary. The set_string re-enters
+        // this handler as key='active-vendor'; GSettings emits nothing for an
+        // unchanged value, so there is no recursion. Return so the active-vendor
+        // re-entry does the re-resolve/fetch below exactly once.
+        if (key === 'primary-vendor') {
+            const primary = settings.get_string('primary-vendor');
+            if (settings.get_string('active-vendor') !== primary) {
+                settings.set_string('active-vendor', primary);
+                writeActiveVendorMirror(primary);
+                return;
+            }
+        }
+
+        const config = readConfig(this._settings);
+
+        // Interval change: re-arm the timer (cadence only, no fetch).
+        if (key === 'refresh-interval') {
+            this._config = config;
+            this._rearmPollTimer(config.refreshIntervalSecs);
+            return;
+        }
+
+        // Active vendor changed (scroll write, primary sync, or a disable that
+        // bumped the fallback): _refresh swaps adapter + cache, rebuilds sub-menus,
+        // and fetches — a cache-warm revisit skips the network via the 60s TTL.
+        if (normalizeActive(config) !== this._adapter.id) {
+            this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
+            return;
+        }
+
+        // Same active vendor: reflect config in-process only (no fetch).
+        this._config = config;
+        this._barFormat = config.barFormat;
+        this._maybeRebuildVendorSections(config);
+        this._reRenderFromCache();
     }
 
     /**
@@ -398,8 +478,9 @@ class Indicator extends PanelMenu.Button {
 
         this._settings.set_string('active-vendor', next);
         writeActiveVendorMirror(next);
-        this._setActiveExpansion(next);  // instant feedback; _refresh re-resolves.
-        this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
+        // Expand synchronously for instant feedback; the reactive settings handler
+        // (fired by the active-vendor write) re-resolves + fetches the new vendor.
+        this._setActiveExpansion(next);
         return Clutter.EVENT_STOP;
     }
 
@@ -473,10 +554,10 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * Tear down: stop the poll + live re-render timers, disconnect the popup and
-     * scroll signals, cancel pending I/O, dispose the Soup session, drop the
-     * in-memory maps, clear the popup, and chain to the GObject destructor.
-     * Idempotent.
+     * Tear down: stop the poll + live re-render timers, disconnect the popup,
+     * scroll, and settings-changed signals, cancel pending I/O, dispose the Soup
+     * session, drop the in-memory maps, clear the popup, and chain to the GObject
+     * destructor. Idempotent.
      * @returns {void}
      */
     destroy() {
@@ -497,6 +578,10 @@ class Indicator extends PanelMenu.Button {
         if (this._scrollId) {
             this.disconnect(this._scrollId);
             this._scrollId = null;
+        }
+        if (this._settingsChangedId) {
+            this._settings.disconnect(this._settingsChangedId);
+            this._settingsChangedId = null;
         }
         if (this._cancellable) {
             this._cancellable.cancel();

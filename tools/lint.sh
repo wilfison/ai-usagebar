@@ -10,7 +10,11 @@ set -u
 fail=0
 
 scan_dirs=(lib tests tools ui)
-files=$(find "${scan_dirs[@]}" -name '*.js' 2>/dev/null | sort)
+root_files=()
+for f in extension.js prefs.js; do
+    [ -f "$f" ] && root_files+=("$f")
+done
+files=$( { find "${scan_dirs[@]}" -name '*.js' 2>/dev/null; printf '%s\n' "${root_files[@]}"; } | sort)
 
 for f in $files; do
     if [ -n "$(tail -c1 "$f")" ]; then
@@ -19,12 +23,12 @@ for f in $files; do
     fi
 done
 
-if grep -RnE --include='*.js' '(^|[^a-zA-Z_.])imports\.' lib tests tools ui extension.js 2>/dev/null; then
+if grep -RnE --include='*.js' '(^|[^a-zA-Z_.])imports\.' lib tests tools ui "${root_files[@]}" 2>/dev/null; then
     echo "FOUND LEGACY imports.* USAGE (see above)"
     fail=1
 fi
 
-if grep -RnE --include='*.js' 'SPDX-License-Identifier' lib tests tools ui extension.js 2>/dev/null; then
+if grep -RnE --include='*.js' 'SPDX-License-Identifier' lib tests tools ui "${root_files[@]}" 2>/dev/null; then
     echo "FOUND SPDX HEADER (see above)"
     fail=1
 fi
