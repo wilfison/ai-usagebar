@@ -96,9 +96,9 @@ function cardRow() {
 }
 
 /**
- * Build a `window` boxed row: icon + title, dim "Resets in …" subtitle, trailing
- * bold `pct% pace` value in its pre-resolved severity color, and a full-width
- * bar filled in that same severity color.
+ * Build a `window` boxed row: icon + title, dim pre-composed "Resets in …"
+ * subtitle, trailing bold `pct% pace` value in its pre-resolved severity color,
+ * and a full-width bar filled in that same severity color.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @returns {St.BoxLayout}
  */
@@ -106,7 +106,7 @@ function buildWindowRow(row) {
     const r = cardRow();
     const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
     r.add_child(rowHeader(row.icon, row.title, {
-        subtitle: `Resets in ${row.reset}`,
+        subtitle: row.subtitle,
         trailing: pctText,
         trailingColor: row.color,
     }));
@@ -152,9 +152,9 @@ function buildTextLine(row) {
 }
 
 /**
- * Build the `http-error` block: a thin rule, an icon + `HTTP <code>` status
- * line (themed foreground; the warning icon carries the error semantics), then
- * dim wrapped body lines.
+ * Build the `http-error` block: a thin rule, an icon + the pre-composed `HTTP
+ * <code>` status line (themed foreground; the warning icon carries the error
+ * semantics), then dim wrapped body lines.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @returns {St.BoxLayout}
  */
@@ -164,7 +164,7 @@ function buildHttpError(row) {
     const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
     if (row.icon)
         head.add_child(makeIcon(row.icon));
-    head.add_child(label(`HTTP ${row.code}`));
+    head.add_child(label(row.status));
     block.add_child(head);
     for (const line of row.lines)
         block.add_child(label(line, {styleClass: 'aiusagebar-dim'}));
@@ -172,7 +172,8 @@ function buildHttpError(row) {
 }
 
 /**
- * Build the dim `footer` line preceded by a thin rule.
+ * Build the dim `footer` line (pre-composed "Updated …" text) preceded by a thin
+ * rule.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @returns {St.BoxLayout}
  */
@@ -182,7 +183,7 @@ function buildFooter(row) {
     const line = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
     if (row.icon)
         line.add_child(makeIcon(row.icon, true));
-    line.add_child(label(`Updated ${row.updated}`, {styleClass: 'aiusagebar-dim'}));
+    line.add_child(label(row.text, {styleClass: 'aiusagebar-dim'}));
     block.add_child(line);
     return block;
 }

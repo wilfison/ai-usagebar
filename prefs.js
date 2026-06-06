@@ -15,24 +15,19 @@ import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
-import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import {vformat} from './lib/format.js';
 import {VENDOR_LABELS} from './lib/vendors.js';
 
 /** @type {number} Schema floor for the refresh interval (seconds). */
 const INTERVAL_MIN = 300;
 /** @type {number} Schema ceiling for the refresh interval (seconds). */
 const INTERVAL_MAX = 86400;
-/** @type {string} Cross-vendor placeholder hint shown under the bar-format row. */
-const BAR_PLACEHOLDERS =
-    'Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} ' +
-    '{weekly_pct} {weekly_reset}';
-/** @type {string} Hint shown under the popup-format row. */
-const POPUP_HINT =
-    'Optional extra lines shown above the popup. Empty uses the built-in layout. ' +
-    'Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} {weekly_reset}';
-/** @type {string} Hint shown under the severity-color overrides group. */
-const COLOR_HINT = 'Hex colors (#rrggbb). Empty leaves the tier on its built-in default.';
+
+// NOTE: user-facing strings are wrapped in `_()` at their use sites (inside
+// `fillPreferencesWindow`/the page builders), never at module top level — the
+// gettext domain is not yet bound when this module is first evaluated.
 
 /**
  * Preferences entry point. Populates the provided `Adw.PreferencesWindow` with a
@@ -75,18 +70,19 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      */
     _buildGeneralPage(settings, cleanups) {
         const page = new Adw.PreferencesPage({
-            title: 'General',
+            title: _('General'),
             icon_name: 'preferences-system-symbolic',
         });
 
         // --- Primary vendor (enum combo) ---
-        const displayGroup = new Adw.PreferencesGroup({title: 'Display'});
+        const displayGroup = new Adw.PreferencesGroup({title: _('Display')});
         const model = new Gtk.StringList();
+        // Vendor labels are brand names (Anthropic, OpenAI, …) — kept verbatim.
         for (const label of VENDOR_LABELS)
             model.append(label);
         const combo = new Adw.ComboRow({
-            title: 'Primary vendor',
-            subtitle: 'Shown by default and used as the scroll-cycle reset target',
+            title: _('Primary vendor'),
+            subtitle: _('Shown by default and used as the scroll-cycle reset target'),
             model,
         });
         // The schema enum nicks are ordered identically to VENDOR_IDS / VENDOR_LABELS,
@@ -111,8 +107,9 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
 
         // --- Refresh interval (int key <-> double SpinRow.value, wired manually) ---
         const cadenceGroup = new Adw.PreferencesGroup({
-            title: 'Refresh',
-            description: `Minimum ${INTERVAL_MIN} s — the upstream endpoints rate-limit below that.`,
+            title: _('Refresh'),
+            // Translators: %d is the minimum refresh interval in seconds.
+            description: vformat(_('Minimum %d s — the upstream endpoints rate-limit below that.'), INTERVAL_MIN),
         });
         const adjustment = new Gtk.Adjustment({
             lower: INTERVAL_MIN,
@@ -121,7 +118,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             page_increment: 300,
         });
         const interval = new Adw.SpinRow({
-            title: 'Refresh interval (seconds)',
+            title: _('Refresh interval (seconds)'),
             adjustment,
             digits: 0,
         });
@@ -145,32 +142,37 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
 
         // --- Bar format (string) ---
         const labelGroup = new Adw.PreferencesGroup({
-            title: 'Panel label',
-            description: BAR_PLACEHOLDERS,
+            title: _('Panel label'),
+            // Translators: the {token} names are literal placeholders the user
+            // types — keep them verbatim, only translate the surrounding prose.
+            description: _('Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} {weekly_pct} {weekly_reset}'),
         });
-        const barFormat = new Adw.EntryRow({title: 'Bar format'});
+        const barFormat = new Adw.EntryRow({title: _('Bar format')});
         settings.bind('bar-format', barFormat, 'text', Gio.SettingsBindFlags.DEFAULT);
         labelGroup.add(barFormat);
         page.add(labelGroup);
 
         // --- Popup (format + pace marker) ---
         const popupGroup = new Adw.PreferencesGroup({
-            title: 'Popup',
-            description: POPUP_HINT,
+            title: _('Popup'),
+            // Translators: the {token} names are literal placeholders the user
+            // types — keep them verbatim, only translate the surrounding prose.
+            description: _('Optional extra lines shown above the popup. Empty uses the built-in layout. Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} {weekly_reset}'),
         });
-        popupGroup.add(this._entryRow(settings, 'tooltip-format', 'Popup format'));
-        popupGroup.add(this._switchRow(settings, 'show-pace-marker', 'Show pace marker'));
+        popupGroup.add(this._entryRow(settings, 'tooltip-format', _('Popup format')));
+        popupGroup.add(this._switchRow(settings, 'show-pace-marker', _('Show pace marker')));
         page.add(popupGroup);
 
         // --- Severity colors (empty = built-in default) ---
         const colorGroup = new Adw.PreferencesGroup({
-            title: 'Severity colors',
-            description: COLOR_HINT,
+            title: _('Severity colors'),
+            description: _('Hex colors (#rrggbb). Empty leaves the tier on its built-in default.'),
         });
-        colorGroup.add(this._entryRow(settings, 'color-low', 'Low'));
-        colorGroup.add(this._entryRow(settings, 'color-mid', 'Mid'));
-        colorGroup.add(this._entryRow(settings, 'color-high', 'High'));
-        colorGroup.add(this._entryRow(settings, 'color-critical', 'Critical'));
+        // Translators: Low/Mid/High/Critical are usage-severity tier names.
+        colorGroup.add(this._entryRow(settings, 'color-low', _('Low')));
+        colorGroup.add(this._entryRow(settings, 'color-mid', _('Mid')));
+        colorGroup.add(this._entryRow(settings, 'color-high', _('High')));
+        colorGroup.add(this._entryRow(settings, 'color-critical', _('Critical')));
         page.add(colorGroup);
 
         return page;
@@ -182,16 +184,17 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildAnthropicPage(settings) {
+        // Translators: "Anthropic" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
-            title: 'Anthropic',
+            title: _('Anthropic'),
             icon_name: 'network-server-symbolic',
         });
         const group = new Adw.PreferencesGroup({
-            title: 'Anthropic',
-            description: 'Credentials path — empty uses ~/.claude/.credentials.json.',
+            title: _('Anthropic'),
+            description: _('Credentials path — empty uses ~/.claude/.credentials.json.'),
         });
-        group.add(this._switchRow(settings, 'anthropic-enabled', 'Enabled'));
-        group.add(this._entryRow(settings, 'anthropic-credentials-path', 'Credentials path'));
+        group.add(this._switchRow(settings, 'anthropic-enabled', _('Enabled')));
+        group.add(this._entryRow(settings, 'anthropic-credentials-path', _('Credentials path')));
         page.add(group);
         return page;
     }
@@ -203,16 +206,17 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildOpenAiPage(settings) {
+        // Translators: "OpenAI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
-            title: 'OpenAI',
+            title: _('OpenAI'),
             icon_name: 'network-server-symbolic',
         });
         const group = new Adw.PreferencesGroup({
-            title: 'OpenAI',
-            description: 'Codex auth path — empty uses ~/.codex/auth.json.',
+            title: _('OpenAI'),
+            description: _('Codex auth path — empty uses ~/.codex/auth.json.'),
         });
-        group.add(this._switchRow(settings, 'openai-enabled', 'Enabled'));
-        group.add(this._entryRow(settings, 'openai-codex-auth-path', 'Codex auth path'));
+        group.add(this._switchRow(settings, 'openai-enabled', _('Enabled')));
+        group.add(this._entryRow(settings, 'openai-codex-auth-path', _('Codex auth path')));
         page.add(group);
         return page;
     }
@@ -223,18 +227,19 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildZaiPage(settings) {
+        // Translators: "Z.AI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
-            title: 'Z.AI',
+            title: _('Z.AI'),
             icon_name: 'network-server-symbolic',
         });
         const group = new Adw.PreferencesGroup({
-            title: 'Z.AI',
-            description: 'Set the API key inline or via the environment variable (env wins).',
+            title: _('Z.AI'),
+            description: _('Set the API key inline or via the environment variable (env wins).'),
         });
-        group.add(this._switchRow(settings, 'zai-enabled', 'Enabled'));
-        group.add(this._entryRow(settings, 'zai-api-key-env', 'API key env var'));
-        group.add(this._passwordRow(settings, 'zai-api-key', 'API key (inline)'));
-        group.add(this._entryRow(settings, 'zai-plan-tier', 'Plan tier (lite/pro/max)'));
+        group.add(this._switchRow(settings, 'zai-enabled', _('Enabled')));
+        group.add(this._entryRow(settings, 'zai-api-key-env', _('API key env var')));
+        group.add(this._passwordRow(settings, 'zai-api-key', _('API key (inline)')));
+        group.add(this._entryRow(settings, 'zai-plan-tier', _('Plan tier (lite/pro/max)')));
         page.add(group);
         return page;
     }
@@ -245,17 +250,18 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildOpenRouterPage(settings) {
+        // Translators: "OpenRouter" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
-            title: 'OpenRouter',
+            title: _('OpenRouter'),
             icon_name: 'network-server-symbolic',
         });
         const group = new Adw.PreferencesGroup({
-            title: 'OpenRouter',
-            description: 'Set the API key inline or via the environment variable (env wins).',
+            title: _('OpenRouter'),
+            description: _('Set the API key inline or via the environment variable (env wins).'),
         });
-        group.add(this._switchRow(settings, 'openrouter-enabled', 'Enabled'));
-        group.add(this._entryRow(settings, 'openrouter-api-key-env', 'API key env var'));
-        group.add(this._passwordRow(settings, 'openrouter-api-key', 'API key (inline)'));
+        group.add(this._switchRow(settings, 'openrouter-enabled', _('Enabled')));
+        group.add(this._entryRow(settings, 'openrouter-api-key-env', _('API key env var')));
+        group.add(this._passwordRow(settings, 'openrouter-api-key', _('API key (inline)')));
         page.add(group);
         return page;
     }
@@ -266,17 +272,18 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildDeepSeekPage(settings) {
+        // Translators: "DeepSeek" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
-            title: 'DeepSeek',
+            title: _('DeepSeek'),
             icon_name: 'network-server-symbolic',
         });
         const group = new Adw.PreferencesGroup({
-            title: 'DeepSeek',
-            description: 'Disabled by default; requires an API key (env var or inline).',
+            title: _('DeepSeek'),
+            description: _('Disabled by default; requires an API key (env var or inline).'),
         });
-        group.add(this._switchRow(settings, 'deepseek-enabled', 'Enabled'));
-        group.add(this._entryRow(settings, 'deepseek-api-key-env', 'API key env var'));
-        group.add(this._passwordRow(settings, 'deepseek-api-key', 'API key (inline)'));
+        group.add(this._switchRow(settings, 'deepseek-enabled', _('Enabled')));
+        group.add(this._entryRow(settings, 'deepseek-api-key-env', _('API key env var')));
+        group.add(this._passwordRow(settings, 'deepseek-api-key', _('API key (inline)')));
         page.add(group);
         return page;
     }

@@ -35,4 +35,17 @@ describe('buildSection (deepseek)', () => {
     });
 });
 
+describe('buildSection (deepseek) — injected translator', () => {
+    const T = (s) => `«${s}»`;
+
+    it('routes the balance gauge + availability (brand title kept verbatim)', () => {
+        const s = {isAvailable: true, balance: 5.5, granted: 5, toppedUp: 0.5, currency: 'USD'};
+        const m = buildSection(s, META, NOW, theme, T);
+        assertEqual(m.title, 'DeepSeek');
+        assertEqual(m.rows[0].title, '«Balance»');
+        assertEqual(m.rows[0].subLine, '«granted $5.00 · topped-up $0.50»');
+        assertEqual(m.rows[1].text, '«API available»');
+    });
+});
+
 system.exit(summary());

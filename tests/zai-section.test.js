@@ -55,4 +55,20 @@ describe('buildSection (zai)', () => {
     });
 });
 
+describe('buildSection (zai) — injected translator', () => {
+    const T = (s) => `«${s}»`;
+
+    it('routes the present window titles', () => {
+        const s = {plan: 'GLM Coding Pro', session: win(42, 120, SESSION_MS), weekly: null, mcp: null};
+        const m = buildSection(s, META, NOW, theme, T);
+        assertEqual(m.rows[0].title, '«Session (5h)»');
+    });
+
+    it('routes the "no usage windows" message', () => {
+        const s = {plan: 'GLM Coding Unknown', session: null, weekly: null, mcp: null};
+        const m = buildSection(s, META, NOW, theme, T);
+        assertEqual(m.rows[0].text, '«no usage windows reported»');
+    });
+});
+
 system.exit(summary());

@@ -24,6 +24,7 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -42,8 +43,6 @@ import {defaultTheme, withOverrides} from '../lib/theme.js';
 const RERENDER_INTERVAL_S = 60;
 /** @type {string} Suffix appended to the label when the served data is stale. */
 const STALE_MARK = ' ⏸';
-/** @type {string} Placeholder row for an enabled vendor with no data yet. */
-const NO_DATA_MSG = 'No data — use "Refresh all"';
 /** @type {string} Symbolic icon shown on every vendor sub-section header
  * (uniform, matching the per-vendor pages in prefs.js). */
 const VENDOR_HEADER_ICON = 'network-server-symbolic';
@@ -103,6 +102,8 @@ class Indicator extends PanelMenu.Button {
 
         this._box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
         this._label = new St.Label({
+            // Vendor short codes (e.g. "Claude", "GPT") are proper nouns — not
+            // translated; the trailing em-dash is punctuation.
             text: `${this._adapter.vendorShort} —`,
             y_align: Clutter.ActorAlign.CENTER,
             y_expand: true,
@@ -114,21 +115,21 @@ class Indicator extends PanelMenu.Button {
         // sub-sections are inserted above the separator on (re)build.
         this._separator = new PopupMenu.PopupSeparatorMenuItem();
         this.menu.addMenuItem(this._separator);
-        this._refreshItem = new PopupMenu.PopupMenuItem('Refresh now');
+        this._refreshItem = new PopupMenu.PopupMenuItem(_('Refresh now'));
         this._refreshItem.connect('activate', () => {
             if (this._destroyed)
                 return;
             this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
         });
         this.menu.addMenuItem(this._refreshItem);
-        this._refreshAllItem = new PopupMenu.PopupMenuItem('Refresh all');
+        this._refreshAllItem = new PopupMenu.PopupMenuItem(_('Refresh all'));
         this._refreshAllItem.connect('activate', () => {
             if (this._destroyed)
                 return;
             this._refreshAll().catch(e => console.warn(`ai-usagebar: refresh all failed: ${e}`));
         });
         this.menu.addMenuItem(this._refreshAllItem);
-        this._prefsItem = new PopupMenu.PopupMenuItem('Preferences');
+        this._prefsItem = new PopupMenu.PopupMenuItem(_('Preferences'));
         this._prefsItem.connect('activate', () => {
             if (this._destroyed)
                 return;
@@ -304,7 +305,7 @@ class Indicator extends PanelMenu.Button {
         const section = item.menu;
         const res = this._results.get(id);
         if (!res) {
-            this._setSubmenuMessage(section, NO_DATA_MSG, {dim: true});
+            this._setSubmenuMessage(section, _('No data — use "Refresh all"'), {dim: true});
             return;
         }
         if (res.ok) {
@@ -326,7 +327,7 @@ class Indicator extends PanelMenu.Button {
             }
             renderSection(section, model);
         } else if (res.kind === 'loading') {
-            this._setSubmenuMessage(section, 'Loading…', {dim: true});
+            this._setSubmenuMessage(section, _('Loading…'), {dim: true});
         } else {
             this._setSubmenuMessage(section, res.message, {
                 color: severityColor(Severity.CRITICAL, this._theme),
@@ -448,7 +449,7 @@ class Indicator extends PanelMenu.Button {
             const now = new Date();
             this._paintLabelOk(res.snapshot, res.stale, now);
         } else if (res.kind === 'loading') {
-            this._setLabel('Loading…', this._theme.fg);
+            this._setLabel(_('Loading…'), this._theme.fg);
         } else {
             // kind: 'error' — message is retained on disk (.last_error) and in
             // the result; surface it in the popup and log it.

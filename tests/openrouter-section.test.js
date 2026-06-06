@@ -51,4 +51,25 @@ describe('buildSection (openrouter)', () => {
     });
 });
 
+describe('buildSection (openrouter) — injected translator', () => {
+    const T = (s) => `«${s}»`;
+    const m = buildSection(snap(), META, NOW, theme, T);
+
+    it('routes the balance gauge title + sub-line', () => {
+        assertEqual(m.rows[0].title, '«Balance»');
+        assertEqual(m.rows[0].subLine, '«$25.50 of $100.00 used (26%)»');
+    });
+
+    it('routes the usage block', () => {
+        assertEqual(m.rows[1].text, '«Usage»');
+        assertEqual(m.rows[2].text, '«today $1.00 · week $7.00 · month $25.50»');
+    });
+
+    it('routes the per-key limit and tier labels', () => {
+        assertEqual(m.rows[3].text, '«Per-key limit»');
+        assertEqual(m.rows[4].text, '«$24.50 of $50.00 remaining»');
+        assertEqual(m.rows[5].text, '«paid tier»');
+    });
+});
+
 system.exit(summary());

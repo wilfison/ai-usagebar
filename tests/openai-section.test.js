@@ -79,4 +79,28 @@ describe('buildSection (openai)', () => {
     });
 });
 
+describe('buildSection (openai) — injected translator', () => {
+    const T = (s) => `«${s}»`;
+
+    it('routes the Codex window titles and the credits block', () => {
+        const s = base();
+        s.credits = {balance: '$5.00', hasCredits: true, unlimited: false,
+            approxLocalMessages: [100, 200], approxCloudMessages: [30, 50]};
+        const m = buildSection(s, META, NOW, theme, T);
+        assertEqual(m.rows[0].title, '«Codex 5h»');
+        assertEqual(m.rows[2].text, '«Credits»');
+        assertEqual(m.rows[3].text, '«balance: $5.00»');
+        assertEqual(m.rows[4].text, '«~ 100-200 local messages»');
+        assertEqual(m.rows[5].text, '«~ 30-50 cloud messages»');
+    });
+
+    it('routes the "unlimited" credits label', () => {
+        const s = base();
+        s.credits = {balance: '$0.00', hasCredits: false, unlimited: true,
+            approxLocalMessages: null, approxCloudMessages: null};
+        const m = buildSection(s, META, NOW, theme, T);
+        assertEqual(m.rows[3].text, '«balance: «unlimited»»');
+    });
+});
+
 system.exit(summary());

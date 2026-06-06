@@ -1,0 +1,357 @@
+# Portuguese (Brazil) translation for ai-usagebar.
+# This file is distributed under the same license as the ai-usagebar@wilfison package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ai-usagebar@wilfison\n"
+"Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
+"POT-Creation-Date: 2026-06-06 18:00-0300\n"
+"PO-Revision-Date: 2026-06-06 12:00+0000\n"
+"Last-Translator: ai-usagebar contributors\n"
+"Language-Team: Portuguese (Brazil)\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: lib/countdown.js:28
+msgid "now"
+msgstr "agora"
+
+#. Translators: compact countdown — d = days, h = hours.
+#: lib/countdown.js:36
+#, javascript-format
+msgid "%dd %dh"
+msgstr "%dd %dh"
+
+#. Translators: compact countdown — h = hours, m = minutes (zero-padded).
+#: lib/countdown.js:38
+#, javascript-format
+msgid "%dh %02dm"
+msgstr "%dh %02dm"
+
+#: lib/vendors/anthropic-section.js:104 lib/vendors/openai-section.js:46
+#: lib/vendors/zai-section.js:44
+#, javascript-format
+msgid "Resets in %s"
+msgstr "Reinicia em %s"
+
+#: lib/vendors/anthropic-section.js:127
+msgid "Session"
+msgstr "Sessão"
+
+#: lib/vendors/anthropic-section.js:128 lib/vendors/zai-section.js:65
+msgid "Weekly"
+msgstr "Semanal"
+
+#: lib/vendors/anthropic-section.js:130
+msgid "Sonnet only"
+msgstr "Apenas Sonnet"
+
+#: lib/vendors/anthropic-section.js:137
+msgid "Extra usage"
+msgstr "Uso extra"
+
+#: lib/vendors/anthropic-section.js:140
+#, javascript-format
+msgid "Limit: %s"
+msgstr "Limite: %s"
+
+#. Translators: %s is the Anthropic plan name (e.g. "Max 5x") — kept verbatim.
+#: lib/vendors/anthropic-section.js:152
+#, javascript-format
+msgid "Claude %s"
+msgstr "Claude %s"
+
+#: lib/vendors/deepseek-section.js:36 lib/vendors/openrouter-section.js:40
+msgid "Balance"
+msgstr "Saldo"
+
+#. Translators: %s are money amounts (granted credit, topped-up credit).
+#: lib/vendors/deepseek-section.js:40
+#, javascript-format
+msgid "granted %s · topped-up %s"
+msgstr "concedido %s · recarga %s"
+
+#: lib/vendors/deepseek-section.js:48
+msgid "API available"
+msgstr "API disponível"
+
+#: lib/vendors/deepseek-section.js:48
+msgid "API unavailable"
+msgstr "API indisponível"
+
+#: lib/vendors/openai-section.js:64
+msgid "Codex 5h"
+msgstr "Codex 5h"
+
+#: lib/vendors/openai-section.js:65
+msgid "Codex weekly"
+msgstr "Codex semanal"
+
+#: lib/vendors/openai-section.js:67
+msgid "Code review (weekly)"
+msgstr "Revisão de código (semanal)"
+
+#: lib/vendors/openai-section.js:71
+msgid "Credits"
+msgstr "Créditos"
+
+#: lib/vendors/openai-section.js:72
+#, javascript-format
+msgid "balance: %s"
+msgstr "saldo: %s"
+
+#: lib/vendors/openai-section.js:72
+msgid "unlimited"
+msgstr "ilimitado"
+
+#. Translators: %s-%s is an approximate count range (e.g. "100-200").
+#: lib/vendors/openai-section.js:75
+#, javascript-format
+msgid "~ %s-%s local messages"
+msgstr "~ %s-%s mensagens locais"
+
+#. Translators: %s-%s is an approximate count range (e.g. "30-50").
+#: lib/vendors/openai-section.js:78
+#, javascript-format
+msgid "~ %s-%s cloud messages"
+msgstr "~ %s-%s mensagens na nuvem"
+
+#. Translators: %s are money amounts, %s%% is the consumed percentage.
+#: lib/vendors/openrouter-section.js:44
+#, javascript-format
+msgid "%s of %s used (%s%%)"
+msgstr "%s de %s usado (%s%%)"
+
+#: lib/vendors/openrouter-section.js:49
+msgid "Usage"
+msgstr "Uso"
+
+#. Translators: %s are money amounts for the day, week and month to date.
+#: lib/vendors/openrouter-section.js:53
+#, javascript-format
+msgid "today %s · week %s · month %s"
+msgstr "hoje %s · semana %s · mês %s"
+
+#: lib/vendors/openrouter-section.js:60
+msgid "Per-key limit"
+msgstr "Limite por chave"
+
+#. Translators: %s are money amounts (remaining of limit).
+#: lib/vendors/openrouter-section.js:64
+#, javascript-format
+msgid "%s of %s remaining"
+msgstr "%s de %s restante"
+
+#: lib/vendors/openrouter-section.js:69
+msgid "free tier"
+msgstr "plano gratuito"
+
+#: lib/vendors/openrouter-section.js:69
+msgid "paid tier"
+msgstr "plano pago"
+
+#: lib/vendors/section-common.js:68
+#, javascript-format
+msgid "HTTP %s"
+msgstr "HTTP %s"
+
+#: lib/vendors/section-common.js:86
+#, javascript-format
+msgid "Updated %s"
+msgstr "Atualizado %s"
+
+#: lib/vendors/zai-section.js:63
+msgid "Session (5h)"
+msgstr "Sessão (5h)"
+
+#: lib/vendors/zai-section.js:67
+msgid "MCP tools (monthly)"
+msgstr "Ferramentas MCP (mensal)"
+
+#: lib/vendors/zai-section.js:70
+msgid "no usage windows reported"
+msgstr "nenhuma janela de uso informada"
+
+#: prefs.js:73
+msgid "General"
+msgstr "Geral"
+
+#: prefs.js:78
+msgid "Display"
+msgstr "Exibição"
+
+#: prefs.js:84
+msgid "Primary vendor"
+msgstr "Fornecedor principal"
+
+#: prefs.js:85
+msgid "Shown by default and used as the scroll-cycle reset target"
+msgstr "Exibido por padrão e usado como alvo de reinício ao rolar"
+
+#: prefs.js:110
+msgid "Refresh"
+msgstr "Atualização"
+
+#. Translators: %d is the minimum refresh interval in seconds.
+#: prefs.js:112
+#, javascript-format
+msgid "Minimum %d s — the upstream endpoints rate-limit below that."
+msgstr "Mínimo %d s — os endpoints upstream limitam a taxa abaixo disso."
+
+#: prefs.js:121
+msgid "Refresh interval (seconds)"
+msgstr "Intervalo de atualização (segundos)"
+
+#: prefs.js:145
+msgid "Panel label"
+msgstr "Rótulo do painel"
+
+#. Translators: the {token} names are literal placeholders the user
+#. types — keep them verbatim, only translate the surrounding prose.
+#: prefs.js:148
+msgid ""
+"Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
+"{weekly_pct} {weekly_reset}"
+msgstr ""
+"Espaços reservados: {vendor_short} {session_pct}% {session_reset} {plan} "
+"{weekly_pct} {weekly_reset}"
+
+#: prefs.js:150
+msgid "Bar format"
+msgstr "Formato da barra"
+
+#: prefs.js:157
+msgid "Popup"
+msgstr "Popup"
+
+#. Translators: the {token} names are literal placeholders the user
+#. types — keep them verbatim, only translate the surrounding prose.
+#: prefs.js:160
+msgid ""
+"Optional extra lines shown above the popup. Empty uses the built-in layout. "
+"Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} "
+"{weekly_reset}"
+msgstr ""
+"Linhas extras opcionais mostradas acima do popup. Vazio usa o layout "
+"interno. Espaços reservados: {plan} {session_pct} {session_reset} "
+"{weekly_pct} {weekly_reset}"
+
+#: prefs.js:162
+msgid "Popup format"
+msgstr "Formato do popup"
+
+#: prefs.js:163
+msgid "Show pace marker"
+msgstr "Mostrar marcador de ritmo"
+
+#: prefs.js:168
+msgid "Severity colors"
+msgstr "Cores de severidade"
+
+#: prefs.js:169
+msgid "Hex colors (#rrggbb). Empty leaves the tier on its built-in default."
+msgstr "Cores hexadecimais (#rrggbb). Vazio mantém o nível no padrão interno."
+
+#. Translators: Low/Mid/High/Critical are usage-severity tier names.
+#: prefs.js:172
+msgid "Low"
+msgstr "Baixo"
+
+#: prefs.js:173
+msgid "Mid"
+msgstr "Médio"
+
+#: prefs.js:174
+msgid "High"
+msgstr "Alto"
+
+#: prefs.js:175
+msgid "Critical"
+msgstr "Crítico"
+
+#: prefs.js:189 prefs.js:193
+msgid "Anthropic"
+msgstr "Anthropic"
+
+#: prefs.js:194
+msgid "Credentials path — empty uses ~/.claude/.credentials.json."
+msgstr "Caminho das credenciais — vazio usa ~/.claude/.credentials.json."
+
+#: prefs.js:196 prefs.js:218 prefs.js:239 prefs.js:262 prefs.js:284
+msgid "Enabled"
+msgstr "Ativado"
+
+#: prefs.js:197
+msgid "Credentials path"
+msgstr "Caminho das credenciais"
+
+#: prefs.js:211 prefs.js:215
+msgid "OpenAI"
+msgstr "OpenAI"
+
+#: prefs.js:216
+msgid "Codex auth path — empty uses ~/.codex/auth.json."
+msgstr "Caminho de autenticação do Codex — vazio usa ~/.codex/auth.json."
+
+#: prefs.js:219
+msgid "Codex auth path"
+msgstr "Caminho de autenticação do Codex"
+
+#: prefs.js:232 prefs.js:236
+msgid "Z.AI"
+msgstr "Z.AI"
+
+#: prefs.js:237 prefs.js:260
+msgid "Set the API key inline or via the environment variable (env wins)."
+msgstr ""
+"Defina a chave de API embutida ou via variável de ambiente (ambiente "
+"prevalece)."
+
+#: prefs.js:240 prefs.js:263 prefs.js:285
+msgid "API key env var"
+msgstr "Variável de ambiente da chave de API"
+
+#: prefs.js:241 prefs.js:264 prefs.js:286
+msgid "API key (inline)"
+msgstr "Chave de API (embutida)"
+
+#: prefs.js:242
+msgid "Plan tier (lite/pro/max)"
+msgstr "Nível do plano (lite/pro/max)"
+
+#: prefs.js:255 prefs.js:259
+msgid "OpenRouter"
+msgstr "OpenRouter"
+
+#: prefs.js:277 prefs.js:281
+msgid "DeepSeek"
+msgstr "DeepSeek"
+
+#: prefs.js:282
+msgid "Disabled by default; requires an API key (env var or inline)."
+msgstr ""
+"Desativado por padrão; requer uma chave de API (variável de ambiente ou "
+"embutida)."
+
+#: ui/indicator.js:118
+msgid "Refresh now"
+msgstr "Atualizar agora"
+
+#: ui/indicator.js:125
+msgid "Refresh all"
+msgstr "Atualizar tudo"
+
+#: ui/indicator.js:132
+msgid "Preferences"
+msgstr "Preferências"
+
+#: ui/indicator.js:308
+msgid "No data — use \"Refresh all\""
+msgstr "Sem dados — use \"Atualizar tudo\""
+
+#: ui/indicator.js:330 ui/indicator.js:452
+msgid "Loading…"
+msgstr "Carregando…"

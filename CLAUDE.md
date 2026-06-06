@@ -29,7 +29,11 @@ make watch     # re-run `make test` on changes under lib/ ui/ tests/ (needs inot
 make reload    # disable + enable (Wayland still needs a full relog to pick up changes)
 make run       # launch a throwaway nested gnome-shell (Wayland) to test live
 make logs      # journalctl -f -o cat /usr/bin/gnome-shell
-make pack      # gnome-extensions pack . --force → upload zip
+make pot       # tools/i18n.sh pot — re-extract strings into po/<uuid>.pot
+make update-po # msgmerge each po/*.po against the refreshed template
+make compile-locale  # msgfmt po/*.po → locale/<lang>/LC_MESSAGES/*.mo (dev)
+make i18n-check      # fail on a stale .pot or a malformed po/*.po (CI gate)
+make pack      # gnome-extensions pack . --podir=po --force → upload zip (with .mo)
 make info      # gnome-extensions info ai-usagebar@wilfison
 ```
 
@@ -38,7 +42,8 @@ Each `tests/*.test.js` is self-contained (calls `system.exit(summary())`), and
 `tests/run.js` discovers them and runs each as an isolated `gjs -m` subprocess.
 
 CI (`.github/workflows/ci.yml`) runs `make schemas`, `make test`, `tools/lint.sh`,
-`npx eslint .`, and `make validate` on every PR.
+`npx eslint .`, `make validate`, and `make i18n-check` on every PR (the runner
+installs `gettext` for the i18n tools).
 
 ## Architecture
 
@@ -117,6 +122,78 @@ defaults to 300s because the undocumented endpoints rate-limit below that.
 registry — it uses `lib/vendors.js` (`VENDOR_LABELS`) for page titles and the
 primary-vendor combo instead.
 
+### Internationalization (i18n / gettext)
+
+`metadata.json` declares `"gettext-domain": "ai-usagebar@wilfison"`, so GNOME
+Shell auto-initializes translations for both `extension.js` and `prefs.js`. Every
+user-facing string is wrapped in `_()` (gettext) using a **plain string literal**
+as the argument — never a template literal, which `xgettext` cannot extract.
+
+- **Where `_` comes from.** gi-bound modules import the real translator:
+  `ui/indicator.js` and `lib/vendors/registry.js` from
+  `resource:///org/gnome/shell/extensions/extension.js`; `prefs.js` from
+  `resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js`. **Pure modules
+  never import gettext** (it is gi-bound) — see the injected-translator rule below.
+- **Injected translator (pure modules).** `lib/countdown.js`,
+  `lib/vendors/section-common.js`, and every `lib/vendors/*-section.js` take a
+  trailing `_ = (s) => s` parameter defaulting to the identity function. The
+  builders call `_('…')` on it; `registry.js` injects the real `gettext` when it
+  wraps each adapter's `buildSection`. Tests call these with no translator (or a
+  fake one) and stay 100% `gi://`-free. `xgettext` extraction is syntactic, so
+  `_('Session')` is extracted regardless of where `_` is defined.
+- **Interpolation.** GJS's `String.prototype.format` is absent in the prefs
+  process and in bare-`gjs -m` tests, so we use the pure `vformat()` helper in
+  `lib/format.js` instead: `vformat(_('Claude %s'), plan)`. The translatable text
+  stays a literal inside `_()`; `vformat` substitutes `%s` / `%d` / `%02d` / `%%`.
+  Use `ngettext`/`pgettext` (already in the `xgettext` keyword set) if plural or
+  context ever applies.
+- **What is NOT translated** (kept verbatim, outside the `_()` literal): vendor
+  brand names (Claude/OpenAI/Z.AI/OpenRouter/DeepSeek — wrapped in prefs only for
+  catalog completeness, with a "brand name — keep untranslated" translator
+  comment), `{token}` placeholder names, `%s`/`%d` specifiers, vendor short codes,
+  hex colors, money/number strings, and punctuation like the `—` em-dash marker.
+- **The renderer stays string-free.** `ui/vendorSection.js` paints pre-composed,
+  already-translated fields the builders produce (`row.subtitle`, `row.status`,
+  `row.text`) — it owns no user-facing prose.
+- **Catalogs.** `po/` holds the tracked `.pot` template + `pt_BR`/`es`/`fr`/`de`
+  `.po` sources; `locale/<lang>/LC_MESSAGES/*.mo` is the gitignored compiled
+  output. The dev loop:
+
+  ```bash
+  make pot            # re-extract strings into po/ai-usagebar@wilfison.pot
+  make update-po      # msgmerge each po/*.po against the refreshed template
+  make compile-locale # msgfmt po/*.po → locale/<lang>/LC_MESSAGES/*.mo (dev/live)
+  make i18n-check     # CI gate: .pot drift (regenerate+diff) + msgfmt --check
+  make pack           # zip with --podir=po so .mo files ship in the bundle
+  ```
+
+- **Adding a language** (3 commands, no source changes): copy the template and
+  translate, then compile and test under that locale —
+  `msginit --input=po/ai-usagebar@wilfison.pot --locale=<ll> --output=po/<ll>.po`,
+  fill every `msgstr` (preserve `%`/`{token}`/brand names), then
+  `make compile-locale` and verify with the recipe below. Wire the new id only by
+  shipping the `.po`; `make i18n-check` keeps it honest.
+- **Adding a string.** Wrap it in `_('literal')` (inject `_` if the module is
+  pure), run `make pot` + `make update-po`, translate the new `msgid` in each
+  `po/*.po`, then `make i18n-check`.
+
+#### Verifying a translation (Wayland-gated)
+
+The running session's locale is fixed, so `make reload` will **not** switch
+language — you must launch a nested shell with the target locale, or do a full
+relog under it:
+
+```bash
+make compile-locale
+env LANG=pt_BR.UTF-8 LANGUAGE=pt_BR make run   # nested gnome-shell (Wayland)
+```
+
+In the nested shell, open the popup (and scroll-cycle a vendor), check the panel
+label, the menu items, and the prefs window, then watch `make logs` for errors.
+Record the exact commands + what you observed; never claim "verified" from code
+reading alone. Swap the locale (`es_ES.UTF-8`, `fr_FR.UTF-8`, `de_DE.UTF-8`) to
+spot-check the other catalogs.
+
 ## Conventions
 
 - `*.credentials.json`, `auth.json`, and `*.compiled` are gitignored; never
@@ -134,6 +211,12 @@ primary-vendor combo instead.
 - Keep API usage on the GNOME 50 ESM surface — `gi://` imports and
   `resource:///org/gnome/shell/…`, no legacy `imports.*` syntax (the lint
   enforces this).
+- **Pure modules stay `gi://`-free, including gettext.** They never import the
+  translator; they take an injected `_ = (s) => s` parameter (default identity)
+  that the gi-bound caller supplies. User-facing text is always a plain string
+  literal inside `_()`; interpolate with `vformat()` (see Internationalization),
+  never a template literal. Wrapping the same string in two places is fine —
+  `xgettext` dedupes identical `msgid`s.
 
 ## Testing policy
 

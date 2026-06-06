@@ -175,6 +175,33 @@ describe('buildSection — elapsedPct marker data', () => {
     });
 });
 
+describe('buildSection — injected translator', () => {
+    // A fake translator wraps each string so we can prove the labels route
+    // through `_()` (not hard-coded). The countdown is wrapped too, since the
+    // builder threads the same translator into formatCountdown.
+    const T = (s) => `«${s}»`;
+    const meta = {stale: true, lastError: {code: 503, body: 'down'}, fetchedAt: NOW};
+    const model = buildSection(fullSnapshot(), meta, NOW, theme, T);
+
+    it('routes the header title (with the plan kept verbatim)', () =>
+        assertEqual(model.title, '«Claude Max 5x»'));
+
+    it('routes the window title', () =>
+        assertEqual(model.rows[0].title, '«Session»'));
+
+    it('routes the "Resets in" subtitle and the countdown', () =>
+        assertEqual(model.rows[0].subtitle, '«Resets in «1h 30m»»'));
+
+    it('routes the gauge sub-line', () =>
+        assertEqual(model.rows[3].subLine, '«Limit: $50.00»'));
+
+    it('routes the HTTP status label', () =>
+        assertEqual(model.rows.find(r => r.kind === 'http-error').status, '«HTTP 503»'));
+
+    it('routes the footer "Updated" text', () =>
+        assertEqual(model.rows.at(-1).text, `«Updated ${localTimeHm(NOW)}»`));
+});
+
 describe('wrapWords — greedy word wrap', () => {
     it('packs words and breaks at the width boundary', () =>
         assertDeepEqual(wrapWords('one two three four five', 13),

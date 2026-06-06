@@ -4,6 +4,9 @@
 *.compiled
 *.shell-extension.zip
 
+# Compiled gettext catalogs are build artifacts; the po/*.po sources are tracked.
+locale/**/*.mo
+
 # Node dev tooling (eslint only); the lockfile IS committed.
 node_modules/
 

@@ -57,4 +57,27 @@ describe('countdown.format', () => {
     });
 });
 
+describe('countdown.format — injected translator', () => {
+    // A fake translator wraps the format string in guillemets so we can prove the
+    // unit labels route through `_()` (and are not hard-coded) and that vformat
+    // still interpolates the translated template.
+    const T = (s) => `«${s}»`;
+
+    it('routes "now" through the translator', () => {
+        assertEqual(format(at(-SECOND), now, T), '«now»');
+    });
+
+    it('routes the day/hour format through the translator', () => {
+        assertEqual(format(at(DAY + HOUR), now, T), '«1d 1h»');
+    });
+
+    it('routes the hour/minute format through the translator', () => {
+        assertEqual(format(at(HOUR + 5 * MINUTE), now, T), '«1h 05m»');
+    });
+
+    it('leaves the null em-dash marker untranslated', () => {
+        assertEqual(format(null, now, T), '—');
+    });
+});
+
 system.exit(summary());

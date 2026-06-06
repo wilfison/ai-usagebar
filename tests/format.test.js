@@ -2,6 +2,7 @@ import system from 'system';
 
 import {
     substitute,
+    vformat,
     localTimeHm,
     localTimeHms,
     updatedAtHm,
@@ -83,6 +84,32 @@ describe('time formatting', () => {
     it('updatedAtHms subtracts cacheAgeMs', () => {
         // 5 minutes + 3 seconds ago → 14:02:00
         assertEqual(updatedAtHms(anchor, 5 * 60 * 1000 + 3000), '14:02:00');
+    });
+});
+
+describe('vformat', () => {
+    it('substitutes %s in order', () => {
+        assertEqual(vformat('%s of %s', '$1', '$2'), '$1 of $2');
+    });
+
+    it('substitutes %d (truncating to integer)', () => {
+        assertEqual(vformat('Minimum %d s', 300), 'Minimum 300 s');
+    });
+
+    it('zero-pads with %02d', () => {
+        assertEqual(vformat('%dh %02dm', 1, 5), '1h 05m');
+    });
+
+    it('does not pad a wide %02d value', () => {
+        assertEqual(vformat('%02d', 123), '123');
+    });
+
+    it('renders a literal %% as %', () => {
+        assertEqual(vformat('%s used (%s%%)', '$1', 26), '$1 used (26%)');
+    });
+
+    it('leaves a template with no conversions untouched', () => {
+        assertEqual(vformat('plain'), 'plain');
     });
 });
 

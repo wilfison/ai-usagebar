@@ -11,10 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install gjs + glib schema tools
+      - name: Install gjs + glib schema tools + gettext
         run: |
           sudo apt-get update
-          sudo apt-get install -y gjs libglib2.0-bin
+          sudo apt-get install -y gjs libglib2.0-bin gettext
 
       - uses: actions/setup-node@v4
         with:
@@ -37,3 +37,6 @@ jobs:
 
       - name: Validate metadata + schema
         run: make validate
+
+      - name: i18n template + catalog check
+        run: make i18n-check
