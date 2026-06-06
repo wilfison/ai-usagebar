@@ -33,9 +33,11 @@ describe('buildSection — full snapshot', () => {
 
     it('carries the plan label', () => assertEqual(model.plan, 'Max 5x'));
 
+    it('builds the full header title', () => assertEqual(model.title, 'Claude Max 5x'));
+
     it('emits all six row kinds in order', () =>
         assertDeepEqual(model.rows.map(r => r.kind),
-            ['window', 'window', 'window', 'extra', 'http-error', 'footer']));
+            ['window', 'window', 'window', 'gauge', 'http-error', 'footer']));
 
     it('session row: icon, title, pct, mid→yellow, countdown', () => {
         const r = model.rows[0];
@@ -63,12 +65,13 @@ describe('buildSection — full snapshot', () => {
         assertEqual(r.paceGlyph, '');
     });
 
-    it('extra row: dollars + mid→yellow', () => {
+    it('extra row → gauge: dollars + mid→yellow', () => {
         const r = model.rows[3];
-        assertEqual(r.kind, 'extra');
+        assertEqual(r.kind, 'gauge');
         assertEqual(r.icon, '󰄑');
-        assertEqual(r.spent, '$25.00');
-        assertEqual(r.limit, '$50.00');
+        assertEqual(r.pct, 50);
+        assertEqual(r.value, '$25.00');
+        assertEqual(r.subLine, '󰀓  Limit: $50.00');
         assertEqual(r.color, theme.yellow);
     });
 });
@@ -80,7 +83,7 @@ describe('buildSection — omissions', () => {
         const s = fullSnapshot();
         s.sonnet = null;
         const kinds = buildSection(s, meta, NOW, theme).rows.map(r => r.kind);
-        assertDeepEqual(kinds, ['window', 'window', 'extra', 'footer']);
+        assertDeepEqual(kinds, ['window', 'window', 'gauge', 'footer']);
     });
 
     it('omits extra when absent', () => {

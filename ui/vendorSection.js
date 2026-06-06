@@ -63,20 +63,38 @@ function renderWindow(menuSection, row, theme) {
 }
 
 /**
- * Render the `extra` usage row: title, bar + spent, dim limit line.
+ * Render a `gauge` row: title line, then a value line (bar drawn only when
+ * `row.pct` is a number, omitted when `null`) with the bold colored value, and an
+ * optional dim sub-line.
  * @param {PopupMenu.PopupMenuSection} menuSection
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @param {import('../lib/theme.js').Theme} theme
  * @returns {void}
  */
-function renderExtra(menuSection, row, theme) {
+function renderGauge(menuSection, row, theme) {
     addLine(menuSection).add_child(label(`${row.icon}  ${row.title}`, {color: theme.fg}));
 
-    const barLine = addLine(menuSection);
-    barLine.add_child(makeBar(row.pct, row.color, theme));
-    barLine.add_child(label(row.spent, {color: row.color, bold: true}));
+    const valLine = addLine(menuSection);
+    if (typeof row.pct === 'number')
+        valLine.add_child(makeBar(row.pct, row.color, theme));
+    valLine.add_child(label(row.value, {color: row.color, bold: true}));
 
-    addLine(menuSection).add_child(label(`󰀓  Limit: ${row.limit}`, {color: theme.dim}));
+    if (row.subLine)
+        addLine(menuSection).add_child(label(row.subLine, {color: theme.dim}));
+}
+
+/**
+ * Render a `text` row: optional icon + text. Color precedence is explicit
+ * `row.color` hex, else `row.tone` ('dim' → dim, otherwise foreground).
+ * @param {PopupMenu.PopupMenuSection} menuSection
+ * @param {import('../lib/vendors/anthropic-section.js').Row} row
+ * @param {import('../lib/theme.js').Theme} theme
+ * @returns {void}
+ */
+function renderText(menuSection, row, theme) {
+    const color = row.color ?? (row.tone === 'dim' ? theme.dim : theme.fg);
+    const text = row.icon ? `${row.icon}  ${row.text}` : row.text;
+    addLine(menuSection).add_child(label(text, {color}));
 }
 
 /**
@@ -104,15 +122,18 @@ function renderHttpError(menuSection, row, theme) {
 export function renderSection(menuSection, model, theme) {
     menuSection.removeAll();
 
-    addLine(menuSection).add_child(label(`Claude ${model.plan}`, {color: theme.blue, bold: true}));
+    addLine(menuSection).add_child(label(model.title, {color: theme.blue, bold: true}));
 
     for (const row of model.rows) {
         switch (row.kind) {
         case 'window':
             renderWindow(menuSection, row, theme);
             break;
-        case 'extra':
-            renderExtra(menuSection, row, theme);
+        case 'gauge':
+            renderGauge(menuSection, row, theme);
+            break;
+        case 'text':
+            renderText(menuSection, row, theme);
             break;
         case 'http-error':
             renderHttpError(menuSection, row, theme);
