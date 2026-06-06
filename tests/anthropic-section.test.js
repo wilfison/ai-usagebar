@@ -1,6 +1,8 @@
 import system from 'system';
 
 import {buildSection, wrapWords} from '../lib/vendors/anthropic-section.js';
+import {SESSION_MS, WEEKLY_MS} from '../lib/vendors/anthropic-parse.js';
+import {calc} from '../lib/pacing.js';
 import {defaultTheme} from '../lib/theme.js';
 import {localTimeHm} from '../lib/format.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
@@ -147,6 +149,29 @@ describe('buildSection — footer pinned to fetchedAt', () => {
         const m = {stale: false, lastError: null, fetchedAt: null};
         const footer = buildSection(fullSnapshot(), m, NOW, theme).rows.at(-1);
         assertEqual(footer.updated, '—');
+    });
+});
+
+describe('buildSection — elapsedPct marker data', () => {
+    const meta = {stale: false, lastError: null, fetchedAt: NOW};
+    const model = buildSection(fullSnapshot(), meta, NOW, theme);
+
+    it('session row elapsedPct equals calc().elapsedPct', () => {
+        const r = model.rows[0];
+        const expected = calc({usagePct: 62, reset: win(62, 90).resetsAt, now: NOW, windowMs: SESSION_MS}).elapsedPct;
+        assertEqual(r.elapsedPct, expected);
+    });
+
+    it('weekly row elapsedPct equals calc().elapsedPct', () => {
+        const r = model.rows[1];
+        const expected = calc({usagePct: 80, reset: win(80, 3 * 24 * 60).resetsAt, now: NOW, windowMs: WEEKLY_MS}).elapsedPct;
+        assertEqual(r.elapsedPct, expected);
+    });
+
+    it('sonnet row (no window length) omits elapsedPct', () => {
+        const r = model.rows[2];
+        assertEqual(r.title, 'Sonnet only');
+        assertEqual(Object.hasOwn(r, 'elapsedPct'), false);
     });
 });
 

@@ -66,6 +66,12 @@
       <description>Hex color (#rrggbb) for the critical-severity tier. Empty derives the color from the active theme.</description>
     </key>
 
+    <key name="show-pace-marker" type="b">
+      <default>false</default>
+      <summary>Show the elapsed-position marker on popup bars</summary>
+      <description>When enabled, each popup window bar draws a thin marker at the fraction of the window that has elapsed, so usage can be compared against pace at a glance.</description>
+    </key>
+
     <key name="anthropic-enabled" type="b">
       <default>true</default>
       <summary>Enable Anthropic</summary>

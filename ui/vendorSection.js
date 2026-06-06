@@ -46,16 +46,22 @@ function addLine(menuSection) {
 
 /**
  * Render a single `window` row: title line, bar + pct + pace, dim reset line.
+ * When `opts.showMarker` is set and the row carries a numeric `elapsedPct`, the
+ * bar draws the elapsed-position marker.
  * @param {PopupMenu.PopupMenuSection} menuSection
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @param {import('../lib/theme.js').Theme} theme
+ * @param {{showMarker?: boolean}} opts
  * @returns {void}
  */
-function renderWindow(menuSection, row, theme) {
+function renderWindow(menuSection, row, theme, opts) {
     addLine(menuSection).add_child(label(`${row.icon}  ${row.title}`, {color: theme.fg}));
 
     const barLine = addLine(menuSection);
-    barLine.add_child(makeBar(row.pct, row.color, theme));
+    const barOpts = opts.showMarker && typeof row.elapsedPct === 'number'
+        ? {markerPct: row.elapsedPct}
+        : null;
+    barLine.add_child(makeBar(row.pct, row.color, theme, barOpts));
     const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
     barLine.add_child(label(pctText, {color: row.color, bold: true}));
 
@@ -117,9 +123,11 @@ function renderHttpError(menuSection, row, theme) {
  * @param {PopupMenu.PopupMenuSection} menuSection
  * @param {import('../lib/vendors/anthropic-section.js').SectionModel} model
  * @param {import('../lib/theme.js').Theme} theme
+ * @param {{showMarker?: boolean}} [opts] - render options; `showMarker` draws the
+ *   elapsed-position marker on window bars.
  * @returns {void}
  */
-export function renderSection(menuSection, model, theme) {
+export function renderSection(menuSection, model, theme, opts = {}) {
     menuSection.removeAll();
 
     addLine(menuSection).add_child(label(model.title, {color: theme.blue, bold: true}));
@@ -127,7 +135,7 @@ export function renderSection(menuSection, model, theme) {
     for (const row of model.rows) {
         switch (row.kind) {
         case 'window':
-            renderWindow(menuSection, row, theme);
+            renderWindow(menuSection, row, theme, opts);
             break;
         case 'gauge':
             renderGauge(menuSection, row, theme);

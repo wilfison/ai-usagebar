@@ -2,6 +2,7 @@ import system from 'system';
 
 import {buildSection} from '../lib/vendors/zai-section.js';
 import {SESSION_MS, WEEKLY_MS, MCP_MS} from '../lib/vendors/zai-parse.js';
+import {calc} from '../lib/pacing.js';
 import {defaultTheme} from '../lib/theme.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
@@ -44,6 +45,13 @@ describe('buildSection (zai)', () => {
         const m = buildSection(s, meta, NOW, theme);
         assertDeepEqual(m.rows.map(r => r.kind), ['window', 'http-error', 'footer']);
         assertEqual(m.rows[1].code, 401);
+    });
+
+    it('window rows carry elapsedPct equal to calc().elapsedPct', () => {
+        const s = {plan: 'GLM Coding Pro', session: win(42, 120, SESSION_MS), weekly: null, mcp: null};
+        const m = buildSection(s, META, NOW, theme);
+        const expected = calc({usagePct: 42, reset: win(42, 120, SESSION_MS).resetsAt, now: NOW, windowMs: SESSION_MS}).elapsedPct;
+        assertEqual(m.rows[0].elapsedPct, expected);
     });
 });
 

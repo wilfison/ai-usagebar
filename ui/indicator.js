@@ -311,7 +311,7 @@ class Indicator extends PanelMenu.Button {
                 if (extra.length)
                     model.rows = [...extra, ...model.rows];
             }
-            renderSection(section, model, this._theme);
+            renderSection(section, model, this._theme, {showMarker: this._config.showPaceMarker});
         } else if (res.kind === 'loading') {
             this._setSubmenuMessage(section, 'Loading…', this._theme.dim);
         } else {

@@ -2,6 +2,7 @@ import system from 'system';
 
 import {buildSection} from '../lib/vendors/openai-section.js';
 import {SESSION_MS, WEEKLY_MS} from '../lib/vendors/openai-parse.js';
+import {calc} from '../lib/pacing.js';
 import {defaultTheme} from '../lib/theme.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
@@ -69,6 +70,12 @@ describe('buildSection (openai)', () => {
         const m = buildSection(base(), meta, NOW, theme);
         assertDeepEqual(m.rows.map(r => r.kind), ['window', 'window', 'http-error', 'footer']);
         assertEqual(m.rows[2].code, 503);
+    });
+
+    it('window rows carry elapsedPct equal to calc().elapsedPct', () => {
+        const m = buildSection(base(), META, NOW, theme);
+        const expected = calc({usagePct: 1, reset: win(1, 90, SESSION_MS).resetsAt, now: NOW, windowMs: SESSION_MS}).elapsedPct;
+        assertEqual(m.rows[0].elapsedPct, expected);
     });
 });
 
