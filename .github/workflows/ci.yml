@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gjs + glib schema tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gjs libglib2.0-bin
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install eslint deps
+        run: npm ci
+
+      - name: Compile schemas
+        run: make schemas
+
+      - name: Unit tests (gjs)
+        run: make test
+
+      - name: Hygiene lint
+        run: ./tools/lint.sh
+
+      - name: ESLint
+        run: npx eslint .
+
+      - name: Validate metadata + schema
+        run: make validate
