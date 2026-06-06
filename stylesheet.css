@@ -72,8 +72,8 @@
     border-radius: 4px;
 }
 
-/* Fill: the GNOME accent color — the one themed color token St exposes, so the
-   bar tracks the user's accent like the shell's own sliders. */
+/* Fill: defaults to the GNOME accent color (the one themed color token St
+   exposes); ui/bar.js overrides it inline with the row's severity hex. */
 .aiusagebar-bar-fill {
     background-color: -st-accent-color;
     border-radius: 4px;

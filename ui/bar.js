@@ -3,9 +3,9 @@
  * widget, so the bar is a thin hand-drawn `St.Widget`: the widget itself is the
  * rounded translucent track and a single child is the fill, sized to a fraction
  * of the bar's *actual* allocated width on every layout pass (so it fills the
- * card width responsively). All colors live in the `.aiusagebar-bar*` CSS
- * classes — the fill uses `-st-accent-color`, the one themed color token St
- * exposes — so nothing is colored inline here.
+ * card width responsively). The track color lives in the `.aiusagebar-bar*` CSS
+ * classes; the fill defaults to `-st-accent-color` (the one themed color token
+ * St exposes) but is overridden inline with a severity hex when one is passed.
  */
 
 import Clutter from 'gi://Clutter';
@@ -23,13 +23,15 @@ function clamp(n, lo, hi) {
 }
 
 /**
- * Build a full-width accent-filled bar at `pct` percent. A `FixedLayout` lets the
- * fill be sized by hand against the live allocation; the bar's own size comes
- * from CSS height + `x_expand`, so resizing the fill cannot feed back into it.
+ * Build a full-width bar at `pct` percent. A `FixedLayout` lets the fill be
+ * sized by hand against the live allocation; the bar's own size comes from CSS
+ * height + `x_expand`, so resizing the fill cannot feed back into it.
  * @param {number} pct - fill percent; clamped to 0..100.
+ * @param {?string} [color] - severity hex for the fill; null/undefined keeps the
+ *   default `-st-accent-color` from CSS.
  * @returns {St.Widget}
  */
-export function makeBar(pct) {
+export function makeBar(pct, color = null) {
     const fraction = clamp(pct, 0, 100) / 100;
 
     const bar = new St.Widget({
@@ -39,6 +41,8 @@ export function makeBar(pct) {
     });
 
     const fill = new St.Widget({style_class: 'aiusagebar-bar-fill'});
+    if (color)
+        fill.set_style(`background-color: ${color};`);
     bar.add_child(fill);
 
     const apply = () => {

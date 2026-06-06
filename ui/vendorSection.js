@@ -62,7 +62,8 @@ function makeIcon(name, dim = false) {
  * trailing value to the right edge (Adwaita row layout).
  * @param {?string} iconName - leading symbolic icon, or null for none.
  * @param {string} title
- * @param {{subtitle?: string, trailing?: string}} [opts]
+ * @param {{subtitle?: string, trailing?: string, trailingColor?: string}} [opts]
+ *   - `trailingColor` is the pre-resolved severity hex for the trailing value.
  * @returns {St.BoxLayout}
  */
 function rowHeader(iconName, title, opts = {}) {
@@ -81,7 +82,7 @@ function rowHeader(iconName, title, opts = {}) {
     head.add_child(col);
 
     if (opts.trailing)
-        head.add_child(label(opts.trailing, {bold: true}));
+        head.add_child(label(opts.trailing, {bold: true, color: opts.trailingColor}));
 
     return head;
 }
@@ -96,7 +97,8 @@ function cardRow() {
 
 /**
  * Build a `window` boxed row: icon + title, dim "Resets in …" subtitle, trailing
- * bold `pct% pace` value (themed foreground), and a full-width native accent bar.
+ * bold `pct% pace` value in its pre-resolved severity color, and a full-width
+ * bar filled in that same severity color.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @returns {St.BoxLayout}
  */
@@ -106,15 +108,16 @@ function buildWindowRow(row) {
     r.add_child(rowHeader(row.icon, row.title, {
         subtitle: `Resets in ${row.reset}`,
         trailing: pctText,
+        trailingColor: row.color,
     }));
-    r.add_child(makeBar(row.pct));
+    r.add_child(makeBar(row.pct, row.color));
     return r;
 }
 
 /**
  * Build a `gauge` boxed row: icon + title, optional dim subtitle, trailing bold
- * value (themed foreground), and a native accent bar (drawn only when `row.pct`
- * is a number).
+ * value in its pre-resolved severity color, and a bar filled in that same
+ * severity color (drawn only when `row.pct` is a number).
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @returns {St.BoxLayout}
  */
@@ -123,9 +126,10 @@ function buildGaugeRow(row) {
     r.add_child(rowHeader(row.icon, row.title, {
         subtitle: row.subLine,
         trailing: row.value,
+        trailingColor: row.color,
     }));
     if (typeof row.pct === 'number')
-        r.add_child(makeBar(row.pct));
+        r.add_child(makeBar(row.pct, row.color));
     return r;
 }
 
