@@ -12,6 +12,7 @@ help:
 	@echo "  lint     Check trailing newline + no imports.* in JS files"
 	@echo "  eslint   Run eslint (GNOME Shell style); needs 'npm ci' first"
 	@echo "  validate Validate metadata.json + compile schema with --strict"
+	@echo "  watch    Re-run 'make test' on changes under lib/ ui/ tests/"
 	@echo "  pack     Build the upload zip via gnome-extensions pack"
 	@echo "  info     Show gnome-extensions info for $(UUID)"
 
@@ -41,10 +42,22 @@ eslint:
 validate:
 	@./tools/validate.sh
 
+# Re-run the test suite whenever a source/test file changes. Requires
+# inotify-tools; degrades to a clear message when inotifywait is absent.
+watch:
+	@command -v inotifywait >/dev/null 2>&1 || { \
+		echo "watch: inotifywait not found — install inotify-tools to use 'make watch'"; \
+		exit 1; \
+	}
+	@$(MAKE) --no-print-directory test || true
+	@while inotifywait -qq -r -e modify,create,delete,move lib ui tests; do \
+		$(MAKE) --no-print-directory test || true; \
+	done
+
 pack: schemas
 	gnome-extensions pack . --force
 
 info:
 	gnome-extensions info $(UUID)
 
-.PHONY: help schemas enable disable reload logs test lint eslint validate pack info
+.PHONY: help schemas enable disable reload logs test lint eslint validate watch pack info
