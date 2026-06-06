@@ -103,4 +103,37 @@ describe('hexBlend', () => {
     });
 });
 
+describe('indicator color resolution (config.colors)', () => {
+    // Mirrors ui/indicator.js._rebuildTheme(): withOverrides(defaultTheme(),
+    // config.colors), where config.colors is the {low,mid,high,critical} map
+    // readConfig() produces (each value a hex string or null when unset).
+    it('a colors map resolves each tier to its override', () => {
+        const colors = {low: '#101010', mid: '#202020', high: '#303030', critical: '#404040'};
+        const t = withOverrides(defaultTheme(), colors);
+        assertEqual(t.green, '#101010');
+        assertEqual(t.yellow, '#202020');
+        assertEqual(t.orange, '#303030');
+        assertEqual(t.red, '#404040');
+    });
+
+    it('null tiers fall back to the One-Dark default', () => {
+        const def = defaultTheme();
+        const colors = {low: null, mid: null, high: null, critical: '#ff00ff'};
+        const t = withOverrides(def, colors);
+        assertEqual(t.green, def.green);
+        assertEqual(t.yellow, def.yellow);
+        assertEqual(t.orange, def.orange);
+        assertEqual(t.red, '#ff00ff');
+    });
+
+    it('an all-null map equals the default palette', () => {
+        const def = defaultTheme();
+        const t = withOverrides(def, {low: null, mid: null, high: null, critical: null});
+        assertEqual(t.green, def.green);
+        assertEqual(t.yellow, def.yellow);
+        assertEqual(t.orange, def.orange);
+        assertEqual(t.red, def.red);
+    });
+});
+
 system.exit(summary());

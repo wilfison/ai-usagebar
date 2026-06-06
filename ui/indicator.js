@@ -36,7 +36,7 @@ import {getAdapter} from '../lib/vendors/registry.js';
 import {renderSection} from './vendorSection.js';
 import {substitute} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
-import {defaultTheme} from '../lib/theme.js';
+import {defaultTheme, withOverrides} from '../lib/theme.js';
 
 /** @type {number} Live countdown re-render cadence while the popup is open. */
 const RERENDER_INTERVAL_S = 60;
@@ -77,6 +77,7 @@ class Indicator extends PanelMenu.Button {
         this._adapter = getAdapter(this._activeId);
         this._cache = Cache.forVendor(this._adapter.cacheId);
         this._theme = defaultTheme();
+        this._rebuildTheme();
         this._timeoutId = null;
         this._renderTimeoutId = null;
         this._openStateId = null;
@@ -216,7 +217,17 @@ class Indicator extends PanelMenu.Button {
         this._config = config;
         this._barFormat = config.barFormat;
         this._maybeRebuildVendorSections(config);
-        this._reRenderFromCache();
+
+        // Appearance-only keys (severity colors, popup format, pace marker) affect
+        // every built section, not just the active one — rebuild the theme on a
+        // color change and re-render all sub-sections. Everything else repaints
+        // just the active section.
+        if (key.startsWith('color-'))
+            this._rebuildTheme();
+        if (key.startsWith('color-') || key === 'tooltip-format' || key === 'show-pace-marker')
+            this._reRenderAllSections();
+        else
+            this._reRenderFromCache();
     }
 
     /**
@@ -441,6 +452,32 @@ class Indicator extends PanelMenu.Button {
             this._renderVendorSection(this._activeId);
         } catch (e) {
             console.warn(`ai-usagebar: re-render failed: ${e}`);
+        }
+    }
+
+    /**
+     * Rebuild the active palette from the One-Dark default plus the user's
+     * severity-color overrides (empty/invalid entries fall back to the default).
+     * Call after `this._config` is (re)read so the theme tracks the prefs.
+     * @returns {void}
+     */
+    _rebuildTheme() {
+        this._theme = withOverrides(defaultTheme(), this._config.colors);
+    }
+
+    /**
+     * Re-render the active label + every built vendor sub-section from cache,
+     * without fetching. Used by appearance-only changes (theme colors, popup
+     * format, pace marker) that affect all sections, not just the active one.
+     * @returns {void}
+     */
+    _reRenderAllSections() {
+        if (this._destroyed)
+            return;
+        this._reRenderFromCache();
+        for (const id of this._vendorItems.keys()) {
+            if (id !== this._activeId)
+                this._renderVendorSection(id);
         }
     }
 
