@@ -1,11 +1,14 @@
 /**
  * @file Thin renderer that walks a {@link SectionModel} and populates a
- * `PopupMenu` section with St widgets. Holds no business logic — all severity
- * colors, countdowns, and text come pre-resolved on the model; this module only
- * maps row kinds to widgets. Icons are system symbolic icons (`St.Icon`) and
- * foreground/dim/accent text inherits the live shell theme via CSS classes, so
- * the popup tracks the user's GNOME theme. The section is cleared and rebuilt on
- * every refresh.
+ * `PopupMenu` section with St widgets, laid out as a libadwaita boxed list:
+ * the whole section lives in one non-reactive item; usage windows/gauges are
+ * grouped into a rounded card, each row showing a leading symbolic icon, a
+ * title with a dim subtitle stacked under it, a trailing severity-colored value,
+ * and a full-width progress bar. Holds no business logic — all severity colors,
+ * countdowns, and text come pre-resolved on the model; this module only maps row
+ * kinds to widgets. Foreground/dim/accent text inherits the live shell theme via
+ * CSS classes, so the popup tracks the user's GNOME theme. The section is cleared
+ * and rebuilt on every refresh.
  */
 
 import Clutter from 'gi://Clutter';
@@ -54,112 +57,146 @@ function makeIcon(name, dim = false) {
 }
 
 /**
- * Append one non-reactive display line to the section and return its horizontal
- * content box for children to be added to.
- * @param {PopupMenu.PopupMenuSection} menuSection
+ * Build the leading-icon + (title / dim subtitle) + trailing-value header shared
+ * by every boxed card row. The title/subtitle column expands, pushing the
+ * trailing value to the right edge (Adwaita row layout).
+ * @param {?string} iconName - leading symbolic icon, or null for none.
+ * @param {string} title
+ * @param {{subtitle?: string, trailing?: string, trailingColor?: string}} [opts]
  * @returns {St.BoxLayout}
  */
-function addLine(menuSection) {
-    const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-    const box = new St.BoxLayout({style_class: 'aiusagebar-row'});
-    item.add_child(box);
-    menuSection.addMenuItem(item);
-    return box;
+function rowHeader(iconName, title, opts = {}) {
+    const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
+    if (iconName)
+        head.add_child(makeIcon(iconName));
+
+    const col = new St.BoxLayout({
+        vertical: true,
+        x_expand: true,
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    col.add_child(label(title, {styleClass: 'aiusagebar-row-title'}));
+    if (opts.subtitle)
+        col.add_child(label(opts.subtitle, {styleClass: 'aiusagebar-dim aiusagebar-row-subtitle'}));
+    head.add_child(col);
+
+    if (opts.trailing)
+        head.add_child(label(opts.trailing, {color: opts.trailingColor, bold: true}));
+
+    return head;
 }
 
 /**
- * Render a single `window` row: icon + title line, bar + pct + pace, dim reset
- * line. When `opts.showMarker` is set and the row carries a numeric `elapsedPct`,
- * the bar draws the elapsed-position marker.
- * @param {PopupMenu.PopupMenuSection} menuSection
+ * Build an empty vertical card-row container (header line + bar stacked).
+ * @returns {St.BoxLayout}
+ */
+function cardRow() {
+    return new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card-row'});
+}
+
+/**
+ * Build a `window` boxed row: icon + title, dim "Resets in …" subtitle, trailing
+ * `pct% pace` value, and a full-width severity bar. When `opts.showMarker` is set
+ * and the row carries a numeric `elapsedPct`, the bar draws the elapsed marker.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @param {import('../lib/theme.js').Theme} theme
  * @param {{showMarker?: boolean}} opts
- * @returns {void}
+ * @returns {St.BoxLayout}
  */
-function renderWindow(menuSection, row, theme, opts) {
-    const titleLine = addLine(menuSection);
-    if (row.icon)
-        titleLine.add_child(makeIcon(row.icon));
-    titleLine.add_child(label(row.title));
-
-    const barLine = addLine(menuSection);
-    const barOpts = opts.showMarker && typeof row.elapsedPct === 'number'
-        ? {markerPct: row.elapsedPct}
-        : null;
-    barLine.add_child(makeBar(row.pct, row.color, theme, barOpts));
+function buildWindowRow(row, theme, opts) {
+    const r = cardRow();
     const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
-    barLine.add_child(label(pctText, {color: row.color, bold: true}));
+    r.add_child(rowHeader(row.icon, row.title, {
+        subtitle: `Resets in ${row.reset}`,
+        trailing: pctText,
+        trailingColor: row.color,
+    }));
 
-    const resetLine = addLine(menuSection);
-    resetLine.add_child(makeIcon('alarm-symbolic', true));
-    resetLine.add_child(label(`Resets in ${row.reset}`, {styleClass: 'aiusagebar-dim'}));
+    const barOpts = {fullWidth: true};
+    if (opts.showMarker && typeof row.elapsedPct === 'number')
+        barOpts.markerPct = row.elapsedPct;
+    r.add_child(makeBar(row.pct, row.color, theme, barOpts));
+    return r;
 }
 
 /**
- * Render a `gauge` row: icon + title line, then a value line (bar drawn only
- * when `row.pct` is a number, omitted when `null`) with the bold colored value,
- * and an optional dim sub-line.
- * @param {PopupMenu.PopupMenuSection} menuSection
+ * Build a `gauge` boxed row: icon + title, optional dim subtitle, trailing bold
+ * colored value, and a full-width bar (drawn only when `row.pct` is a number).
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @param {import('../lib/theme.js').Theme} theme
- * @returns {void}
+ * @returns {St.BoxLayout}
  */
-function renderGauge(menuSection, row, theme) {
-    const titleLine = addLine(menuSection);
-    if (row.icon)
-        titleLine.add_child(makeIcon(row.icon));
-    titleLine.add_child(label(row.title));
-
-    const valLine = addLine(menuSection);
+function buildGaugeRow(row, theme) {
+    const r = cardRow();
+    r.add_child(rowHeader(row.icon, row.title, {
+        subtitle: row.subLine,
+        trailing: row.value,
+        trailingColor: row.color,
+    }));
     if (typeof row.pct === 'number')
-        valLine.add_child(makeBar(row.pct, row.color, theme));
-    valLine.add_child(label(row.value, {color: row.color, bold: true}));
-
-    if (row.subLine)
-        addLine(menuSection).add_child(label(row.subLine, {styleClass: 'aiusagebar-dim'}));
+        r.add_child(makeBar(row.pct, row.color, theme, {fullWidth: true}));
+    return r;
 }
 
 /**
- * Render a `text` row: optional icon + text. Color precedence is explicit
- * `row.color` hex, else `row.tone` ('dim' → dim class, otherwise themed
- * foreground).
- * @param {PopupMenu.PopupMenuSection} menuSection
+ * Build a standalone `text` line (lives outside the card). Color precedence is
+ * explicit `row.color` hex, else `row.tone` ('dim' → dim class, else themed fg).
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {void}
+ * @returns {St.BoxLayout}
  */
-function renderText(menuSection, row) {
+function buildTextLine(row) {
     const dim = row.tone === 'dim';
-    const line = addLine(menuSection);
+    const line = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
     if (row.icon)
         line.add_child(makeIcon(row.icon, dim && !row.color));
     if (row.color)
         line.add_child(label(row.text, {color: row.color}));
     else
         line.add_child(label(row.text, dim ? {styleClass: 'aiusagebar-dim'} : null));
+    return line;
 }
 
 /**
- * Render the `http-error` block: separator, icon + status line, dim wrapped body
- * lines.
- * @param {PopupMenu.PopupMenuSection} menuSection
+ * Build the `http-error` block: a thin rule, an icon + `HTTP <code>` status
+ * line, then dim wrapped body lines.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {void}
+ * @returns {St.BoxLayout}
  */
-function renderHttpError(menuSection, row) {
-    menuSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    const head = addLine(menuSection);
+function buildHttpError(row) {
+    const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
+    block.add_child(new St.Widget({style_class: 'aiusagebar-rule', x_expand: true}));
+    const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
     if (row.icon)
         head.add_child(makeIcon(row.icon));
     head.add_child(label(`HTTP ${row.code}`, {color: row.color}));
+    block.add_child(head);
     for (const line of row.lines)
-        addLine(menuSection).add_child(label(line, {styleClass: 'aiusagebar-dim'}));
+        block.add_child(label(line, {styleClass: 'aiusagebar-dim'}));
+    return block;
 }
 
 /**
- * Clear `menuSection` and repopulate it from `model`. Always emits the accent
- * header first, then one or more lines per row in model order.
- * @param {PopupMenu.PopupMenuSection} menuSection
+ * Build the dim `footer` line preceded by a thin rule.
+ * @param {import('../lib/vendors/anthropic-section.js').Row} row
+ * @returns {St.BoxLayout}
+ */
+function buildFooter(row) {
+    const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
+    block.add_child(new St.Widget({style_class: 'aiusagebar-rule', x_expand: true}));
+    const line = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
+    if (row.icon)
+        line.add_child(makeIcon(row.icon, true));
+    line.add_child(label(`Updated ${row.updated}`, {styleClass: 'aiusagebar-dim'}));
+    block.add_child(line);
+    return block;
+}
+
+/**
+ * Clear `menuSection` and repopulate it from `model` as a single non-reactive
+ * boxed-list item: the accent header first, then usage windows/gauges grouped
+ * into a rounded card (thin separators between rows), with text/error/footer
+ * lines breaking out of the card at their model position.
+ * @param {PopupMenu.PopupMenuBase} menuSection
  * @param {import('../lib/vendors/anthropic-section.js').SectionModel} model
  * @param {import('../lib/theme.js').Theme} theme
  * @param {{showMarker?: boolean}} [opts] - render options; `showMarker` draws the
@@ -169,30 +206,50 @@ function renderHttpError(menuSection, row) {
 export function renderSection(menuSection, model, theme, opts = {}) {
     menuSection.removeAll();
 
-    addLine(menuSection).add_child(label(model.title, {styleClass: 'aiusagebar-title'}));
+    const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+    const container = new St.BoxLayout({
+        vertical: true,
+        x_expand: true,
+        style_class: 'aiusagebar-section aiusagebar-popup',
+    });
+    item.add_child(container);
+    menuSection.addMenuItem(item);
+
+    container.add_child(label(model.title, {styleClass: 'aiusagebar-title'}));
+
+    // Group consecutive window/gauge rows into one rounded card with thin
+    // separators; any other row kind breaks the card and renders inline.
+    let card = null;
+    const pushCardRow = rowWidget => {
+        if (!card) {
+            card = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card'});
+            container.add_child(card);
+        } else {
+            card.add_child(new St.Widget({style_class: 'aiusagebar-card-sep', x_expand: true}));
+        }
+        card.add_child(rowWidget);
+    };
 
     for (const row of model.rows) {
         switch (row.kind) {
         case 'window':
-            renderWindow(menuSection, row, theme, opts);
+            pushCardRow(buildWindowRow(row, theme, opts));
             break;
         case 'gauge':
-            renderGauge(menuSection, row, theme);
+            pushCardRow(buildGaugeRow(row, theme));
             break;
         case 'text':
-            renderText(menuSection, row);
+            card = null;
+            container.add_child(buildTextLine(row));
             break;
         case 'http-error':
-            renderHttpError(menuSection, row);
+            card = null;
+            container.add_child(buildHttpError(row));
             break;
-        case 'footer': {
-            menuSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            const footLine = addLine(menuSection);
-            if (row.icon)
-                footLine.add_child(makeIcon(row.icon, true));
-            footLine.add_child(label(`Updated ${row.updated}`, {styleClass: 'aiusagebar-dim'}));
+        case 'footer':
+            card = null;
+            container.add_child(buildFooter(row));
             break;
-        }
         }
     }
 }

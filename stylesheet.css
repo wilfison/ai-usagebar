@@ -1,4 +1,15 @@
-/* Popup usage rows: icon + bar + labels laid out horizontally with a gap. */
+/* Vertical spacing between a section's header, card, and footer blocks. */
+.aiusagebar-section {
+    spacing: 8px;
+}
+
+/* Top-level section container: widen the popup beyond its natural content size
+   so the boxed card reads like a roomy Adwaita window. Bump for a wider popup. */
+.aiusagebar-popup {
+    min-width: 320px;
+}
+
+/* Horizontal line: icon + label(s) laid out with a gap. */
 .aiusagebar-row {
     spacing: 8px;
 }
@@ -9,19 +20,56 @@
     font-weight: bold;
 }
 
+/* Boxed-row primary text (window/gauge name). */
+.aiusagebar-row-title {
+    font-weight: bold;
+}
+
+/* Boxed-row dim subtitle (reset countdown, gauge limit) — slightly smaller. */
+.aiusagebar-row-subtitle {
+    font-size: 0.85em;
+}
+
 /* Secondary text (countdowns, footer, error body): Adwaita dim-label feel,
    inherits the themed foreground color so it adapts to light/dark. */
 .aiusagebar-dim {
     opacity: 0.55;
 }
 
-/* Progress bar: fixed height, fully rounded. The container clips its segments. */
+/* Adwaita boxed list: a rounded card grouping the usage rows. Theme-neutral
+   translucent fill + hairline border so it reads on light and dark shells. */
+.aiusagebar-card {
+    background-color: rgba(127, 127, 127, 0.10);
+    border: 1px solid rgba(127, 127, 127, 0.16);
+    border-radius: 12px;
+}
+
+/* One row inside the card: header line + bar stacked, comfortably padded. */
+.aiusagebar-card-row {
+    spacing: 6px;
+    padding: 10px 12px;
+}
+
+/* Hairline divider between card rows (full-bleed, like an Adwaita list). */
+.aiusagebar-card-sep {
+    height: 1px;
+    background-color: rgba(127, 127, 127, 0.16);
+}
+
+/* Standalone rule above the error/footer blocks. */
+.aiusagebar-rule {
+    height: 1px;
+    background-color: rgba(127, 127, 127, 0.16);
+}
+
+/* Progress bar: fixed height, fully rounded. In full-width mode the bar widget
+   itself carries the translucent track and clips the fill. */
 .aiusagebar-bar {
     height: 8px;
     border-radius: 4px;
 }
 
-/* Empty portion: theme-neutral translucent track (works on light and dark). */
+/* Empty portion / full-width track: theme-neutral translucent (light + dark). */
 .aiusagebar-bar-track {
     background-color: rgba(127, 127, 127, 0.25);
     border-radius: 4px;
