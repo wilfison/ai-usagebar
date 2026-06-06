@@ -1,1 +1,10 @@
-/* Add your custom extension styling here */
+/* Popup usage rows: bar + labels laid out horizontally with a little gap. */
+.aiusagebar-row {
+    spacing: 8px;
+}
+
+/* Progress bar: fixed height, rounded corners; width is set inline per segment. */
+.aiusagebar-bar {
+    height: 10px;
+    border-radius: 5px;
+}
