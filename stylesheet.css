@@ -1,10 +1,33 @@
-/* Popup usage rows: bar + labels laid out horizontally with a little gap. */
+/* Popup usage rows: icon + bar + labels laid out horizontally with a gap. */
 .aiusagebar-row {
     spacing: 8px;
 }
 
-/* Progress bar: fixed height, rounded corners; width is set inline per segment. */
+/* Section header: system accent color, bold — tracks the user's GNOME accent. */
+.aiusagebar-title {
+    color: -st-accent-color;
+    font-weight: bold;
+}
+
+/* Secondary text (countdowns, footer, error body): Adwaita dim-label feel,
+   inherits the themed foreground color so it adapts to light/dark. */
+.aiusagebar-dim {
+    opacity: 0.55;
+}
+
+/* Progress bar: fixed height, fully rounded. The container clips its segments. */
 .aiusagebar-bar {
-    height: 10px;
-    border-radius: 5px;
+    height: 8px;
+    border-radius: 4px;
+}
+
+/* Empty portion: theme-neutral translucent track (works on light and dark). */
+.aiusagebar-bar-track {
+    background-color: rgba(127, 127, 127, 0.25);
+    border-radius: 4px;
+}
+
+/* Filled portion: rounded; fill color is set inline per severity. */
+.aiusagebar-bar-fill {
+    border-radius: 4px;
 }

@@ -13,17 +13,17 @@ describe('defaultTheme', () => {
         );
     });
 
-    it('matches the One-Dark palette byte-for-byte', () => {
+    it('matches the default palette byte-for-byte', () => {
         const t = defaultTheme();
-        assertEqual(t.green, '#98c379');
-        assertEqual(t.yellow, '#e5c07b');
-        assertEqual(t.orange, '#d19a66');
-        assertEqual(t.red, '#e06c75');
-        assertEqual(t.blue, '#61afef');
+        assertEqual(t.green, '#2ec27e');
+        assertEqual(t.yellow, '#e5a50a');
+        assertEqual(t.orange, '#ff7800');
+        assertEqual(t.red, '#e01b24');
+        assertEqual(t.blue, '#3584e4');
         assertEqual(t.dim, '#5c6370');
         assertEqual(t.fg, '#abb2bf');
         assertEqual(t.barEmpty, '#3e4451');
-        assertEqual(t.marker, '#d19a66');
+        assertEqual(t.marker, '#77767b');
     });
 
     it('is frozen', () => {
@@ -38,7 +38,7 @@ describe('withOverrides', () => {
         const after = withOverrides(before, {mid: '#abcdef'});
         assertEqual(after.yellow, '#abcdef');
         // original unchanged
-        assertEqual(before.yellow, '#e5c07b');
+        assertEqual(before.yellow, '#e5a50a');
     });
 
     it('low/mid/high/critical map to green/yellow/orange/red', () => {

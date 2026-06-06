@@ -44,6 +44,9 @@ const RERENDER_INTERVAL_S = 60;
 const STALE_MARK = ' ⏸';
 /** @type {string} Placeholder row for an enabled vendor with no data yet. */
 const NO_DATA_MSG = 'No data — use "Refresh all"';
+/** @type {string} Symbolic icon shown on every vendor sub-section header
+ * (uniform, matching the per-vendor pages in prefs.js). */
+const VENDOR_HEADER_ICON = 'network-server-symbolic';
 
 /**
  * `PanelMenu.Button` subclass that shows multi-vendor AI plan usage in the top
@@ -269,8 +272,9 @@ class Indicator extends PanelMenu.Button {
 
         enabledVendors(config).forEach((id, idx) => {
             const adapter = getAdapter(id);
-            const sub = new PopupMenu.PopupSubMenuMenuItem('', false);
-            sub.label.text = `${adapter.icon}  ${adapter.vendorShort}`;
+            const sub = new PopupMenu.PopupSubMenuMenuItem('', true);
+            sub.icon.icon_name = VENDOR_HEADER_ICON;
+            sub.label.text = adapter.vendorShort;
             this.menu.addMenuItem(sub, idx);
             this._vendorItems.set(id, sub);
             this._renderVendorSection(id);
@@ -295,7 +299,7 @@ class Indicator extends PanelMenu.Button {
         const section = item.menu;
         const res = this._results.get(id);
         if (!res) {
-            this._setSubmenuMessage(section, NO_DATA_MSG, this._theme.dim);
+            this._setSubmenuMessage(section, NO_DATA_MSG, {dim: true});
             return;
         }
         if (res.ok) {
@@ -317,9 +321,12 @@ class Indicator extends PanelMenu.Button {
             }
             renderSection(section, model, this._theme, {showMarker: this._config.showPaceMarker});
         } else if (res.kind === 'loading') {
-            this._setSubmenuMessage(section, 'Loading…', this._theme.dim);
+            this._setSubmenuMessage(section, 'Loading…', {dim: true});
         } else {
-            this._setSubmenuMessage(section, `⚠ ${res.message}`, severityColor(Severity.CRITICAL, this._theme));
+            this._setSubmenuMessage(section, res.message, {
+                color: severityColor(Severity.CRITICAL, this._theme),
+                iconName: 'dialog-warning-symbolic',
+            });
         }
     }
 
@@ -578,19 +585,32 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * Replace a (sub)menu section with a single dim/colored message row (used for
-     * Loading…, placeholder, and error states).
+     * Replace a (sub)menu section with a single message row (used for Loading…,
+     * placeholder, and error states). Dim states inherit the themed foreground;
+     * the error state takes an explicit severity color plus a symbolic icon.
      * @param {PopupMenu.PopupMenuBase} menu - the section/submenu to fill.
      * @param {string} text
-     * @param {string} color - hex color.
+     * @param {{color?: string, iconName?: string, dim?: boolean}} [opts]
      * @returns {void}
      */
-    _setSubmenuMessage(menu, text, color) {
+    _setSubmenuMessage(menu, text, opts = {}) {
         menu.removeAll();
         const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-        const l = new St.Label({text});
-        l.set_style(`color: ${color};`);
-        item.add_child(l);
+        const box = new St.BoxLayout({style_class: 'aiusagebar-row'});
+        if (opts.iconName) {
+            box.add_child(new St.Icon({
+                icon_name: opts.iconName,
+                style_class: opts.dim ? 'popup-menu-icon aiusagebar-dim' : 'popup-menu-icon',
+                y_align: Clutter.ActorAlign.CENTER,
+            }));
+        }
+        const l = new St.Label({text, y_align: Clutter.ActorAlign.CENTER});
+        if (opts.color)
+            l.set_style(`color: ${opts.color};`);
+        else if (opts.dim)
+            l.add_style_class_name('aiusagebar-dim');
+        box.add_child(l);
+        item.add_child(box);
         menu.addMenuItem(item);
     }
 

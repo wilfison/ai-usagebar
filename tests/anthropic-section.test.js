@@ -43,7 +43,7 @@ describe('buildSection — full snapshot', () => {
 
     it('session row: icon, title, pct, mid→yellow, countdown', () => {
         const r = model.rows[0];
-        assertEqual(r.icon, '󰔟');
+        assertEqual(r.icon, 'alarm-symbolic');
         assertEqual(r.title, 'Session');
         assertEqual(r.pct, 62);
         assertEqual(r.color, theme.yellow);
@@ -61,7 +61,7 @@ describe('buildSection — full snapshot', () => {
 
     it('sonnet row: low→green, no pace glyph', () => {
         const r = model.rows[2];
-        assertEqual(r.icon, '󱤔');
+        assertEqual(r.icon, 'starred-symbolic');
         assertEqual(r.title, 'Sonnet only');
         assertEqual(r.color, theme.green);
         assertEqual(r.paceGlyph, '');
@@ -70,10 +70,10 @@ describe('buildSection — full snapshot', () => {
     it('extra row → gauge: dollars + mid→yellow', () => {
         const r = model.rows[3];
         assertEqual(r.kind, 'gauge');
-        assertEqual(r.icon, '󰄑');
+        assertEqual(r.icon, 'utilities-system-monitor-symbolic');
         assertEqual(r.pct, 50);
         assertEqual(r.value, '$25.00');
-        assertEqual(r.subLine, '󰀓  Limit: $50.00');
+        assertEqual(r.subLine, 'Limit: $50.00');
         assertEqual(r.color, theme.yellow);
     });
 });
@@ -113,24 +113,24 @@ describe('buildSection — http-error icon/color split', () => {
         return buildSection(fullSnapshot(), m, NOW, theme).rows.find(r => r.kind === 'http-error');
     }
 
-    it('429 → client glyph 󰀪 in orange', () => {
+    it('429 → client icon in orange', () => {
         const r = errorRow(429, 'rate limited');
-        assertEqual(r.icon, '󰀪');
+        assertEqual(r.icon, 'dialog-warning-symbolic');
         assertEqual(r.color, theme.orange);
         assertEqual(r.code, 429);
     });
 
-    it('503 → server glyph 󰅚 in red', () => {
+    it('503 → server icon in red', () => {
         const r = errorRow(503, 'service unavailable');
-        assertEqual(r.icon, '󰅚');
+        assertEqual(r.icon, 'dialog-error-symbolic');
         assertEqual(r.color, theme.red);
     });
 
-    it('500 (lower edge) → server glyph 󰅚', () =>
-        assertEqual(errorRow(500, 'boom').icon, '󰅚'));
+    it('500 (lower edge) → server icon', () =>
+        assertEqual(errorRow(500, 'boom').icon, 'dialog-error-symbolic'));
 
-    it('499 (upper client edge) → client glyph 󰀪', () =>
-        assertEqual(errorRow(499, 'odd').icon, '󰀪'));
+    it('499 (upper client edge) → client icon', () =>
+        assertEqual(errorRow(499, 'odd').icon, 'dialog-warning-symbolic'));
 
     it('wraps the error body to the section width', () =>
         assertEqual(Array.isArray(errorRow(500, 'a b c').lines), true));

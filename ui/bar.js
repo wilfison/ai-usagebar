@@ -1,8 +1,9 @@
 /**
  * @file Reusable horizontal progress-bar widget. A fixed-width strip split into
- * a severity-colored filled portion and a dim remainder, used by each popup
- * window/extra row. Height and corner rounding live in the `.aiusagebar-bar` CSS
- * class; only the proportional width math is computed here.
+ * a severity-colored filled portion and a theme-neutral translucent track, used
+ * by each popup window/extra row. Height, rounding, and the track color live in
+ * the `.aiusagebar-bar*` CSS classes (so the track follows the shell theme); only
+ * the proportional width math and the dynamic severity fill color are set here.
  */
 
 import St from 'gi://St';
@@ -37,12 +38,11 @@ export function makeBar(pct, color, theme, opts = null) {
 
     const bar = new St.BoxLayout({style_class: 'aiusagebar-bar', x_expand: false});
 
-    const filled = new St.Widget({width: fillW, y_expand: true});
+    const filled = new St.Widget({style_class: 'aiusagebar-bar-fill', width: fillW, y_expand: true});
     filled.set_style(`background-color: ${color};`);
     bar.add_child(filled);
 
-    const empty = new St.Widget({width: emptyW, y_expand: true});
-    empty.set_style(`background-color: ${theme.barEmpty};`);
+    const empty = new St.Widget({style_class: 'aiusagebar-bar-track', width: emptyW, y_expand: true});
     bar.add_child(empty);
 
     if (opts && typeof opts.markerPct === 'number') {
