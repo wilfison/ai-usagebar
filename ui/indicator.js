@@ -1,16 +1,24 @@
 /**
- * @file Top-panel indicator widget. Polls the effective primary vendor on the
- * configured refresh interval (plus once immediately on construction), renders
- * the configured bar label colored by severity (with a trailing `⏸` when the
- * data is stale), and fills the popup with a detailed usage section, a "Refresh
- * now" action, and `Loading…`/`⚠` states. The vendor is resolved each tick via
- * the adapter registry; when the primary changes the per-vendor cache is swapped.
- * While the popup is open a 60s timer re-renders the cached snapshot so
- * countdowns tick without hitting the network. Owns the shared cancellable, the
- * refresh timeout source, the live re-render source, the Soup session, and the
- * popup signal handler — all torn down in `destroy()`.
+ * @file Top-panel indicator widget. Polls the effective *active* vendor (the
+ * scroll-selected one, falling back to the configured primary) on the refresh
+ * interval (plus once immediately on construction), renders the configured bar
+ * label colored by severity (with a trailing `⏸` when the data is stale), and
+ * fills the popup with one collapsible sub-section per enabled vendor — the
+ * active vendor's expanded — plus "Refresh now" / "Refresh all" actions.
+ *
+ * Scrolling the button cycles through enabled vendors (UP = next, DOWN = prev,
+ * wrap-around): it writes `active-vendor`, mirrors it to disk best-effort, and
+ * triggers an immediate re-resolve + fetch of the newly-active vendor. Only the
+ * active vendor is fetched on the poll tick; other sub-sections render from an
+ * in-memory results map (populated lazily on cycle or via "Refresh all") and
+ * show a placeholder until they have data. While the popup is open a 60s timer
+ * re-renders the active sub-section so countdowns tick without hitting the
+ * network. Owns the shared cancellable, the refresh + live-render timeout
+ * sources, the Soup session, the popup signal, and the scroll signal — all torn
+ * down in `destroy()`.
  */
 
+import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
@@ -21,7 +29,8 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {Cache} from '../lib/cache.js';
 import {readConfig} from '../lib/config.js';
-import {normalizePrimary} from '../lib/config-resolve.js';
+import {normalizeActive, cycleVendor, enabledVendors} from '../lib/config-resolve.js';
+import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {request, disposeSession} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
 import {renderSection} from './vendorSection.js';
@@ -33,11 +42,14 @@ import {defaultTheme} from '../lib/theme.js';
 const RERENDER_INTERVAL_S = 60;
 /** @type {string} Suffix appended to the label when the served data is stale. */
 const STALE_MARK = ' ⏸';
+/** @type {string} Placeholder row for an enabled vendor with no data yet. */
+const NO_DATA_MSG = 'No data — use "Refresh all"';
 
 /**
- * `PanelMenu.Button` subclass that shows Anthropic plan usage in the top panel.
+ * `PanelMenu.Button` subclass that shows multi-vendor AI plan usage in the top
+ * panel and cycles vendors on scroll.
  *
- * Construct via `new Indicator()`; `GObject.registerClass` rewires the
+ * Construct via `new Indicator(settings)`; `GObject.registerClass` rewires the
  * constructor to call `_init` for you.
  * @class Indicator
  * @extends PanelMenu.Button
@@ -58,26 +70,33 @@ class Indicator extends PanelMenu.Button {
         this._barFormat = this._config.barFormat;
 
         this._cancellable = new Gio.Cancellable();
-        this._adapter = getAdapter(normalizePrimary(this._config));
+        this._activeId = normalizeActive(this._config);
+        this._adapter = getAdapter(this._activeId);
         this._cache = Cache.forVendor(this._adapter.cacheId);
         this._theme = defaultTheme();
         this._timeoutId = null;
         this._renderTimeoutId = null;
         this._openStateId = null;
+        this._scrollId = null;
         this._destroyed = false;
-        this._lastResult = null;
-        this._fetchedAt = null;
+
+        // D4 lazy data: only the active vendor is polled; other sub-sections
+        // render from whatever is already here. `_fetchedAt` pins each vendor's
+        // footer timestamp to its real fetch instant across live re-renders.
+        this._results = new Map();      // vendorId -> FetchResult
+        this._fetchedAt = new Map();    // vendorId -> Date
+        this._vendorItems = new Map();  // vendorId -> PopupMenu.PopupSubMenuMenuItem
+        this._enabledSig = '';
 
         this._box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
         this._label = new St.Label({text: `${this._adapter.vendorShort} —`});
         this._box.add_child(this._label);
         this.add_child(this._box);
 
-        // Popup: vendor section, separator, "Refresh now". Seed the section with
-        // a Loading… row so an immediately-opened popup is never empty.
-        this._section = new PopupMenu.PopupMenuSection();
-        this.menu.addMenuItem(this._section);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        // Footer items are created once (handlers connected once); per-vendor
+        // sub-sections are inserted above the separator on (re)build.
+        this._separator = new PopupMenu.PopupSeparatorMenuItem();
+        this.menu.addMenuItem(this._separator);
         this._refreshItem = new PopupMenu.PopupMenuItem('Refresh now');
         this._refreshItem.connect('activate', () => {
             if (this._destroyed)
@@ -85,9 +104,20 @@ class Indicator extends PanelMenu.Button {
             this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
         });
         this.menu.addMenuItem(this._refreshItem);
-        this._setSectionMessage('Loading…', this._theme.dim);
+        this._refreshAllItem = new PopupMenu.PopupMenuItem('Refresh all');
+        this._refreshAllItem.connect('activate', () => {
+            if (this._destroyed)
+                return;
+            this._refreshAll().catch(e => console.warn(`ai-usagebar: refresh all failed: ${e}`));
+        });
+        this.menu.addMenuItem(this._refreshAllItem);
 
-        // Live countdowns: re-render from cache only while the popup is open.
+        // Seed the active vendor with a Loading… state so its sub-section (and an
+        // immediately-opened popup) is never empty before the first fetch lands.
+        this._results.set(this._activeId, {ok: false, kind: 'loading'});
+        this._rebuildVendorSections(this._config);
+
+        // Live countdowns: re-render the active sub-section only while open.
         this._openStateId = this.menu.connect('open-state-changed', (_m, open) => {
             if (this._destroyed)
                 return;
@@ -97,8 +127,11 @@ class Indicator extends PanelMenu.Button {
                 this._onPopupClose();
         });
 
-        // One immediate refresh, then poll. A rejected promise must never
-        // escape into the timeout callback / event loop.
+        // Scroll to cycle enabled vendors.
+        this._scrollId = this.connect('scroll-event', (actor, event) => this._onScroll(actor, event));
+
+        // One immediate refresh, then poll. A rejected promise must never escape
+        // into the timeout callback / event loop.
         this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._config.refreshIntervalSecs, () => {
             this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
@@ -107,27 +140,126 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * Fetch the current snapshot and repaint the label + popup. Guards against a
-     * post-destroy callback touching a freed widget. Never throws.
+     * Signature of the enabled-vendor set in canonical order. Used to rebuild the
+     * sub-sections only when the set changes, not on every tick.
+     * @param {import('../lib/config.js').ConfigSnapshot} config
+     * @returns {string}
+     */
+    _enabledSignature(config) {
+        return enabledVendors(config).join(',');
+    }
+
+    /**
+     * Rebuild the per-vendor sub-sections only when the enabled set changed.
+     * @param {import('../lib/config.js').ConfigSnapshot} config
+     * @returns {void}
+     */
+    _maybeRebuildVendorSections(config) {
+        if (this._enabledSignature(config) !== this._enabledSig)
+            this._rebuildVendorSections(config);
+    }
+
+    /**
+     * Destroy the existing vendor sub-sections and recreate one
+     * `PopupSubMenuMenuItem` per enabled vendor (canonical order), inserted above
+     * the separator, each rendered from its current results-map entry. Expands
+     * the active vendor's sub-section.
+     * @param {import('../lib/config.js').ConfigSnapshot} config
+     * @returns {void}
+     */
+    _rebuildVendorSections(config) {
+        for (const item of this._vendorItems.values())
+            item.destroy();
+        this._vendorItems.clear();
+
+        enabledVendors(config).forEach((id, idx) => {
+            const adapter = getAdapter(id);
+            const sub = new PopupMenu.PopupSubMenuMenuItem('', false);
+            sub.label.text = `${adapter.icon}  ${adapter.vendorShort}`;
+            this.menu.addMenuItem(sub, idx);
+            this._vendorItems.set(id, sub);
+            this._renderVendorSection(id);
+        });
+
+        this._enabledSig = this._enabledSignature(config);
+        this._setActiveExpansion(this._activeId);
+    }
+
+    /**
+     * Render a single vendor's sub-section from its results-map entry: the
+     * adapter-built model when present and ok, a `Loading…`/placeholder/`⚠` row
+     * otherwise. Always renders via the vendor's own adapter (never the active
+     * one), so any entry paints correctly. No-op when the vendor has no item.
+     * @param {string} id - vendor id.
+     * @returns {void}
+     */
+    _renderVendorSection(id) {
+        const item = this._vendorItems.get(id);
+        if (!item)
+            return;
+        const section = item.menu;
+        const res = this._results.get(id);
+        if (!res) {
+            this._setSubmenuMessage(section, NO_DATA_MSG, this._theme.dim);
+            return;
+        }
+        if (res.ok) {
+            const now = new Date();
+            const fetchedAt = this._fetchedAt.get(id) ?? new Date(Date.now() - res.cacheAgeMs);
+            const model = getAdapter(id).buildSection(
+                res.snapshot,
+                {stale: res.stale, lastError: res.lastError, fetchedAt},
+                now,
+                this._theme,
+            );
+            renderSection(section, model, this._theme);
+        } else if (res.kind === 'loading') {
+            this._setSubmenuMessage(section, 'Loading…', this._theme.dim);
+        } else {
+            this._setSubmenuMessage(section, `⚠ ${res.message}`, severityColor(Severity.CRITICAL, this._theme));
+        }
+    }
+
+    /**
+     * Expand the active vendor's sub-section and collapse the rest. Skips
+     * sub-sections already in the wanted state so it never fights an animation or
+     * a user's manual expand/collapse on each tick.
+     * @param {string} activeId - vendor id to expand.
+     * @returns {void}
+     */
+    _setActiveExpansion(activeId) {
+        for (const [id, item] of this._vendorItems) {
+            const want = id === activeId;
+            if (item.menu.isOpen !== want)
+                item.setSubmenuShown(want);
+        }
+    }
+
+    /**
+     * Fetch the active vendor's snapshot and repaint the label + its sub-section.
+     * Re-reads config each tick so a gsettings change (active/primary vendor,
+     * creds path, bar format, interval) is picked up without a reactive handler.
+     * Guards against a post-destroy callback touching a freed widget. Never throws.
      * @returns {Promise<void>}
      */
     async _refresh() {
-        // Re-read config each tick so a primary-vendor, creds-path, or bar-format
-        // change applied via gsettings takes effect on the next refresh without a
-        // reactive handler (reactive binding lands with the prefs dialog).
         this._config = readConfig(this._settings);
         this._barFormat = this._config.barFormat;
 
-        // Swap adapter + cache when the effective primary vendor changed. The old
-        // result belongs to the previous vendor and must not be re-rendered
-        // through the new vendor's builders, so drop it until the new fetch lands.
-        const primary = normalizePrimary(this._config);
-        if (primary !== this._adapter.id) {
-            this._adapter = getAdapter(primary);
+        // Swap adapter + cache when the effective active vendor changed. Each
+        // vendor's result is rendered through its own adapter, so no map entry
+        // needs dropping — only the active fetch target changes.
+        const activeId = normalizeActive(this._config);
+        const activeChanged = activeId !== this._adapter.id;
+        if (activeChanged) {
+            this._adapter = getAdapter(activeId);
             this._cache = Cache.forVendor(this._adapter.cacheId);
-            this._lastResult = null;
-            this._fetchedAt = null;
         }
+        this._activeId = activeId;
+
+        this._maybeRebuildVendorSections(this._config);
+        if (activeChanged)
+            this._setActiveExpansion(activeId);
 
         const res = await this._adapter.fetchSnapshot({
             config: this._config,
@@ -137,52 +269,138 @@ class Indicator extends PanelMenu.Button {
         });
         if (this._destroyed)
             return;
+        this._storeResult(activeId, res);
         this._render(res);
     }
 
     /**
-     * Paint the label + popup for a {@link FetchResult} and remember it for live
-     * re-renders.
+     * Force-fetch every enabled vendor once, storing each `FetchResult` into the
+     * map and repainting its sub-section. Per-vendor failures are isolated and
+     * never throw into the caller. Repaints the active label/section at the end.
+     * @returns {Promise<void>}
+     */
+    async _refreshAll() {
+        const config = readConfig(this._settings);
+        this._maybeRebuildVendorSections(config);
+
+        for (const id of enabledVendors(config)) {
+            const adapter = getAdapter(id);
+            const cache = Cache.forVendor(adapter.cacheId);
+            let res;
+            try {
+                res = await adapter.fetchSnapshot({
+                    config,
+                    cache,
+                    http: request,
+                    signal: this._cancellable,
+                });
+            } catch (e) {
+                res = {ok: false, kind: 'error', message: e?.message ?? String(e)};
+            }
+            if (this._destroyed)
+                return;
+            this._storeResult(id, res);
+            this._renderVendorSection(id);
+        }
+
+        const activeRes = this._results.get(this._activeId);
+        if (activeRes)
+            this._render(activeRes);
+    }
+
+    /**
+     * Store a vendor's fetch result and pin its footer timestamp (ok results
+     * only) so live re-renders keep showing the real fetch instant.
+     * @param {string} id - vendor id.
+     * @param {import('../lib/vendors/types.js').FetchResult} res
+     * @returns {void}
+     */
+    _storeResult(id, res) {
+        this._results.set(id, res);
+        if (res.ok)
+            this._fetchedAt.set(id, new Date(Date.now() - res.cacheAgeMs));
+    }
+
+    /**
+     * Paint the label for the active vendor's {@link FetchResult} and re-render
+     * its sub-section. Expansion is managed separately (only on active change /
+     * rebuild) so it does not fight a user's manual collapse.
      * @param {import('../lib/vendors/types.js').FetchResult} res
      * @returns {void}
      */
     _render(res) {
-        this._lastResult = res;
         if (res.ok) {
-            this._fetchedAt = new Date(Date.now() - res.cacheAgeMs);
             const now = new Date();
             this._paintLabelOk(res.snapshot, res.stale, now);
-            this._paintSection(res, now);
         } else if (res.kind === 'loading') {
             this._setLabel('Loading…', this._theme.fg);
-            this._setSectionMessage('Loading…', this._theme.dim);
         } else {
             // kind: 'error' — message is retained on disk (.last_error) and in
             // the result; surface it in the popup and log it.
             console.warn(`ai-usagebar: ${res.message}`);
-            const critical = severityColor(Severity.CRITICAL, this._theme);
-            this._setLabel('⚠', critical);
-            this._setSectionMessage(`⚠ ${res.message}`, critical);
+            this._setLabel('⚠', severityColor(Severity.CRITICAL, this._theme));
+        }
+        this._renderVendorSection(this._activeId);
+    }
+
+    /**
+     * Re-render the active vendor's label + sub-section from cache without
+     * fetching. Uses a fresh clock for countdowns but the pinned fetch instant
+     * for the footer. No-op (never throws) when there is no usable cached result.
+     * @returns {void}
+     */
+    _reRenderFromCache() {
+        if (this._destroyed)
+            return;
+        const res = this._results.get(this._activeId);
+        if (!res || !res.ok)
+            return;
+        try {
+            const now = new Date();
+            this._paintLabelOk(res.snapshot, res.stale, now);
+            this._renderVendorSection(this._activeId);
+        } catch (e) {
+            console.warn(`ai-usagebar: re-render failed: ${e}`);
         }
     }
 
     /**
-     * Re-render the label + popup from the last successful result without
-     * fetching. Uses a fresh clock for countdowns but keeps the footer pinned to
-     * the original fetch instant. No-op (never throws) when there is no usable
-     * cached result.
-     * @returns {void}
+     * Cycle to the next/previous enabled vendor on scroll. No-op (propagates the
+     * event) for non vertical scroll or when fewer than two vendors are enabled.
+     * On a real cycle it persists `active-vendor`, mirrors it to disk, expands the
+     * new sub-section, and triggers an immediate re-resolve + fetch.
+     * @param {Clutter.Actor} _actor
+     * @param {Clutter.Event} event
+     * @returns {number} `Clutter.EVENT_STOP` when consumed, else `EVENT_PROPAGATE`.
      */
-    _reRenderFromCache() {
-        if (this._destroyed || !this._lastResult || !this._lastResult.ok)
-            return;
-        try {
-            const now = new Date();
-            this._paintLabelOk(this._lastResult.snapshot, this._lastResult.stale, now);
-            this._paintSection(this._lastResult, now);
-        } catch (e) {
-            console.warn(`ai-usagebar: re-render failed: ${e}`);
-        }
+    _onScroll(_actor, event) {
+        if (this._destroyed)
+            return Clutter.EVENT_PROPAGATE;
+
+        const dir = event.get_scroll_direction();
+        let delta;
+        if (dir === Clutter.ScrollDirection.UP)
+            delta = +1;
+        else if (dir === Clutter.ScrollDirection.DOWN)
+            delta = -1;
+        else
+            return Clutter.EVENT_PROPAGATE;  // SMOOTH / horizontal: ignore.
+
+        const config = readConfig(this._settings);
+        const enabled = enabledVendors(config);
+        if (enabled.length < 2)
+            return Clutter.EVENT_PROPAGATE;
+
+        const active = normalizeActive(config);
+        const next = cycleVendor(enabled, active, delta);
+        if (next === active)
+            return Clutter.EVENT_PROPAGATE;
+
+        this._settings.set_string('active-vendor', next);
+        writeActiveVendorMirror(next);
+        this._setActiveExpansion(next);  // instant feedback; _refresh re-resolves.
+        this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
+        return Clutter.EVENT_STOP;
     }
 
     /**
@@ -201,24 +419,8 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * Rebuild the popup vendor section from a successful result.
-     * @param {import('../lib/vendors/types.js').FetchResult} res
-     * @param {Date} now
-     * @returns {void}
-     */
-    _paintSection(res, now) {
-        const model = this._adapter.buildSection(
-            res.snapshot,
-            {stale: res.stale, lastError: res.lastError, fetchedAt: this._fetchedAt},
-            now,
-            this._theme,
-        );
-        renderSection(this._section, model, this._theme);
-    }
-
-    /**
      * On popup open: re-render immediately from cache, then start the 60s live
-     * re-render timer.
+     * re-render timer (active sub-section only).
      * @returns {void}
      */
     _onPopupOpen() {
@@ -243,19 +445,20 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * Replace the popup section with a single dim/colored message row (used for
-     * Loading… and error states).
+     * Replace a (sub)menu section with a single dim/colored message row (used for
+     * Loading…, placeholder, and error states).
+     * @param {PopupMenu.PopupMenuBase} menu - the section/submenu to fill.
      * @param {string} text
      * @param {string} color - hex color.
      * @returns {void}
      */
-    _setSectionMessage(text, color) {
-        this._section.removeAll();
+    _setSubmenuMessage(menu, text, color) {
+        menu.removeAll();
         const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
         const l = new St.Label({text});
         l.set_style(`color: ${color};`);
         item.add_child(l);
-        this._section.addMenuItem(item);
+        menu.addMenuItem(item);
     }
 
     /**
@@ -270,9 +473,10 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * Tear down: stop the poll + live re-render timers, disconnect the popup
-     * signal, cancel pending I/O, dispose the Soup session, clear the popup, and
-     * chain to the GObject destructor. Idempotent.
+     * Tear down: stop the poll + live re-render timers, disconnect the popup and
+     * scroll signals, cancel pending I/O, dispose the Soup session, drop the
+     * in-memory maps, clear the popup, and chain to the GObject destructor.
+     * Idempotent.
      * @returns {void}
      */
     destroy() {
@@ -290,12 +494,20 @@ class Indicator extends PanelMenu.Button {
             this.menu.disconnect(this._openStateId);
             this._openStateId = null;
         }
+        if (this._scrollId) {
+            this.disconnect(this._scrollId);
+            this._scrollId = null;
+        }
         if (this._cancellable) {
             this._cancellable.cancel();
             this._cancellable = null;
         }
         disposeSession();
         this._settings = null;
+
+        this._vendorItems.clear();
+        this._results.clear();
+        this._fetchedAt.clear();
 
         this.menu?.removeAll();
 

@@ -6,6 +6,8 @@ import {
     isEnabled,
     enabledVendors,
     normalizePrimary,
+    normalizeActive,
+    cycleVendor,
 } from '../lib/config-resolve.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
@@ -24,6 +26,7 @@ function snapshot(overrides = {}) {
     };
     return {
         primaryVendor: overrides.primaryVendor ?? 'anthropic',
+        activeVendor: overrides.activeVendor ?? '',
         vendors: {
             anthropic: {enabled: enabled.anthropic},
             openai: {enabled: enabled.openai},
@@ -110,6 +113,52 @@ describe('normalizePrimary', () => {
             })),
             'anthropic',
         ));
+});
+
+describe('normalizeActive', () => {
+    it('returns the active vendor when it is enabled', () =>
+        assertEqual(
+            normalizeActive(snapshot({primaryVendor: 'anthropic', activeVendor: 'zai'})),
+            'zai',
+        ));
+    it('falls back to primary when the active vendor is disabled', () =>
+        assertEqual(
+            normalizeActive(snapshot({
+                primaryVendor: 'openai',
+                activeVendor: 'deepseek',
+            })),
+            'openai',
+        ));
+    it('falls back through normalizePrimary when both active and primary are disabled', () =>
+        assertEqual(
+            normalizeActive(snapshot({
+                primaryVendor: 'openai',
+                activeVendor: 'deepseek',
+                enabled: {openai: false},
+            })),
+            'anthropic',
+        ));
+    it('falls back to primary when active is unset (empty string)', () =>
+        assertEqual(
+            normalizeActive(snapshot({primaryVendor: 'zai', activeVendor: ''})),
+            'zai',
+        ));
+});
+
+describe('cycleVendor', () => {
+    const list = ['anthropic', 'openai', 'zai'];
+    it('steps forward', () => assertEqual(cycleVendor(list, 'anthropic', +1), 'openai'));
+    it('steps backward', () => assertEqual(cycleVendor(list, 'openai', -1), 'anthropic'));
+    it('wraps forward past the end', () => assertEqual(cycleVendor(list, 'zai', +1), 'anthropic'));
+    it('wraps backward past the start', () => assertEqual(cycleVendor(list, 'anthropic', -1), 'zai'));
+    it('returns the first element for +1 when current is absent', () =>
+        assertEqual(cycleVendor(list, 'deepseek', +1), 'anthropic'));
+    it('returns the last element for -1 when current is absent', () =>
+        assertEqual(cycleVendor(list, 'deepseek', -1), 'zai'));
+    it('single-element list returns itself', () =>
+        assertEqual(cycleVendor(['zai'], 'zai', +1), 'zai'));
+    it('empty list returns current unchanged', () =>
+        assertEqual(cycleVendor([], 'zai', +1), 'zai'));
 });
 
 system.exit(summary());
