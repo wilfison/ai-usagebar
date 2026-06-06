@@ -116,6 +116,24 @@ describe('fetchSnapshot (zai)', () => {
         assertEqual(r.snapshot.session.utilizationPct, 10);
         assertEqual(r.lastError.code, 401);
     }));
+
+    it('transient failure with no cache → kind:loading (never error)', withTemp(({cache}) => {
+        // Transport/timeout/cancel surfaces as res.error; with nothing cached the
+        // panel must show Loading…, not the ⚠ error state.
+        const http = httpStub({status: 0, headers: {}, bodyBytes: new Uint8Array(0), error: new Error('network down')});
+        const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
+        assertEqual(r.ok, false);
+        assertEqual(r.kind, 'loading');
+    }));
+
+    it('HTTP failure with no cache → kind:error with a message', withTemp(({cache}) => {
+        const http = httpStub(res(401, '{"code":401,"msg":"Unauthorized"}'));
+        const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
+        assertEqual(r.ok, false);
+        assertEqual(r.kind, 'error');
+        assertEqual(typeof r.message, 'string');
+        assertEqual(r.message.includes('401'), true);
+    }));
 });
 
 system.exit(summary());

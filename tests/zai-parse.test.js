@@ -99,6 +99,14 @@ describe('placeholders', () => {
         assertEqual(m.get('session_reset'), '—');
         assertEqual(m.get('zai_mcp_pct'), '0');
     });
+
+    it('the schema default bar-format renders the expected label', () => {
+        // Regression guard for the default 'bar-format' template; '—' when the
+        // session window reports no reset time.
+        const DEFAULT = '{vendor_short} {session_pct}% · {session_reset}';
+        const s = parseEnvelope('{"data":{"limits":[{"type":"TOKENS_LIMIT","percentage":42}],"level":"pro"}}', null);
+        assertEqual(substitute(DEFAULT, placeholders(s, now)), 'zai 42% · —');
+    });
 });
 
 system.exit(summary());
