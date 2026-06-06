@@ -13,6 +13,7 @@ help:
 	@echo "  eslint   Run eslint (GNOME Shell style); needs 'npm ci' first"
 	@echo "  validate Validate metadata.json + compile schema with --strict"
 	@echo "  watch    Re-run 'make test' on changes under lib/ ui/ tests/"
+	@echo "  run      Launch a nested gnome-shell (Wayland) to test the extension"
 	@echo "  pack     Build the upload zip via gnome-extensions pack"
 	@echo "  info     Show gnome-extensions info for $(UUID)"
 
@@ -54,10 +55,16 @@ watch:
 		$(MAKE) --no-print-directory test || true; \
 	done
 
+# Run the extension inside a throwaway nested gnome-shell so you can iterate
+# without logging out of your Wayland session. The nested shell gets its own
+# D-Bus session; close its window to exit.
+run:
+	MUTTER_DEBUG="focus,stack" dbus-run-session -- gnome-shell --wayland --devkit
+
 pack: schemas
 	gnome-extensions pack . --force
 
 info:
 	gnome-extensions info $(UUID)
 
-.PHONY: help schemas enable disable reload logs test lint eslint validate watch pack info
+.PHONY: help schemas enable disable reload logs test lint eslint validate watch run pack info
