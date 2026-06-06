@@ -34,7 +34,7 @@ import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {request, disposeSession} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
 import {renderSection} from './vendorSection.js';
-import {substitute} from '../lib/format.js';
+import {substitute, tooltipRows} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
 
@@ -297,12 +297,20 @@ class Indicator extends PanelMenu.Button {
         if (res.ok) {
             const now = new Date();
             const fetchedAt = this._fetchedAt.get(id) ?? new Date(Date.now() - res.cacheAgeMs);
-            const model = getAdapter(id).buildSection(
+            const adapter = getAdapter(id);
+            const model = adapter.buildSection(
                 res.snapshot,
                 {stale: res.stale, lastError: res.lastError, fetchedAt},
                 now,
                 this._theme,
             );
+            // A non-empty tooltip-format prepends additive text rows built from
+            // this vendor's placeholders, above the structured layout.
+            if (this._config.tooltipFormat) {
+                const extra = tooltipRows(this._config.tooltipFormat, adapter.placeholders(res.snapshot, now));
+                if (extra.length)
+                    model.rows = [...extra, ...model.rows];
+            }
             renderSection(section, model, this._theme);
         } else if (res.kind === 'loading') {
             this._setSubmenuMessage(section, 'Loading…', this._theme.dim);
