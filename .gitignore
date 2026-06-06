@@ -2,6 +2,7 @@
 /docs
 /tasks
 *.compiled
+*.shell-extension.zip
 
 # Local secrets — never commit
 *.credentials.json

@@ -1,7 +1,7 @@
 /**
- * @file Top-panel indicator widget. Polls the Anthropic vendor every
- * {@link REFRESH_INTERVAL_S} seconds (plus once immediately on construction),
- * renders the default bar label `cld <pct>% · <reset>` colored by severity (with
+ * @file Top-panel indicator widget. Polls the Anthropic vendor on the
+ * configured refresh interval (plus once immediately on construction),
+ * renders the configured bar label `cld <pct>% · <reset>` colored by severity (with
  * a trailing `⏸` when the data is stale), and fills the popup with a detailed
  * usage section, a "Refresh now" action, and `Loading…`/`⚠` states. While the
  * popup is open a 60s timer re-renders the cached snapshot so countdowns tick
@@ -19,8 +19,8 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {Cache} from '../lib/cache.js';
+import {readConfig, anthropicCredsPath} from '../lib/config.js';
 import {request, disposeSession} from '../lib/http.js';
-import {defaultCredsPath} from '../lib/oauth/anthropic.js';
 import {fetchSnapshot} from '../lib/vendors/anthropic.js';
 import {placeholders, anthropicSeverity} from '../lib/vendors/anthropic-parse.js';
 import {buildSection} from '../lib/vendors/anthropic-section.js';
@@ -29,10 +29,6 @@ import {substitute} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme} from '../lib/theme.js';
 
-/** @type {string} Default panel bar format. */
-const DEFAULT_FORMAT = '{vendor_short} {session_pct}% · {session_reset}';
-/** @type {number} Poll interval — upstream rate-limits below 300s. */
-const REFRESH_INTERVAL_S = 300;
 /** @type {number} Live countdown re-render cadence while the popup is open. */
 const RERENDER_INTERVAL_S = 60;
 /** @type {string} Suffix appended to the label when the served data is stale. */
@@ -50,11 +46,16 @@ export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     /**
      * Build the panel widget and popup, kick off an immediate refresh, and start
-     * the 300s poll timer.
+     * the poll timer at the configured interval.
+     * @param {object} settings - the extension's Gio.Settings store.
      * @returns {void}
      */
-    _init() {
+    _init(settings) {
         super._init(0.0, 'ai-usagebar');
+
+        this._settings = settings;
+        this._config = readConfig(settings);
+        this._barFormat = this._config.barFormat;
 
         this._cancellable = new Gio.Cancellable();
         this._cache = Cache.forVendor('anthropic');
@@ -98,7 +99,7 @@ class Indicator extends PanelMenu.Button {
         // One immediate refresh, then poll. A rejected promise must never
         // escape into the timeout callback / event loop.
         this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
-        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, REFRESH_INTERVAL_S, () => {
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._config.refreshIntervalSecs, () => {
             this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
             return GLib.SOURCE_CONTINUE;
         });
@@ -110,10 +111,15 @@ class Indicator extends PanelMenu.Button {
      * @returns {Promise<void>}
      */
     async _refresh() {
+        // Re-read config each tick so a creds-path or bar-format change applied
+        // via gsettings takes effect on the next refresh without a reactive
+        // handler (reactive binding lands with the prefs dialog).
+        this._config = readConfig(this._settings);
+        this._barFormat = this._config.barFormat;
         const res = await fetchSnapshot({
             cache: this._cache,
             http: request,
-            credsPath: defaultCredsPath(),
+            credsPath: anthropicCredsPath(this._config),
             signal: this._cancellable,
         });
         if (this._destroyed)
@@ -175,7 +181,7 @@ class Indicator extends PanelMenu.Button {
      * @returns {void}
      */
     _paintLabelOk(snapshot, stale, now) {
-        let text = substitute(DEFAULT_FORMAT, placeholders(snapshot, now));
+        let text = substitute(this._barFormat, placeholders(snapshot, now));
         if (stale)
             text += STALE_MARK;
         this._setLabel(text, severityColor(anthropicSeverity(snapshot), this._theme));
@@ -276,6 +282,7 @@ class Indicator extends PanelMenu.Button {
             this._cancellable = null;
         }
         disposeSession();
+        this._settings = null;
 
         this.menu?.removeAll();
 

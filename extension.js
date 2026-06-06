@@ -15,11 +15,11 @@ import {Indicator} from './ui/indicator.js';
  */
 export default class AiUsagebarExtension extends Extension {
     /**
-     * Construct and mount the panel indicator.
+     * Construct and mount the panel indicator, handing it the GSettings store.
      * @returns {void}
      */
     enable() {
-        this._indicator = new Indicator();
+        this._indicator = new Indicator(this.getSettings());
         Main.panel.addToStatusArea(this.uuid, this._indicator);
     }
 

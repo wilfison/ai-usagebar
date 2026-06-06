@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.ai-usagebar.vendor">
+    <value nick="anthropic" value="0"/>
+    <value nick="openai" value="1"/>
+    <value nick="zai" value="2"/>
+    <value nick="openrouter" value="3"/>
+    <value nick="deepseek" value="4"/>
+  </enum>
+
+  <schema id="org.gnome.shell.extensions.ai-usagebar"
+          path="/org/gnome/shell/extensions/ai-usagebar/">
+
+    <key name="primary-vendor" enum="org.gnome.shell.extensions.ai-usagebar.vendor">
+      <default>'anthropic'</default>
+      <summary>Primary vendor shown on the panel</summary>
+      <description>Which vendor's usage the top-panel label displays.</description>
+    </key>
+
+    <key name="active-vendor" enum="org.gnome.shell.extensions.ai-usagebar.vendor">
+      <default>'anthropic'</default>
+      <summary>Currently active vendor</summary>
+      <description>The vendor selected by scroll-cycling; defaults to the primary vendor.</description>
+    </key>
+
+    <key name="refresh-interval" type="i">
+      <default>300</default>
+      <range min="300" max="86400"/>
+      <summary>Refresh interval in seconds</summary>
+      <description>How often usage is fetched. The minimum of 300 seconds avoids the upstream endpoints' aggressive rate limiting.</description>
+    </key>
+
+    <key name="bar-format" type="s">
+      <default>'{vendor_short} {session_pct}% · {session_reset}'</default>
+      <summary>Panel label format template</summary>
+      <description>Template for the top-panel label. Supports {placeholder} substitution from the active vendor's value set.</description>
+    </key>
+
+    <key name="tooltip-format" type="s">
+      <default>''</default>
+      <summary>Popup format template</summary>
+      <description>Optional template for the popup. An empty value uses the built-in structured layout.</description>
+    </key>
+
+    <key name="color-low" type="s">
+      <default>''</default>
+      <summary>Low-severity color override</summary>
+      <description>Hex color (#rrggbb) for the low-severity tier. Empty derives the color from the active theme.</description>
+    </key>
+
+    <key name="color-mid" type="s">
+      <default>''</default>
+      <summary>Mid-severity color override</summary>
+      <description>Hex color (#rrggbb) for the mid-severity tier. Empty derives the color from the active theme.</description>
+    </key>
+
+    <key name="color-high" type="s">
+      <default>''</default>
+      <summary>High-severity color override</summary>
+      <description>Hex color (#rrggbb) for the high-severity tier. Empty derives the color from the active theme.</description>
+    </key>
+
+    <key name="color-critical" type="s">
+      <default>''</default>
+      <summary>Critical-severity color override</summary>
+      <description>Hex color (#rrggbb) for the critical-severity tier. Empty derives the color from the active theme.</description>
+    </key>
+
+    <key name="anthropic-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Anthropic</summary>
+      <description>Whether the Anthropic vendor is polled and shown.</description>
+    </key>
+
+    <key name="anthropic-credentials-path" type="s">
+      <default>''</default>
+      <summary>Anthropic credentials path override</summary>
+      <description>Path to the Claude credentials file. Empty uses ~/.claude/.credentials.json.</description>
+    </key>
+
+    <key name="openai-enabled" type="b">
+      <default>true</default>
+      <summary>Enable OpenAI</summary>
+      <description>Whether the OpenAI/Codex vendor is polled and shown.</description>
+    </key>
+
+    <key name="openai-codex-auth-path" type="s">
+      <default>''</default>
+      <summary>Codex auth path override</summary>
+      <description>Path to the Codex auth file. Empty uses ~/.codex/auth.json.</description>
+    </key>
+
+    <key name="openai-admin-key-env" type="s">
+      <default>'OPENAI_ADMIN_KEY'</default>
+      <summary>OpenAI admin key environment variable</summary>
+      <description>Name of the environment variable holding the OpenAI admin key for the API-key fallback path.</description>
+    </key>
+
+    <key name="zai-enabled" type="b">
+      <default>true</default>
+      <summary>Enable Z.AI</summary>
+      <description>Whether the Z.AI vendor is polled and shown.</description>
+    </key>
+
+    <key name="zai-api-key-env" type="s">
+      <default>'ZAI_API_KEY'</default>
+      <summary>Z.AI API key environment variable</summary>
+      <description>Name of the environment variable holding the Z.AI API key (takes precedence over the inline key).</description>
+    </key>
+
+    <key name="zai-api-key" type="s">
+      <default>''</default>
+      <summary>Z.AI inline API key</summary>
+      <description>Inline Z.AI API key used when the environment variable is unset. Empty means none.</description>
+    </key>
+
+    <key name="zai-plan-tier" type="s">
+      <default>''</default>
+      <summary>Z.AI plan tier</summary>
+      <description>Display-only plan tier label (e.g. lite/pro/max). Empty means unset.</description>
+    </key>
+
+    <key name="openrouter-enabled" type="b">
+      <default>true</default>
+      <summary>Enable OpenRouter</summary>
+      <description>Whether the OpenRouter vendor is polled and shown.</description>
+    </key>
+
+    <key name="openrouter-api-key-env" type="s">
+      <default>'OPENROUTER_API_KEY'</default>
+      <summary>OpenRouter API key environment variable</summary>
+      <description>Name of the environment variable holding the OpenRouter API key (takes precedence over the inline key).</description>
+    </key>
+
+    <key name="openrouter-api-key" type="s">
+      <default>''</default>
+      <summary>OpenRouter inline API key</summary>
+      <description>Inline OpenRouter API key used when the environment variable is unset. Empty means none.</description>
+    </key>
+
+    <key name="deepseek-enabled" type="b">
+      <default>false</default>
+      <summary>Enable DeepSeek</summary>
+      <description>Whether the DeepSeek vendor is polled and shown. Off by default; requires an API key.</description>
+    </key>
+
+    <key name="deepseek-api-key-env" type="s">
+      <default>'DEEPSEEK_API_KEY'</default>
+      <summary>DeepSeek API key environment variable</summary>
+      <description>Name of the environment variable holding the DeepSeek API key (takes precedence over the inline key).</description>
+    </key>
+
+    <key name="deepseek-api-key" type="s">
+      <default>''</default>
+      <summary>DeepSeek inline API key</summary>
+      <description>Inline DeepSeek API key used when the environment variable is unset. Empty means none.</description>
+    </key>
+
+  </schema>
+</schemalist>
