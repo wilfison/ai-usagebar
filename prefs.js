@@ -4,10 +4,11 @@
  * and the PURE `lib/vendors.js` — never shell modules or the gi-bound adapter
  * registry. Adds six pages (General + one per vendor) bound to GSettings.
  *
- * Surfaces only the keys the extension consumes: `color-*` and `tooltip-format`
- * are deferred to Step 11, and `openai-admin-key-env` is intentionally not shown
- * (OpenAI is Codex-OAuth-only). Inline API keys use a masked entry with a reveal
- * toggle and live only in dconf.
+ * Surfaces the keys the extension consumes: the General page covers the primary
+ * vendor, refresh cadence, bar/popup formats, severity-color overrides, and the
+ * pace-marker toggle; `openai-admin-key-env` is intentionally not shown (OpenAI
+ * is Codex-OAuth-only). Inline API keys use a masked entry with a reveal toggle
+ * and live only in dconf.
  */
 
 import Adw from 'gi://Adw';
@@ -26,6 +27,12 @@ const INTERVAL_MAX = 86400;
 const BAR_PLACEHOLDERS =
     'Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} ' +
     '{weekly_pct} {weekly_reset}';
+/** @type {string} Hint shown under the popup-format row. */
+const POPUP_HINT =
+    'Optional extra lines shown above the popup. Empty uses the built-in layout. ' +
+    'Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} {weekly_reset}';
+/** @type {string} Hint shown under the severity-color overrides group. */
+const COLOR_HINT = 'Hex colors (#rrggbb). Empty leaves the tier on its built-in default.';
 
 /**
  * Preferences entry point. Populates the provided `Adw.PreferencesWindow` with a
@@ -142,6 +149,26 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         settings.bind('bar-format', barFormat, 'text', Gio.SettingsBindFlags.DEFAULT);
         labelGroup.add(barFormat);
         page.add(labelGroup);
+
+        // --- Popup (format + pace marker) ---
+        const popupGroup = new Adw.PreferencesGroup({
+            title: 'Popup',
+            description: POPUP_HINT,
+        });
+        popupGroup.add(this._entryRow(settings, 'tooltip-format', 'Popup format'));
+        popupGroup.add(this._switchRow(settings, 'show-pace-marker', 'Show pace marker'));
+        page.add(popupGroup);
+
+        // --- Severity colors (empty = built-in default) ---
+        const colorGroup = new Adw.PreferencesGroup({
+            title: 'Severity colors',
+            description: COLOR_HINT,
+        });
+        colorGroup.add(this._entryRow(settings, 'color-low', 'Low'));
+        colorGroup.add(this._entryRow(settings, 'color-mid', 'Mid'));
+        colorGroup.add(this._entryRow(settings, 'color-high', 'High'));
+        colorGroup.add(this._entryRow(settings, 'color-critical', 'Critical'));
+        page.add(colorGroup);
 
         return page;
     }
