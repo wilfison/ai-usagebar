@@ -11,6 +11,7 @@ help:
 	@echo "  test     Run the gjs unit-test suite (tests/run.js)"
 	@echo "  lint     Check trailing newline + no imports.* in JS files"
 	@echo "  eslint   Run eslint (GNOME Shell style); needs 'npm ci' first"
+	@echo "  validate Validate metadata.json + compile schema with --strict"
 	@echo "  pack     Build the upload zip via gnome-extensions pack"
 	@echo "  info     Show gnome-extensions info for $(UUID)"
 
@@ -37,10 +38,13 @@ lint:
 eslint:
 	npx eslint .
 
+validate:
+	@./tools/validate.sh
+
 pack: schemas
 	gnome-extensions pack . --force
 
 info:
 	gnome-extensions info $(UUID)
 
-.PHONY: help schemas enable disable reload logs test lint eslint pack info
+.PHONY: help schemas enable disable reload logs test lint eslint validate pack info
