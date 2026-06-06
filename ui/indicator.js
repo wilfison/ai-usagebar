@@ -70,6 +70,11 @@ class Indicator extends PanelMenu.Button {
     _init(settings, openPreferences) {
         super._init(0.0, 'ai-usagebar');
 
+        // Pin the whole popup to a consistent width (see .aiusagebar-popup). Set
+        // on the menu's item box so it holds regardless of which vendor sub-menu
+        // is expanded, rather than on a per-section container nested in a submenu.
+        this.menu.box.add_style_class_name('aiusagebar-popup');
+
         this._settings = settings;
         this._openPreferences = openPreferences;
         this._config = readConfig(settings);
@@ -319,7 +324,7 @@ class Indicator extends PanelMenu.Button {
                 if (extra.length)
                     model.rows = [...extra, ...model.rows];
             }
-            renderSection(section, model, this._theme, {showMarker: this._config.showPaceMarker});
+            renderSection(section, model);
         } else if (res.kind === 'loading') {
             this._setSubmenuMessage(section, 'Loading…', {dim: true});
         } else {

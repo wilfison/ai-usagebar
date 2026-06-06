@@ -62,7 +62,7 @@ function makeIcon(name, dim = false) {
  * trailing value to the right edge (Adwaita row layout).
  * @param {?string} iconName - leading symbolic icon, or null for none.
  * @param {string} title
- * @param {{subtitle?: string, trailing?: string, trailingColor?: string}} [opts]
+ * @param {{subtitle?: string, trailing?: string}} [opts]
  * @returns {St.BoxLayout}
  */
 function rowHeader(iconName, title, opts = {}) {
@@ -81,7 +81,7 @@ function rowHeader(iconName, title, opts = {}) {
     head.add_child(col);
 
     if (opts.trailing)
-        head.add_child(label(opts.trailing, {color: opts.trailingColor, bold: true}));
+        head.add_child(label(opts.trailing, {bold: true}));
 
     return head;
 }
@@ -96,45 +96,36 @@ function cardRow() {
 
 /**
  * Build a `window` boxed row: icon + title, dim "Resets in …" subtitle, trailing
- * `pct% pace` value, and a full-width severity bar. When `opts.showMarker` is set
- * and the row carries a numeric `elapsedPct`, the bar draws the elapsed marker.
+ * bold `pct% pace` value (themed foreground), and a full-width native accent bar.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @param {import('../lib/theme.js').Theme} theme
- * @param {{showMarker?: boolean}} opts
  * @returns {St.BoxLayout}
  */
-function buildWindowRow(row, theme, opts) {
+function buildWindowRow(row) {
     const r = cardRow();
     const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
     r.add_child(rowHeader(row.icon, row.title, {
         subtitle: `Resets in ${row.reset}`,
         trailing: pctText,
-        trailingColor: row.color,
     }));
-
-    const barOpts = {fullWidth: true};
-    if (opts.showMarker && typeof row.elapsedPct === 'number')
-        barOpts.markerPct = row.elapsedPct;
-    r.add_child(makeBar(row.pct, row.color, theme, barOpts));
+    r.add_child(makeBar(row.pct));
     return r;
 }
 
 /**
  * Build a `gauge` boxed row: icon + title, optional dim subtitle, trailing bold
- * colored value, and a full-width bar (drawn only when `row.pct` is a number).
+ * value (themed foreground), and a native accent bar (drawn only when `row.pct`
+ * is a number).
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @param {import('../lib/theme.js').Theme} theme
  * @returns {St.BoxLayout}
  */
-function buildGaugeRow(row, theme) {
+function buildGaugeRow(row) {
     const r = cardRow();
     r.add_child(rowHeader(row.icon, row.title, {
         subtitle: row.subLine,
         trailing: row.value,
-        trailingColor: row.color,
     }));
     if (typeof row.pct === 'number')
-        r.add_child(makeBar(row.pct, row.color, theme, {fullWidth: true}));
+        r.add_child(makeBar(row.pct));
     return r;
 }
 
@@ -158,7 +149,8 @@ function buildTextLine(row) {
 
 /**
  * Build the `http-error` block: a thin rule, an icon + `HTTP <code>` status
- * line, then dim wrapped body lines.
+ * line (themed foreground; the warning icon carries the error semantics), then
+ * dim wrapped body lines.
  * @param {import('../lib/vendors/anthropic-section.js').Row} row
  * @returns {St.BoxLayout}
  */
@@ -168,7 +160,7 @@ function buildHttpError(row) {
     const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
     if (row.icon)
         head.add_child(makeIcon(row.icon));
-    head.add_child(label(`HTTP ${row.code}`, {color: row.color}));
+    head.add_child(label(`HTTP ${row.code}`));
     block.add_child(head);
     for (const line of row.lines)
         block.add_child(label(line, {styleClass: 'aiusagebar-dim'}));
@@ -198,19 +190,16 @@ function buildFooter(row) {
  * lines breaking out of the card at their model position.
  * @param {PopupMenu.PopupMenuBase} menuSection
  * @param {import('../lib/vendors/anthropic-section.js').SectionModel} model
- * @param {import('../lib/theme.js').Theme} theme
- * @param {{showMarker?: boolean}} [opts] - render options; `showMarker` draws the
- *   elapsed-position marker on window bars.
  * @returns {void}
  */
-export function renderSection(menuSection, model, theme, opts = {}) {
+export function renderSection(menuSection, model) {
     menuSection.removeAll();
 
     const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
     const container = new St.BoxLayout({
         vertical: true,
         x_expand: true,
-        style_class: 'aiusagebar-section aiusagebar-popup',
+        style_class: 'aiusagebar-section',
     });
     item.add_child(container);
     menuSection.addMenuItem(item);
@@ -233,10 +222,10 @@ export function renderSection(menuSection, model, theme, opts = {}) {
     for (const row of model.rows) {
         switch (row.kind) {
         case 'window':
-            pushCardRow(buildWindowRow(row, theme, opts));
+            pushCardRow(buildWindowRow(row));
             break;
         case 'gauge':
-            pushCardRow(buildGaugeRow(row, theme));
+            pushCardRow(buildGaugeRow(row));
             break;
         case 'text':
             card = null;

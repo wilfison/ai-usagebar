@@ -3,8 +3,9 @@
     spacing: 8px;
 }
 
-/* Top-level section container: widen the popup beyond its natural content size
-   so the boxed card reads like a roomy Adwaita window. Bump for a wider popup. */
+/* The popup's item box (class added to this.menu.box in ui/indicator.js): pin a
+   consistent minimum width so every vendor sub-menu opens at the same roomy
+   Adwaita width instead of resizing to each one's content. Bump for a wider popup. */
 .aiusagebar-popup {
     min-width: 320px;
 }
@@ -14,9 +15,9 @@
     spacing: 8px;
 }
 
-/* Section header: system accent color, bold — tracks the user's GNOME accent. */
+/* Section header (vendor plan name): bold, no custom color — inherits the
+   popup's themed foreground so it stays high-contrast on light and dark shells. */
 .aiusagebar-title {
-    color: -st-accent-color;
     font-weight: bold;
 }
 
@@ -36,21 +37,16 @@
     opacity: 0.55;
 }
 
-/* Adwaita boxed list: a rounded card grouping the usage rows. Theme-neutral
-   translucent fill + hairline border so it reads on light and dark shells. */
-.aiusagebar-card {
-    background-color: rgba(127, 127, 127, 0.10);
-    border: 1px solid rgba(127, 127, 127, 0.16);
-    border-radius: 12px;
-}
-
-/* One row inside the card: header line + bar stacked, comfortably padded. */
+/* Adwaita boxed list: rows are grouped only by the hairline separators below;
+   the card draws no fill of its own, so labels sit on the popup's native
+   GNOME-themed background and keep the shell theme's contrast. */
 .aiusagebar-card-row {
     spacing: 6px;
-    padding: 10px 12px;
+    padding: 8px 4px;
 }
 
-/* Hairline divider between card rows (full-bleed, like an Adwaita list). */
+/* Hairline divider between card rows (full-bleed, like an Adwaita list). A thin
+   line, not a background — kept faint so it structures without muddying text. */
 .aiusagebar-card-sep {
     height: 1px;
     background-color: rgba(127, 127, 127, 0.16);
@@ -62,20 +58,23 @@
     background-color: rgba(127, 127, 127, 0.16);
 }
 
-/* Progress bar: fixed height, fully rounded. In full-width mode the bar widget
-   itself carries the translucent track and clips the fill. */
+/* Progress bar: fixed height, fully rounded. The bar widget itself is the
+   track; a child widget is the fill (sized in ui/bar.js). */
 .aiusagebar-bar {
     height: 8px;
     border-radius: 4px;
 }
 
-/* Empty portion / full-width track: theme-neutral translucent (light + dark). */
+/* Track: theme-neutral translucent grey that reads on light and dark shells
+   (St exposes no adaptive neutral color token). */
 .aiusagebar-bar-track {
     background-color: rgba(127, 127, 127, 0.25);
     border-radius: 4px;
 }
 
-/* Filled portion: rounded; fill color is set inline per severity. */
+/* Fill: the GNOME accent color — the one themed color token St exposes, so the
+   bar tracks the user's accent like the shell's own sliders. */
 .aiusagebar-bar-fill {
+    background-color: -st-accent-color;
     border-radius: 4px;
 }
