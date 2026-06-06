@@ -74,7 +74,10 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildGeneralPage(settings, cleanups) {
-        const page = new Adw.PreferencesPage({title: 'General'});
+        const page = new Adw.PreferencesPage({
+            title: 'General',
+            icon_name: 'preferences-system-symbolic',
+        });
 
         // --- Primary vendor (enum combo) ---
         const displayGroup = new Adw.PreferencesGroup({title: 'Display'});
@@ -179,7 +182,10 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildAnthropicPage(settings) {
-        const page = new Adw.PreferencesPage({title: 'Anthropic'});
+        const page = new Adw.PreferencesPage({
+            title: 'Anthropic',
+            icon_name: 'network-server-symbolic',
+        });
         const group = new Adw.PreferencesGroup({
             title: 'Anthropic',
             description: 'Credentials path — empty uses ~/.claude/.credentials.json.',
@@ -197,7 +203,10 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildOpenAiPage(settings) {
-        const page = new Adw.PreferencesPage({title: 'OpenAI'});
+        const page = new Adw.PreferencesPage({
+            title: 'OpenAI',
+            icon_name: 'network-server-symbolic',
+        });
         const group = new Adw.PreferencesGroup({
             title: 'OpenAI',
             description: 'Codex auth path — empty uses ~/.codex/auth.json.',
@@ -214,7 +223,10 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildZaiPage(settings) {
-        const page = new Adw.PreferencesPage({title: 'Z.AI'});
+        const page = new Adw.PreferencesPage({
+            title: 'Z.AI',
+            icon_name: 'network-server-symbolic',
+        });
         const group = new Adw.PreferencesGroup({
             title: 'Z.AI',
             description: 'Set the API key inline or via the environment variable (env wins).',
@@ -233,7 +245,10 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildOpenRouterPage(settings) {
-        const page = new Adw.PreferencesPage({title: 'OpenRouter'});
+        const page = new Adw.PreferencesPage({
+            title: 'OpenRouter',
+            icon_name: 'network-server-symbolic',
+        });
         const group = new Adw.PreferencesGroup({
             title: 'OpenRouter',
             description: 'Set the API key inline or via the environment variable (env wins).',
@@ -251,7 +266,10 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
      * @returns {Adw.PreferencesPage}
      */
     _buildDeepSeekPage(settings) {
-        const page = new Adw.PreferencesPage({title: 'DeepSeek'});
+        const page = new Adw.PreferencesPage({
+            title: 'DeepSeek',
+            icon_name: 'network-server-symbolic',
+        });
         const group = new Adw.PreferencesGroup({
             title: 'DeepSeek',
             description: 'Disabled by default; requires an API key (env var or inline).',
