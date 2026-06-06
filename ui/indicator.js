@@ -94,7 +94,11 @@ class Indicator extends PanelMenu.Button {
         this._enabledSig = '';
 
         this._box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
-        this._label = new St.Label({text: `${this._adapter.vendorShort} —`});
+        this._label = new St.Label({
+            text: `${this._adapter.vendorShort} —`,
+            y_align: Clutter.ActorAlign.CENTER,
+            y_expand: true,
+        });
         this._box.add_child(this._label);
         this.add_child(this._box);
 
