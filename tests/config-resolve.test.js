@@ -59,12 +59,12 @@ describe('isEnabled / enabledVendors — defaults', () => {
     it('enabledVendors preserves canonical order, omits DeepSeek', () =>
         assertDeepEqual(
             enabledVendors(snapshot()),
-            ['anthropic', 'openai', 'zai', 'openrouter'],
+            ['anthropic', 'openai', 'zai', 'openrouter']
         ));
     it('DeepSeek appears when enabled', () =>
         assertDeepEqual(
             enabledVendors(snapshot({enabled: {deepseek: true}})),
-            ['anthropic', 'openai', 'zai', 'openrouter', 'deepseek'],
+            ['anthropic', 'openai', 'zai', 'openrouter', 'deepseek']
         ));
 });
 
@@ -72,17 +72,17 @@ describe('resolveApiKey', () => {
     it('prefers env over inline', () =>
         assertEqual(
             resolveApiKey('Z.AI', 'ZAI_API_KEY', 'inline-key', fakeGetenv({ZAI_API_KEY: 'from-env'})),
-            'from-env',
+            'from-env'
         ));
     it('falls back to inline when env unset', () =>
         assertEqual(
             resolveApiKey('Z.AI', 'ZAI_API_KEY', 'inline-key', fakeGetenv({})),
-            'inline-key',
+            'inline-key'
         ));
     it('treats empty env as unset', () =>
         assertEqual(
             resolveApiKey('OpenRouter', 'OR_KEY', 'inline', fakeGetenv({OR_KEY: ''})),
-            'inline',
+            'inline'
         ));
     it('throws naming the env var and the API key when both missing', () => {
         let msg = null;
@@ -103,7 +103,7 @@ describe('normalizePrimary', () => {
     it('falls back to first enabled when primary disabled', () =>
         assertEqual(
             normalizePrimary(snapshot({primaryVendor: 'openai', enabled: {anthropic: false, openai: false}})),
-            'zai',
+            'zai'
         ));
     it('falls back to anthropic when nothing is enabled', () =>
         assertEqual(
@@ -111,7 +111,7 @@ describe('normalizePrimary', () => {
                 primaryVendor: 'openai',
                 enabled: {anthropic: false, openai: false, zai: false, openrouter: false, deepseek: false},
             })),
-            'anthropic',
+            'anthropic'
         ));
 });
 
@@ -119,7 +119,7 @@ describe('normalizeActive', () => {
     it('returns the active vendor when it is enabled', () =>
         assertEqual(
             normalizeActive(snapshot({primaryVendor: 'anthropic', activeVendor: 'zai'})),
-            'zai',
+            'zai'
         ));
     it('falls back to primary when the active vendor is disabled', () =>
         assertEqual(
@@ -127,7 +127,7 @@ describe('normalizeActive', () => {
                 primaryVendor: 'openai',
                 activeVendor: 'deepseek',
             })),
-            'openai',
+            'openai'
         ));
     it('falls back through normalizePrimary when both active and primary are disabled', () =>
         assertEqual(
@@ -136,12 +136,12 @@ describe('normalizeActive', () => {
                 activeVendor: 'deepseek',
                 enabled: {openai: false},
             })),
-            'anthropic',
+            'anthropic'
         ));
     it('falls back to primary when active is unset (empty string)', () =>
         assertEqual(
             normalizeActive(snapshot({primaryVendor: 'zai', activeVendor: ''})),
-            'zai',
+            'zai'
         ));
 });
 

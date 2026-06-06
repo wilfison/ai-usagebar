@@ -28,7 +28,7 @@ describe('combine', () => {
     it('builds the snapshot with balance, consumed%, and label', () => {
         const snap = combine(
             {totalCredits: 100, totalUsage: 30},
-            {label: 'key-A', limit: 50, limitRemaining: 20, usageDaily: 1, usageWeekly: 5, usageMonthly: 30, isFreeTier: false},
+            {label: 'key-A', limit: 50, limitRemaining: 20, usageDaily: 1, usageWeekly: 5, usageMonthly: 30, isFreeTier: false}
         );
         assertEqual(snap.label, 'OpenRouter — key-A');
         assertEqual(balance(snap), 70);

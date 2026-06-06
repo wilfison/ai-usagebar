@@ -9,7 +9,7 @@ describe('defaultTheme', () => {
         const keys = Object.keys(t).sort();
         assertDeepEqual(
             keys,
-            ['barEmpty', 'blue', 'dim', 'fg', 'green', 'marker', 'orange', 'red', 'yellow'],
+            ['barEmpty', 'blue', 'dim', 'fg', 'green', 'marker', 'orange', 'red', 'yellow']
         );
     });
 

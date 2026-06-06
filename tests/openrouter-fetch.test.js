@@ -3,7 +3,7 @@ import Gio from 'gi://Gio';
 import system from 'system';
 
 import {Cache} from '../lib/cache.js';
-import {fetchSnapshot, BASE_URL} from '../lib/vendors/openrouter.js';
+import {fetchSnapshot} from '../lib/vendors/openrouter.js';
 import {balance} from '../lib/vendors/openrouter-parse.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 

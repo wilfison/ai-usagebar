@@ -12,7 +12,7 @@ function runSync(promiseOrThunk) {
     Promise.resolve()
         .then(() => typeof promiseOrThunk === 'function' ? promiseOrThunk() : promiseOrThunk)
         .then(v => { value = v; done = true; loop.quit(); },
-              e => { err = e; done = true; loop.quit(); });
+            e => { err = e; done = true; loop.quit(); });
     if (!done)
         loop.run();
     if (err)

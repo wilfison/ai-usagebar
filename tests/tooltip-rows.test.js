@@ -23,21 +23,21 @@ describe('tooltipRows', () => {
     it('single line becomes one text row with placeholders substituted', () => {
         assertDeepEqual(
             tooltipRows('{plan} — {pct}% used', {plan: 'Pro', pct: '42'}),
-            [{kind: 'text', text: 'Pro — 42% used'}],
+            [{kind: 'text', text: 'Pro — 42% used'}]
         );
     });
 
     it('splits on newlines into one row per line', () => {
         assertDeepEqual(
             tooltipRows('a\nb\nc', {}),
-            [{kind: 'text', text: 'a'}, {kind: 'text', text: 'b'}, {kind: 'text', text: 'c'}],
+            [{kind: 'text', text: 'a'}, {kind: 'text', text: 'b'}, {kind: 'text', text: 'c'}]
         );
     });
 
     it('drops a single leading and trailing blank line', () => {
         assertDeepEqual(
             tooltipRows('\n{plan}\n', {plan: 'Pro'}),
-            [{kind: 'text', text: 'Pro'}],
+            [{kind: 'text', text: 'Pro'}]
         );
     });
 
@@ -55,7 +55,7 @@ describe('tooltipRows', () => {
     it('unknown placeholders pass through literally', () => {
         assertDeepEqual(
             tooltipRows('{plan} {missing}', {plan: 'Pro'}),
-            [{kind: 'text', text: 'Pro {missing}'}],
+            [{kind: 'text', text: 'Pro {missing}'}]
         );
     });
 });

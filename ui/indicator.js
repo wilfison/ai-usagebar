@@ -302,7 +302,7 @@ class Indicator extends PanelMenu.Button {
                 res.snapshot,
                 {stale: res.stale, lastError: res.lastError, fetchedAt},
                 now,
-                this._theme,
+                this._theme
             );
             // A non-empty tooltip-format prepends additive text rows built from
             // this vendor's placeholders, above the structured layout.

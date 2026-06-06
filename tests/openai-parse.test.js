@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseUsage, openaiSeverity, placeholders, SchemaError, SESSION_MS, WEEKLY_MS,
+    parseUsage, openaiSeverity, placeholders, SESSION_MS, WEEKLY_MS,
 } from '../lib/vendors/openai-parse.js';
 import {substitute} from '../lib/format.js';
 import {Severity} from '../lib/severity.js';

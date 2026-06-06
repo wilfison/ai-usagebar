@@ -56,7 +56,7 @@ function discoverTests(dir) {
 function runOne(path) {
     const proc = Gio.Subprocess.new(
         ['gjs', '-m', path],
-        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE,
+        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
     );
     const [, stdout] = proc.communicate_utf8(null, null);
     const ok = proc.get_successful();

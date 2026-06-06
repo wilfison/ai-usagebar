@@ -12,7 +12,7 @@ const META = {stale: false, lastError: null, fetchedAt: NOW};
 function snap({label = 'prod', limit = 50, limitRemaining = 24.5, free = false} = {}) {
     return combine(
         {totalCredits: 100, totalUsage: 25.5},
-        {label, limit, limitRemaining, usageDaily: 1, usageWeekly: 7, usageMonthly: 25.5, isFreeTier: free},
+        {label, limit, limitRemaining, usageDaily: 1, usageWeekly: 7, usageMonthly: 25.5, isFreeTier: free}
     );
 }
 

@@ -4,6 +4,9 @@
 *.compiled
 *.shell-extension.zip
 
+# Node dev tooling (eslint only); the lockfile IS committed.
+node_modules/
+
 # Local secrets — never commit
 *.credentials.json
 

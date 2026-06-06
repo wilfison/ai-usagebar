@@ -24,7 +24,7 @@ function makeSettings() {
     const source = Gio.SettingsSchemaSource.new_from_directory(
         schemasDir(),
         Gio.SettingsSchemaSource.get_default(),
-        false,
+        false
     );
     const schema = source.lookup(SCHEMA_ID, false);
     return Gio.Settings.new_full(schema, null, null);

@@ -30,14 +30,14 @@ describe('calc — neutral / clamp branches', () => {
     it('missing reset returns neutral', () => {
         assertDeepEqual(
             calc({usagePct: 50, reset: null, now, windowMs: FIVE_H, tolerance: DEFAULT_TOLERANCE}),
-            NEUTRAL,
+            NEUTRAL
         );
     });
 
     it('zero window returns neutral', () => {
         assertDeepEqual(
             calc({usagePct: 50, reset: now, now, windowMs: 0, tolerance: 5}),
-            NEUTRAL,
+            NEUTRAL
         );
     });
 

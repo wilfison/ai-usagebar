@@ -10,6 +10,7 @@ help:
 	@echo "  logs     Tail gnome-shell logs (journalctl -f)"
 	@echo "  test     Run the gjs unit-test suite (tests/run.js)"
 	@echo "  lint     Check trailing newline + no imports.* in JS files"
+	@echo "  eslint   Run eslint (GNOME Shell style); needs 'npm ci' first"
 	@echo "  pack     Build the upload zip via gnome-extensions pack"
 	@echo "  info     Show gnome-extensions info for $(UUID)"
 
@@ -33,11 +34,13 @@ test: schemas
 lint:
 	@./tools/lint.sh
 
+eslint:
+	npx eslint .
+
 pack: schemas
 	gnome-extensions pack . --force
 
 info:
 	gnome-extensions info $(UUID)
 
-# TODO(step-12): make watch
-.PHONY: help schemas enable disable reload logs test lint pack info
+.PHONY: help schemas enable disable reload logs test lint eslint pack info
