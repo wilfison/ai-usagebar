@@ -549,11 +549,14 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
-     * On popup open: re-render immediately from cache, then start the 60s live
-     * re-render timer (active sub-section only).
+     * On popup open: re-expand the active sub-section (GNOME collapses open
+     * submenus when the parent popup closes, so without this the active vendor
+     * shows only its header on the second open), re-render immediately from
+     * cache, then start the 60s live re-render timer (active sub-section only).
      * @returns {void}
      */
     _onPopupOpen() {
+        this._setActiveExpansion(this._activeId);
         this._reRenderFromCache();
         if (this._renderTimeoutId)
             return;
