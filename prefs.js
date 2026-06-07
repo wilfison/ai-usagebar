@@ -49,7 +49,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             icon_name: 'preferences-system-symbolic',
         });
 
-        // --- Primary vendor (enum combo) ---
         const displayGroup = new Adw.PreferencesGroup({title: _('Display')});
         const model = new Gtk.StringList();
         // Vendor labels are brand names (Anthropic, OpenAI, …) — kept verbatim.
@@ -80,7 +79,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         displayGroup.add(combo);
         page.add(displayGroup);
 
-        // --- Refresh interval (int key <-> double SpinRow.value, wired manually) ---
         const cadenceGroup = new Adw.PreferencesGroup({
             title: _('Refresh'),
             // Translators: %d is the minimum refresh interval in seconds.
@@ -115,7 +113,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         cadenceGroup.add(interval);
         page.add(cadenceGroup);
 
-        // --- Bar format (string) ---
         const labelGroup = new Adw.PreferencesGroup({
             title: _('Panel label'),
             // Translators: the {token} names are literal placeholders the user
@@ -127,7 +124,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         labelGroup.add(barFormat);
         page.add(labelGroup);
 
-        // --- Popup (format + pace marker) ---
         const popupGroup = new Adw.PreferencesGroup({
             title: _('Popup'),
             // Translators: the {token} names are literal placeholders the user
@@ -138,7 +134,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         popupGroup.add(this._switchRow(settings, 'show-pace-marker', _('Show pace marker')));
         page.add(popupGroup);
 
-        // --- Severity colors (empty = built-in default) ---
         const colorGroup = new Adw.PreferencesGroup({
             title: _('Severity colors'),
             description: _('Pick a color per severity tier. Reset returns a tier to its built-in default.'),
@@ -151,7 +146,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         colorGroup.add(this._colorRow(settings, 'color-critical', _('Critical'), theme[COLOR_KEY_PALETTE['color-critical']], cleanups));
         page.add(colorGroup);
 
-        // --- Reset everything (destructive, confirmed) ---
         const resetGroup = new Adw.PreferencesGroup({
             title: _('Reset'),
             description: _('Restore every setting — vendor toggles, paths, keys, formats, and colors — to its built-in default.'),
@@ -299,7 +293,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
 
         let syncing = false;
 
-        // Push the stored value (or the default, when unset) onto the widgets.
         const resync = () => {
             const value = settings.get_string(key);
             const rgba = new Gdk.RGBA();

@@ -111,7 +111,6 @@ class Indicator extends PanelMenu.Button {
                 this._onPopupClose();
         });
 
-        // Scroll to cycle enabled vendors.
         this._scrollId = this.connect('scroll-event', (actor, event) => this._onScroll(actor, event));
 
         // React to settings changes (prefs / gsettings / scroll write) immediately.
