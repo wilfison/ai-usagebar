@@ -84,10 +84,13 @@ compile-locale:
 i18n-check:
 	@./tools/i18n.sh check
 
-# --podir=po makes gnome-extensions compile po/*.po into the zip as
-# locale/<lang>/LC_MESSAGES/$(UUID).mo, so packaged installs are translated.
+# gnome-extensions pack only bundles a fixed top-level set (extension.js,
+# prefs.js, metadata.json, stylesheet.css, schemas/), so the lib/ and ui/ module
+# trees must be added explicitly with --extra-source. --podir=po compiles po/*.po
+# into the zip as locale/<lang>/LC_MESSAGES/$(UUID).mo, so packaged installs are
+# translated.
 pack: schemas
-	gnome-extensions pack . --podir=po --force
+	gnome-extensions pack . --extra-source=lib --extra-source=ui --podir=po --force
 
 info:
 	gnome-extensions info $(UUID)
