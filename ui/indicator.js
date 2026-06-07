@@ -98,7 +98,7 @@ class Indicator extends PanelMenu.Button {
         this._settingsChangedId = null;
         this._destroyed = false;
 
-        // D4 lazy data: only the active vendor is polled; other sub-sections
+        // Lazy per-vendor data: only the active vendor is polled; other sub-sections
         // render from whatever is already here. `_fetchedAt` pins each vendor's
         // footer timestamp to its real fetch instant across live re-renders.
         this._results = new Map();      // vendorId -> FetchResult
@@ -189,7 +189,7 @@ class Indicator extends PanelMenu.Button {
      * React to a GSettings change: cheap repaint by default; a full re-resolve +
      * fetch only when the effective active vendor id actually changed; poll-timer
      * re-arm only on `refresh-interval`; and `active-vendor := primary-vendor`
-     * sync (D2) on a `primary-vendor` change. Never fetches on a burst of
+     * sync on a `primary-vendor` change. Never fetches on a burst of
      * credential/format edits — those land on the next tick or "Refresh now".
      * @param {object} settings - the Gio.Settings store (same as this._settings).
      * @param {string} key - the changed key name.
@@ -199,7 +199,7 @@ class Indicator extends PanelMenu.Button {
         if (this._destroyed)
             return;
 
-        // D2: a primary change forces active := primary. The set_string re-enters
+        // A primary-vendor change forces active := primary. The set_string re-enters
         // this handler as key='active-vendor'; GSettings emits nothing for an
         // unchanged value, so there is no recursion. Return so the active-vendor
         // re-entry does the re-resolve/fetch below exactly once.
