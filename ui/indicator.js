@@ -37,6 +37,7 @@ import {normalizeActive, cycleVendor, enabledVendors} from '../lib/config-resolv
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {request, disposeSession} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
+import {vendorLabel} from '../lib/vendors.js';
 import {renderSection} from './vendorSection.js';
 import {substitute, tooltipRows} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
@@ -279,10 +280,9 @@ class Indicator extends PanelMenu.Button {
         this._vendorItems.clear();
 
         enabledVendors(config).forEach((id, idx) => {
-            const adapter = getAdapter(id);
             const sub = new PopupMenu.PopupSubMenuMenuItem('', true);
             sub.icon.icon_name = VENDOR_HEADER_ICON;
-            sub.label.text = adapter.vendorShort;
+            sub.label.text = vendorLabel(id);
             this.menu.addMenuItem(sub, idx);
             this._vendorItems.set(id, sub);
             this._renderVendorSection(id);
