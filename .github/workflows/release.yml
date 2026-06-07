@@ -25,7 +25,22 @@ jobs:
       - name: Install Gnome Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gjs libglib2.0-bin gettext gir1.2-soup-3.0
+          # libjson-glib + libgnome-autoar are the only non-standard runtime libs
+          # the gnome-extensions packer needs; the binary itself is extracted from
+          # the .deb below to avoid pulling in the full gnome-shell dependency tree.
+          sudo apt-get install -y \
+            gjs libglib2.0-bin gettext gir1.2-soup-3.0 \
+            libjson-glib-1.0-0 libgnome-autoar-0-0
+
+      - name: Extract gnome-extensions packer
+        run: |
+          # gnome-extensions pack is a self-contained local tool; grab just its
+          # binary from the gnome-shell .deb instead of installing the package.
+          tmp="$(mktemp -d)"
+          ( cd "$tmp" && apt-get download gnome-shell )
+          dpkg-deb -x "$tmp"/gnome-shell_*.deb "$tmp/extract"
+          sudo install -m755 "$tmp/extract/usr/bin/gnome-extensions" /usr/local/bin/gnome-extensions
+          gnome-extensions version
 
       - uses: actions/setup-node@v4
         with:
