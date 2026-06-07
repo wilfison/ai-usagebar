@@ -41,6 +41,10 @@ Run a **single test file** directly: `gjs -m tests/anthropic-parse.test.js`.
 Each `tests/*.test.js` is self-contained (calls `system.exit(summary())`), and
 `tests/run.js` discovers them and runs each as an isolated `gjs -m` subprocess.
 
+The runner colorizes output with ANSI codes; `tests/run.js` honors the
+[`NO_COLOR`](https://no-color.org) env var, so run `NO_COLOR=1 make test` to get
+plain (uncolored) output — use this when capturing logs or running non-interactively.
+
 CI (`.github/workflows/ci.yml`) runs `make schemas`, `make test`, `tools/lint.sh`,
 `npx eslint .`, `make validate`, and `make i18n-check` on every PR (the runner
 installs `gettext` for the i18n tools).
