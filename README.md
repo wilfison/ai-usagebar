@@ -6,18 +6,12 @@ vendors — **Anthropic (Claude)**, **OpenAI (Codex)**, **Z.AI / GLM**,
 
 ## Overview
 
-The panel shows a compact label for the **active** vendor — by default the
-vendor short code, the current session usage percentage, and when that window
-resets (e.g. `Claude 42% · 3h12m`). The label is colored by severity (green →
-orange → red) as you approach a limit, and a trailing `⏸` marks data served from
-cache after a failed refresh.
+The panel shows a compact label for the **active** vendor — e.g.
+`Claude 42% · 3h12m` — colored by severity as you near a limit. Click it to open
+a popup with a collapsible section per enabled vendor, and **scroll** the panel
+button to cycle between them.
 
-Clicking the panel button opens a popup with a **collapsible sub-section per
-enabled vendor**, each showing the structured breakdown (per-window usage, reset
-countdowns, credit balances, and so on) laid out as a boxed-list card. **Scroll**
-the panel button to cycle through your enabled vendors; the footer has
-icon-buttons to refresh the active vendor, refresh all vendors, and open
-preferences.
+![AI Usage Bar screenshot](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshot.png)
 
 ## Supported vendors
 
@@ -37,6 +31,17 @@ via the popup's "Refresh all" button.
 
 This extension targets **GNOME Shell 50**. There is no build step — it is plain
 GJS / ES modules.
+
+> [!NOTE]
+> **Not on extensions.gnome.org.** This extension is distributed **only** through
+> GitHub releases, not the official [extensions.gnome.org](https://extensions.gnome.org)
+> (EGO) site. It was built with substantial AI assistance, and since December 2025
+> EGO's [review policy rejects extensions that read as AI-generated](https://gjs.guide/extensions/review-guidelines/review-guidelines.html#extensions-must-not-be-ai-generated).
+> Rather than
+> misrepresent how it was made, it is published here for anyone who wants to
+> install it manually. The full source is available for review and the code is
+> held to the same readability, cleanup-on-disable, and security standards EGO
+> expects.
 
 ### From a packed zip
 
