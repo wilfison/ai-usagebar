@@ -21,13 +21,13 @@ preferences.
 
 ## Supported vendors
 
-| Vendor | What is shown | Auth model |
-| --- | --- | --- |
+| Vendor                 | What is shown                                    | Auth model                                                           |
+| ---------------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
 | **Anthropic (Claude)** | Session + weekly usage %, reset countdowns, plan | OAuth credentials from `~/.claude/.credentials.json`, auto-refreshed |
-| **OpenAI (Codex)** | Plan usage and reset windows | OAuth from `~/.codex/auth.json`; optional admin key for org usage |
-| **Z.AI / GLM** | Plan usage and reset windows | API key (env var or prefs entry) |
-| **OpenRouter** | Credit balance and usage | API key (env var or prefs entry) |
-| **DeepSeek** | Balance / credits | API key (env var or prefs entry) |
+| **OpenAI (Codex)**     | Plan usage and reset windows                     | OAuth from `~/.codex/auth.json`; optional admin key for org usage    |
+| **Z.AI / GLM**         | Plan usage and reset windows                     | API key (env var or prefs entry)                                     |
+| **OpenRouter**         | Credit balance and usage                         | API key (env var or prefs entry)                                     |
+| **DeepSeek**           | Balance / credits                                | API key (env var or prefs entry)                                     |
 
 Only the **active** vendor is polled on the refresh timer; other enabled vendors
 render from the last fetched result and are refreshed lazily on scroll-cycle or
@@ -40,8 +40,9 @@ GJS / ES modules.
 
 ### From a packed zip
 
-1. Download or build `ai-usagebar@wilfison.shell-extension.zip`
-   (`make pack` builds it from a checkout).
+1. Download `ai-usagebar@wilfison.shell-extension.zip` from the
+   [latest release](https://github.com/wilfison/ai-usagebar/releases/latest),
+   or build it from a checkout with `make pack`.
 2. Install it:
 
    ```bash
@@ -50,6 +51,7 @@ GJS / ES modules.
 
    Or unzip it manually into
    `~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison/`.
+
 3. **Log out and back in** (on Wayland a full relog is required to load a new
    extension), then enable it:
 
@@ -112,8 +114,33 @@ gear button in the popup footer). The prefs window exposes:
 
 ## Development
 
-There is no build step; GNOME Shell loads the JS directly. The `Makefile` is the
-canonical dev loop — run `make` to list all targets. The common ones:
+There is no build step; GNOME Shell loads the JS directly.
+
+### Dependencies
+
+- `gjs` — runs the pure-JS unit suite (`make test`) and the extension itself.
+- `glib2` — provides `glib-compile-schemas` (`make schemas`) and the
+  `gnome-extensions` packing tool (`make pack`).
+- `gettext` — `msgfmt` / `msgmerge` / `xgettext` for the i18n targets.
+- `libsoup3` — the libsoup3 typelib, so `gi://Soup` resolves in tests.
+- `mutter-dev` — to launch a nested Wayland session with `make run`
+
+**On Ubuntu**
+
+```bash
+sudo apt install gjs libglib2.0-bin gettext gir1.2-soup-3.0 mutter-dev-bin
+```
+
+**On Arch**
+
+```bash
+sudo pacman -S gjs glib2-devel gnome-shell gettext libsoup3 mutter
+```
+
+ESLint (`make eslint`) additionally needs Node and the dev deps: `npm ci`.
+
+The `Makefile` is the canonical dev loop — run `make` to list all targets. The
+common ones:
 
 ```bash
 make test      # gjs pure-JS unit suite
