@@ -13,9 +13,11 @@
  * in-memory results map (populated lazily on cycle or via "Refresh all") and
  * show a placeholder until they have data. While the popup is open a 60s timer
  * re-renders the active sub-section so countdowns tick without hitting the
- * network. Owns the shared cancellable, the refresh + live-render timeout
- * sources, the Soup session, the popup signal, and the scroll signal — all torn
- * down in `destroy()`.
+ * network. The footer is a row of icon-only action buttons (Refresh now /
+ * Refresh all / Preferences) with delayed hover tooltips. Owns the shared
+ * cancellable, the refresh + live-render + tooltip timeout sources, the shared
+ * tooltip label, the Soup session, the popup signal, and the scroll signal —
+ * all torn down in `destroy()`.
  */
 
 import Clutter from 'gi://Clutter';
@@ -25,6 +27,7 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -46,6 +49,8 @@ const STALE_MARK = ' ⏸';
 /** @type {string} Symbolic icon shown on every vendor sub-section header
  * (uniform, matching the per-vendor pages in prefs.js). */
 const VENDOR_HEADER_ICON = 'network-server-symbolic';
+/** @type {number} Delay before a hovered action button's tooltip appears (ms). */
+const TOOLTIP_DELAY_MS = 400;
 
 /**
  * `PanelMenu.Button` subclass that shows multi-vendor AI plan usage in the top
@@ -111,31 +116,28 @@ class Indicator extends PanelMenu.Button {
         this._box.add_child(this._label);
         this.add_child(this._box);
 
-        // Footer items are created once (handlers connected once); per-vendor
-        // sub-sections are inserted above the separator on (re)build.
+        // Footer is a single non-reactive row of icon-only action buttons
+        // (handlers connected once); per-vendor sub-sections are inserted above
+        // the separator on (re)build. A lazily-created tooltip label (shared by
+        // all three buttons) lives in the uiGroup and is torn down in destroy().
+        this._tooltip = null;
+        this._tooltipTimeoutId = null;
         this._separator = new PopupMenu.PopupSeparatorMenuItem();
         this.menu.addMenuItem(this._separator);
-        this._refreshItem = new PopupMenu.PopupMenuItem(_('Refresh now'));
-        this._refreshItem.connect('activate', () => {
-            if (this._destroyed)
-                return;
-            this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
+        this._actionsItem = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        const actionsBox = new St.BoxLayout({
+            style_class: 'aiusagebar-actions',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
         });
-        this.menu.addMenuItem(this._refreshItem);
-        this._refreshAllItem = new PopupMenu.PopupMenuItem(_('Refresh all'));
-        this._refreshAllItem.connect('activate', () => {
-            if (this._destroyed)
-                return;
-            this._refreshAll().catch(e => console.warn(`ai-usagebar: refresh all failed: ${e}`));
-        });
-        this.menu.addMenuItem(this._refreshAllItem);
-        this._prefsItem = new PopupMenu.PopupMenuItem(_('Preferences'));
-        this._prefsItem.connect('activate', () => {
-            if (this._destroyed)
-                return;
-            this._openPreferences?.();
-        });
-        this.menu.addMenuItem(this._prefsItem);
+        actionsBox.add_child(this._makeActionButton('view-refresh-symbolic', _('Refresh now'), () =>
+            this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`))));
+        actionsBox.add_child(this._makeActionButton('emblem-synchronizing-symbolic', _('Refresh all'), () =>
+            this._refreshAll().catch(e => console.warn(`ai-usagebar: refresh all failed: ${e}`))));
+        actionsBox.add_child(this._makeActionButton('preferences-system-symbolic', _('Preferences'), () =>
+            this._openPreferences?.()));
+        this._actionsItem.add_child(actionsBox);
+        this.menu.addMenuItem(this._actionsItem);
 
         // Seed the active vendor with a Loading… state so its sub-section (and an
         // immediately-opened popup) is never empty before the first fetch lands.
@@ -632,6 +634,98 @@ class Indicator extends PanelMenu.Button {
     }
 
     /**
+     * Build one icon-only footer action button: a symbolic `St.Icon` in an
+     * `St.Button`, with the (translated) label exposed as the accessible name and
+     * shown as a delayed hover tooltip. The click handler is guarded against a
+     * post-destroy invocation; hovering or clicking also dismisses the tooltip.
+     * @param {string} iconName - symbolic icon name.
+     * @param {string} label - already-translated action label (tooltip + a11y).
+     * @param {() => void} onClick - invoked on click when not destroyed.
+     * @returns {St.Button}
+     */
+    _makeActionButton(iconName, label, onClick) {
+        const button = new St.Button({
+            style_class: 'aiusagebar-action-button',
+            child: new St.Icon({icon_name: iconName, style_class: 'popup-menu-icon'}),
+            can_focus: true,
+            track_hover: true,
+        });
+        button.accessible_name = label;
+        button.connect('clicked', () => {
+            if (this._destroyed)
+                return;
+            this._hideTooltip();
+            onClick();
+        });
+        button.connect('notify::hover', () => this._onActionHover(button, label));
+        return button;
+    }
+
+    /**
+     * Hover handler for an action button: arm the delayed tooltip on enter, or
+     * cancel any pending timer and hide the tooltip on leave.
+     * @param {St.Button} button - the hovered button.
+     * @param {string} label - tooltip text.
+     * @returns {void}
+     */
+    _onActionHover(button, label) {
+        if (this._destroyed)
+            return;
+        this._cancelTooltipTimer();
+        if (!button.hover) {
+            this._hideTooltip();
+            return;
+        }
+        this._tooltipTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_DELAY_MS, () => {
+            this._tooltipTimeoutId = null;
+            this._showTooltip(button, label);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /**
+     * Show the shared tooltip label (created lazily in the uiGroup) centered just
+     * below the given button. No-op if the button is no longer hovered.
+     * @param {St.Button} button - the button to anchor under.
+     * @param {string} label - tooltip text.
+     * @returns {void}
+     */
+    _showTooltip(button, label) {
+        if (this._destroyed || !button.hover)
+            return;
+        if (!this._tooltip) {
+            this._tooltip = new St.Label({style_class: 'aiusagebar-tooltip'});
+            this._tooltip.hide();
+            Main.layoutManager.uiGroup.add_child(this._tooltip);
+        }
+        this._tooltip.text = label;
+        this._tooltip.show();
+        const [bx, by] = button.get_transformed_position();
+        const x = Math.round(bx + button.width / 2 - this._tooltip.width / 2);
+        const y = Math.round(by + button.height + 4);
+        this._tooltip.set_position(Math.max(0, x), y);
+    }
+
+    /**
+     * Hide the shared tooltip label if it exists.
+     * @returns {void}
+     */
+    _hideTooltip() {
+        this._tooltip?.hide();
+    }
+
+    /**
+     * Cancel a pending tooltip-show timer, if any.
+     * @returns {void}
+     */
+    _cancelTooltipTimer() {
+        if (this._tooltipTimeoutId) {
+            GLib.Source.remove(this._tooltipTimeoutId);
+            this._tooltipTimeoutId = null;
+        }
+    }
+
+    /**
      * Tear down: stop the poll + live re-render timers, disconnect the popup,
      * scroll, and settings-changed signals, cancel pending I/O, dispose the Soup
      * session, drop the in-memory maps, clear the popup, and chain to the GObject
@@ -648,6 +742,11 @@ class Indicator extends PanelMenu.Button {
         if (this._renderTimeoutId) {
             GLib.Source.remove(this._renderTimeoutId);
             this._renderTimeoutId = null;
+        }
+        this._cancelTooltipTimer();
+        if (this._tooltip) {
+            this._tooltip.destroy();
+            this._tooltip = null;
         }
         if (this._openStateId) {
             this.menu.disconnect(this._openStateId);

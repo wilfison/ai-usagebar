@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-06-06 23:09-0300\n"
+"POT-Creation-Date: 2026-06-06 23:27-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: French\n"
@@ -347,22 +347,22 @@ msgstr ""
 msgid "Reset to default"
 msgstr "Réinitialiser par défaut"
 
-#: ui/indicator.js:118
+#: ui/indicator.js:133
 msgid "Refresh now"
 msgstr "Actualiser maintenant"
 
-#: ui/indicator.js:125
+#: ui/indicator.js:135
 msgid "Refresh all"
 msgstr "Tout actualiser"
 
-#: ui/indicator.js:132
+#: ui/indicator.js:137
 msgid "Preferences"
 msgstr "Préférences"
 
-#: ui/indicator.js:308
+#: ui/indicator.js:310
 msgid "No data — use \"Refresh all\""
 msgstr "Aucune donnée — utilisez « Tout actualiser »"
 
-#: ui/indicator.js:330 ui/indicator.js:452
+#: ui/indicator.js:332 ui/indicator.js:454
 msgid "Loading…"
 msgstr "Chargement…"

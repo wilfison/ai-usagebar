@@ -78,3 +78,34 @@
     background-color: -st-accent-color;
     border-radius: 4px;
 }
+
+/* Footer action row: icon-only buttons centered below the separator. */
+.aiusagebar-actions {
+    spacing: 12px;
+}
+
+/* Footer action button: square-ish icon button with an Adwaita-style hover/
+   active wash. Neutral translucent grey reads on light and dark shells. */
+.aiusagebar-action-button {
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.aiusagebar-action-button:hover {
+    background-color: rgba(127, 127, 127, 0.15);
+}
+
+.aiusagebar-action-button:active,
+.aiusagebar-action-button:focus {
+    background-color: rgba(127, 127, 127, 0.25);
+}
+
+/* Hover tooltip for the footer action buttons: a small dark pill floated in the
+   uiGroup (ui/indicator.js positions it under the button). */
+.aiusagebar-tooltip {
+    background-color: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.85em;
+}
