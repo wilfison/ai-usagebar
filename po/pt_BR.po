@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-06-06 18:00-0300\n"
+"POT-Creation-Date: 2026-06-06 23:09-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Portuguese (Brazil)\n"
@@ -175,43 +175,43 @@ msgstr "Ferramentas MCP (mensal)"
 msgid "no usage windows reported"
 msgstr "nenhuma janela de uso informada"
 
-#: prefs.js:73
+#: prefs.js:89
 msgid "General"
 msgstr "Geral"
 
-#: prefs.js:78
+#: prefs.js:94
 msgid "Display"
 msgstr "Exibição"
 
-#: prefs.js:84
+#: prefs.js:100
 msgid "Primary vendor"
 msgstr "Fornecedor principal"
 
-#: prefs.js:85
+#: prefs.js:101
 msgid "Shown by default and used as the scroll-cycle reset target"
 msgstr "Exibido por padrão e usado como alvo de reinício ao rolar"
 
-#: prefs.js:110
+#: prefs.js:126
 msgid "Refresh"
 msgstr "Atualização"
 
 #. Translators: %d is the minimum refresh interval in seconds.
-#: prefs.js:112
+#: prefs.js:128
 #, javascript-format
 msgid "Minimum %d s — the upstream endpoints rate-limit below that."
 msgstr "Mínimo %d s — os endpoints upstream limitam a taxa abaixo disso."
 
-#: prefs.js:121
+#: prefs.js:137
 msgid "Refresh interval (seconds)"
 msgstr "Intervalo de atualização (segundos)"
 
-#: prefs.js:145
+#: prefs.js:161
 msgid "Panel label"
 msgstr "Rótulo do painel"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types — keep them verbatim, only translate the surrounding prose.
-#: prefs.js:148
+#: prefs.js:164
 msgid ""
 "Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
@@ -219,17 +219,17 @@ msgstr ""
 "Espaços reservados: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:150
+#: prefs.js:166
 msgid "Bar format"
 msgstr "Formato da barra"
 
-#: prefs.js:157
+#: prefs.js:173
 msgid "Popup"
 msgstr "Popup"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types — keep them verbatim, only translate the surrounding prose.
-#: prefs.js:160
+#: prefs.js:176
 msgid ""
 "Optional extra lines shown above the popup. Empty uses the built-in layout. "
 "Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} "
@@ -239,102 +239,109 @@ msgstr ""
 "interno. Espaços reservados: {plan} {session_pct} {session_reset} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:162
+#: prefs.js:178
 msgid "Popup format"
 msgstr "Formato do popup"
 
-#: prefs.js:163
+#: prefs.js:179
 msgid "Show pace marker"
 msgstr "Mostrar marcador de ritmo"
 
-#: prefs.js:168
+#: prefs.js:184
 msgid "Severity colors"
 msgstr "Cores de severidade"
 
-#: prefs.js:169
-msgid "Hex colors (#rrggbb). Empty leaves the tier on its built-in default."
-msgstr "Cores hexadecimais (#rrggbb). Vazio mantém o nível no padrão interno."
+#: prefs.js:185
+msgid ""
+"Pick a color per severity tier. Reset returns a tier to its built-in default."
+msgstr ""
+"Escolha uma cor para cada nível de severidade. Redefinir retorna o nível ao "
+"seu padrão interno."
 
 #. Translators: Low/Mid/High/Critical are usage-severity tier names.
-#: prefs.js:172
+#: prefs.js:189
 msgid "Low"
 msgstr "Baixo"
 
-#: prefs.js:173
+#: prefs.js:190
 msgid "Mid"
 msgstr "Médio"
 
-#: prefs.js:174
+#: prefs.js:191
 msgid "High"
 msgstr "Alto"
 
-#: prefs.js:175
+#: prefs.js:192
 msgid "Critical"
 msgstr "Crítico"
 
-#: prefs.js:189 prefs.js:193
+#: prefs.js:206 prefs.js:210
 msgid "Anthropic"
 msgstr "Anthropic"
 
-#: prefs.js:194
+#: prefs.js:211
 msgid "Credentials path — empty uses ~/.claude/.credentials.json."
 msgstr "Caminho das credenciais — vazio usa ~/.claude/.credentials.json."
 
-#: prefs.js:196 prefs.js:218 prefs.js:239 prefs.js:262 prefs.js:284
+#: prefs.js:213 prefs.js:235 prefs.js:256 prefs.js:279 prefs.js:301
 msgid "Enabled"
 msgstr "Ativado"
 
-#: prefs.js:197
+#: prefs.js:214
 msgid "Credentials path"
 msgstr "Caminho das credenciais"
 
-#: prefs.js:211 prefs.js:215
+#: prefs.js:228 prefs.js:232
 msgid "OpenAI"
 msgstr "OpenAI"
 
-#: prefs.js:216
+#: prefs.js:233
 msgid "Codex auth path — empty uses ~/.codex/auth.json."
 msgstr "Caminho de autenticação do Codex — vazio usa ~/.codex/auth.json."
 
-#: prefs.js:219
+#: prefs.js:236
 msgid "Codex auth path"
 msgstr "Caminho de autenticação do Codex"
 
-#: prefs.js:232 prefs.js:236
+#: prefs.js:249 prefs.js:253
 msgid "Z.AI"
 msgstr "Z.AI"
 
-#: prefs.js:237 prefs.js:260
+#: prefs.js:254 prefs.js:277
 msgid "Set the API key inline or via the environment variable (env wins)."
 msgstr ""
 "Defina a chave de API embutida ou via variável de ambiente (ambiente "
 "prevalece)."
 
-#: prefs.js:240 prefs.js:263 prefs.js:285
+#: prefs.js:257 prefs.js:280 prefs.js:302
 msgid "API key env var"
 msgstr "Variável de ambiente da chave de API"
 
-#: prefs.js:241 prefs.js:264 prefs.js:286
+#: prefs.js:258 prefs.js:281 prefs.js:303
 msgid "API key (inline)"
 msgstr "Chave de API (embutida)"
 
-#: prefs.js:242
+#: prefs.js:259
 msgid "Plan tier (lite/pro/max)"
 msgstr "Nível do plano (lite/pro/max)"
 
-#: prefs.js:255 prefs.js:259
+#: prefs.js:272 prefs.js:276
 msgid "OpenRouter"
 msgstr "OpenRouter"
 
-#: prefs.js:277 prefs.js:281
+#: prefs.js:294 prefs.js:298
 msgid "DeepSeek"
 msgstr "DeepSeek"
 
-#: prefs.js:282
+#: prefs.js:299
 msgid "Disabled by default; requires an API key (env var or inline)."
 msgstr ""
 "Desativado por padrão; requer uma chave de API (variável de ambiente ou "
 "embutida)."
+
+#: prefs.js:359
+msgid "Reset to default"
+msgstr "Redefinir para o padrão"
 
 #: ui/indicator.js:118
 msgid "Refresh now"

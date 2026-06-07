@@ -12,18 +12,34 @@
  */
 
 import Adw from 'gi://Adw';
+import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import {rgbToHex} from './lib/color.js';
 import {vformat} from './lib/format.js';
+import {defaultTheme} from './lib/theme.js';
 import {VENDOR_LABELS} from './lib/vendors.js';
 
 /** @type {number} Schema floor for the refresh interval (seconds). */
 const INTERVAL_MIN = 300;
 /** @type {number} Schema ceiling for the refresh interval (seconds). */
 const INTERVAL_MAX = 86400;
+
+/**
+ * @type {Record<string, string>} Maps each `color-*` schema key to the
+ * {@link defaultTheme} palette key whose hue is the tier's built-in default.
+ * Mirrors `withOverrides` in lib/theme.js (low→green, mid→yellow, …); the swatch
+ * shows this color when the key is unset (empty string).
+ */
+const COLOR_KEY_PALETTE = {
+    'color-low': 'green',
+    'color-mid': 'yellow',
+    'color-high': 'orange',
+    'color-critical': 'red',
+};
 
 // NOTE: user-facing strings are wrapped in `_()` at their use sites (inside
 // `fillPreferencesWindow`/the page builders), never at module top level — the
@@ -166,13 +182,14 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // --- Severity colors (empty = built-in default) ---
         const colorGroup = new Adw.PreferencesGroup({
             title: _('Severity colors'),
-            description: _('Hex colors (#rrggbb). Empty leaves the tier on its built-in default.'),
+            description: _('Pick a color per severity tier. Reset returns a tier to its built-in default.'),
         });
+        const theme = defaultTheme();
         // Translators: Low/Mid/High/Critical are usage-severity tier names.
-        colorGroup.add(this._entryRow(settings, 'color-low', _('Low')));
-        colorGroup.add(this._entryRow(settings, 'color-mid', _('Mid')));
-        colorGroup.add(this._entryRow(settings, 'color-high', _('High')));
-        colorGroup.add(this._entryRow(settings, 'color-critical', _('Critical')));
+        colorGroup.add(this._colorRow(settings, 'color-low', _('Low'), theme[COLOR_KEY_PALETTE['color-low']], cleanups));
+        colorGroup.add(this._colorRow(settings, 'color-mid', _('Mid'), theme[COLOR_KEY_PALETTE['color-mid']], cleanups));
+        colorGroup.add(this._colorRow(settings, 'color-high', _('High'), theme[COLOR_KEY_PALETTE['color-high']], cleanups));
+        colorGroup.add(this._colorRow(settings, 'color-critical', _('Critical'), theme[COLOR_KEY_PALETTE['color-critical']], cleanups));
         page.add(colorGroup);
 
         return page;
@@ -311,6 +328,70 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
     _entryRow(settings, key, title) {
         const row = new Adw.EntryRow({title});
         settings.bind(key, row, 'text', Gio.SettingsBindFlags.DEFAULT);
+        return row;
+    }
+
+    /**
+     * A severity-color row: an `Adw.ActionRow` whose suffixes are a
+     * `Gtk.ColorDialogButton` (the GTK 4 native swatch/chooser) and a flat reset
+     * button. GSettings stays the source of truth — the string key holds a
+     * '#rrggbb' hex, and the empty string means "use the built-in default".
+     * Picking writes hex; reset clears the key. Because a swatch always holds a
+     * color, an unset key displays `defaultHex` and the reset button goes
+     * insensitive. Programmatic `set_rgba` is gated by `syncing` so resyncing an
+     * unset key does not write the default hex back and silently mark it set.
+     * @param {Gio.Settings} settings
+     * @param {string} key - string `color-*` schema key.
+     * @param {string} title
+     * @param {string} defaultHex - the tier's built-in default, shown when unset.
+     * @param {Array<() => void>} cleanups - sink for manual-signal disconnects.
+     * @returns {Adw.ActionRow}
+     */
+    _colorRow(settings, key, title, defaultHex, cleanups) {
+        const row = new Adw.ActionRow({title});
+
+        const dialog = new Gtk.ColorDialog({with_alpha: false});
+        const button = new Gtk.ColorDialogButton({dialog, valign: Gtk.Align.CENTER});
+        const reset = new Gtk.Button({
+            icon_name: 'edit-clear-symbolic',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['flat'],
+            tooltip_text: _('Reset to default'),
+        });
+
+        let syncing = false;
+
+        // Push the stored value (or the default, when unset) onto the widgets.
+        const resync = () => {
+            const value = settings.get_string(key);
+            const rgba = new Gdk.RGBA();
+            if (!value || !rgba.parse(value))
+                rgba.parse(defaultHex);
+            syncing = true;
+            button.set_rgba(rgba);
+            syncing = false;
+            reset.sensitive = value !== '';
+        };
+
+        const pickId = button.connect('notify::rgba', () => {
+            if (syncing)
+                return;
+            const {red, green, blue} = button.get_rgba();
+            const hex = rgbToHex(red, green, blue);
+            if (settings.get_string(key) !== hex)
+                settings.set_string(key, hex);
+        });
+        const resetId = reset.connect('clicked', () => settings.set_string(key, ''));
+        const changedId = settings.connect(`changed::${key}`, resync);
+        cleanups.push(() => {
+            button.disconnect(pickId);
+            reset.disconnect(resetId);
+            settings.disconnect(changedId);
+        });
+
+        resync();
+        row.add_suffix(button);
+        row.add_suffix(reset);
         return row;
     }
 
