@@ -11,10 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install gjs + glib schema tools + gettext
+      - name: Install Gnome Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gjs libglib2.0-bin gettext
+          sudo apt-get install -y gjs libglib2.0-bin gettext gir1.2-soup-3.0
 
       - uses: actions/setup-node@v4
         with:
