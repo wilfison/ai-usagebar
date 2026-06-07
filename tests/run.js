@@ -1,11 +1,3 @@
-/**
- * @file Discovers `tests/*.test.js` and runs each one as a `gjs -m`
- * subprocess. Each test file is self-contained (calls
- * `system.exit(summary())` on its own), so subprocess isolation keeps the
- * existing files runnable standalone AND lets the runner aggregate pass/fail
- * across the whole suite.
- */
-
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import system from 'system';
@@ -19,22 +11,12 @@ const C = {
     reset: useColor ? '\x1b[0m' : '',
 };
 
-/**
- * Resolve the directory containing this script so `gjs -m tests/run.js`
- * works from any cwd. `import.meta.url` is a file:// URL on gjs.
- * @returns {string} absolute path.
- */
 function testsDir() {
     const url = import.meta.url;
     const path = url.startsWith('file://') ? url.slice('file://'.length) : url;
     return GLib.path_get_dirname(path);
 }
 
-/**
- * List every `*.test.js` under `dir`, sorted for stable output.
- * @param {string} dir
- * @returns {string[]} absolute paths.
- */
 function discoverTests(dir) {
     const found = [];
     const d = GLib.Dir.open(dir, 0);
@@ -48,11 +30,6 @@ function discoverTests(dir) {
     return found;
 }
 
-/**
- * Run a single test file as `gjs -m <path>` and capture its merged output.
- * @param {string} path
- * @returns {{ok: boolean, stdout: string}}
- */
 function runOne(path) {
     const proc = Gio.Subprocess.new(
         ['gjs', '-m', path],
@@ -63,11 +40,6 @@ function runOne(path) {
     return {ok, stdout: stdout ?? ''};
 }
 
-/**
- * Extract the trailing "N passed, M failed" line emitted by `summary()`.
- * @param {string} stdout
- * @returns {?{passed: number, failed: number, line: string}}
- */
 function summaryFor(stdout) {
     const lines = stdout.trimEnd().split('\n');
     for (let i = lines.length - 1; i >= 0; i--) {
@@ -78,10 +50,6 @@ function summaryFor(stdout) {
     return null;
 }
 
-/**
- * Runner entry point.
- * @returns {number} process exit code (0 on full pass).
- */
 function main() {
     const dir = testsDir();
     const files = discoverTests(dir);

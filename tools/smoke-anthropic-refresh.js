@@ -1,13 +1,3 @@
-/**
- * @file End-to-end smoke test for `lib/oauth/anthropic.js`. Reads
- * `~/.claude/.credentials.json` (or `--path X`), reports plan + countdown
- * + needsRefresh, and on `--force` runs a real refresh + writeBack so
- * sibling keys (mcpOAuth, etc.) can be confirmed preserved with
- * `jq 'keys'` before/after.
- *
- * Never prints tokens — only plan label, expiresAt, key sets, and outcomes.
- */
-
 import system from 'system';
 import GLib from 'gi://GLib';
 
@@ -21,10 +11,6 @@ import {
 } from '../lib/oauth/anthropic.js';
 import {request, disposeSession} from '../lib/http.js';
 
-/**
- * Process exit codes, picked so CI can distinguish failure modes.
- * @enum {number}
- */
 const EXIT = {
     ok: 0,
     generic: 1,
@@ -35,19 +21,6 @@ const EXIT = {
     io: 6,
 };
 
-/**
- * @typedef {object} CliArgs
- * @property {boolean} force - bypass needsRefresh and hit the network.
- * @property {?string} path - credentials path override.
- * @property {boolean} [help]
- */
-
-/**
- * Parse the smoke test's CLI arguments.
- * @param {string[]} argv
- * @returns {CliArgs}
- * @throws {Error} on unknown args or missing values.
- */
 function parseArgs(argv) {
     const out = {force: false, path: null};
     for (let i = 0; i < argv.length; i++) {
@@ -67,22 +40,12 @@ function parseArgs(argv) {
     return out;
 }
 
-/**
- * Print CLI usage to stdout.
- * @returns {void}
- */
 function printHelp() {
     print('Usage: gjs -m tools/smoke-anthropic-refresh.js [--force] [--path PATH]');
     print('  --force       skip needsRefresh and POST a refresh, then writeBack');
     print('  --path PATH   override default ~/.claude/.credentials.json');
 }
 
-/**
- * Sorted top-level key set of the credentials file, or `[]` on read failure.
- * Used to confirm `writeBack` preserves sibling keys (mcpOAuth, etc.).
- * @param {string} path
- * @returns {string[]}
- */
 function topLevelKeys(path) {
     try {
         const {raw} = readCreds(path);
@@ -92,13 +55,6 @@ function topLevelKeys(path) {
     }
 }
 
-/**
- * Spin a `GLib.MainLoop` until `promise` settles; rethrow on rejection.
- * gjs scripts need this because there's no host-managed event loop.
- * @template T
- * @param {Promise<T>} promise
- * @returns {T}
- */
 function runSync(promise) {
     const loop = GLib.MainLoop.new(null, false);
     let value, err, done = false;
@@ -113,19 +69,10 @@ function runSync(promise) {
     return value;
 }
 
-/**
- * Current wall-clock time in epoch seconds (truncated).
- * @returns {number}
- */
 function nowSecs() {
     return Math.trunc(GLib.get_real_time() / 1_000_000);
 }
 
-/**
- * Print a refresh failure and map its kind to an {@link EXIT} code.
- * @param {import('../lib/oauth/anthropic.js').RefreshResult} result
- * @returns {number} EXIT code.
- */
 function reportRefreshFailure(result) {
     if (result.kind === 'transport') {
         print(`TRANSPORT: ${result.message}`);
@@ -143,10 +90,6 @@ function reportRefreshFailure(result) {
     return EXIT.generic;
 }
 
-/**
- * Smoke test entry point.
- * @returns {number} EXIT code.
- */
 function main() {
     let args;
     try {

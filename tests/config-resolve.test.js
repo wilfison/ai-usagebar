@@ -11,10 +11,6 @@ import {
 } from '../lib/config-resolve.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
-/**
- * Build a snapshot-like object with the given per-vendor enabled flags. Defaults
- * mirror the GSettings defaults: every vendor enabled except DeepSeek.
- */
 function snapshot(overrides = {}) {
     const enabled = {
         anthropic: true,
@@ -37,7 +33,6 @@ function snapshot(overrides = {}) {
     };
 }
 
-/** Fake getenv backed by a plain object. Missing keys return null. */
 function fakeGetenv(map) {
     return name => (name in map ? map[name] : null);
 }

@@ -11,12 +11,10 @@ const theme = defaultTheme();
 const NOW = new Date('2026-06-05T12:00:00Z');
 const MIN = 60 * 1000;
 
-/** A window with a given utilization, resetting `mins` minutes from NOW. */
 function win(utilizationPct, mins) {
     return {utilizationPct, resetsAt: new Date(NOW.getTime() + mins * MIN)};
 }
 
-/** Snapshot with every optional block present. */
 function fullSnapshot() {
     return {
         plan: 'Max 5x',

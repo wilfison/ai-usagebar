@@ -11,7 +11,6 @@ import {describe, it, assertEqual, summary} from './_assert.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
 
-/** Absolute path to the repo's schemas/ dir (sibling of tests/). */
 function schemasDir() {
     const url = import.meta.url;
     const path = url.startsWith('file://') ? url.slice('file://'.length) : url;
@@ -19,7 +18,6 @@ function schemasDir() {
     return GLib.build_filenamev([GLib.path_get_dirname(tests), 'schemas']);
 }
 
-/** A fresh Gio.Settings bound to the compiled schema on the memory backend. */
 function makeSettings() {
     const source = Gio.SettingsSchemaSource.new_from_directory(
         schemasDir(),

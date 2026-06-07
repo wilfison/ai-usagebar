@@ -1,17 +1,3 @@
-/**
- * @file GTK preferences window for ai-usagebar. Runs in a separate process from
- * gnome-shell, so it imports only `gi://{Adw,Gtk,Gio}`, the prefs.js resource,
- * and the PURE `lib/vendors.js` — never shell modules or the gi-bound adapter
- * registry. Adds six pages (General + one per vendor) bound to GSettings.
- *
- * Surfaces the keys the extension consumes: the General page covers the primary
- * vendor, refresh cadence, bar/popup formats, severity-color overrides, the
- * pace-marker toggle, and a confirmed "reset all settings" action;
- * `openai-admin-key-env` is intentionally not shown (OpenAI
- * is Codex-OAuth-only). Inline API keys use a masked entry with a reveal toggle
- * and live only in dconf.
- */
-
 import Adw from 'gi://Adw';
 import Gdk from 'gi://Gdk';
 import Gio from 'gi://Gio';
@@ -24,17 +10,9 @@ import {vformat} from './lib/format.js';
 import {defaultTheme} from './lib/theme.js';
 import {VENDOR_LABELS} from './lib/vendors.js';
 
-/** @type {number} Schema floor for the refresh interval (seconds). */
 const INTERVAL_MIN = 300;
-/** @type {number} Schema ceiling for the refresh interval (seconds). */
 const INTERVAL_MAX = 86400;
 
-/**
- * @type {Record<string, string>} Maps each `color-*` schema key to the
- * {@link defaultTheme} palette key whose hue is the tier's built-in default.
- * Mirrors `withOverrides` in lib/theme.js (low→green, mid→yellow, …); the swatch
- * shows this color when the key is unset (empty string).
- */
 const COLOR_KEY_PALETTE = {
     'color-low': 'green',
     'color-mid': 'yellow',
@@ -46,23 +24,9 @@ const COLOR_KEY_PALETTE = {
 // `fillPreferencesWindow`/the page builders), never at module top level — the
 // gettext domain is not yet bound when this module is first evaluated.
 
-/**
- * Preferences entry point. Populates the provided `Adw.PreferencesWindow` with a
- * General page plus one page per vendor, all bound to the extension's GSettings.
- * @extends ExtensionPreferences
- */
 export default class AiUsagebarPreferences extends ExtensionPreferences {
-    /**
-     * Add the General + per-vendor pages to `window`. Wires the manual signals
-     * (the enum combo + the int spin-row), then disconnects them on window close
-     * so the prefs process is leak-clean. Rows bound via `Gio.Settings.bind`
-     * auto-unbind on widget destroy and need no manual teardown.
-     * @param {Adw.PreferencesWindow} window
-     * @returns {void}
-     */
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
-        /** @type {Array<() => void>} disconnect callbacks run on window close. */
         const cleanups = [];
 
         window.add(this._buildGeneralPage(settings, cleanups));
@@ -79,12 +43,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         });
     }
 
-    /**
-     * General page: primary-vendor combo, refresh interval, bar format.
-     * @param {Gio.Settings} settings
-     * @param {Array<() => void>} cleanups - sink for manual-signal disconnects.
-     * @returns {Adw.PreferencesPage}
-     */
     _buildGeneralPage(settings, cleanups) {
         const page = new Adw.PreferencesPage({
             title: _('General'),
@@ -209,12 +167,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
-    /**
-     * Present a destructive confirmation dialog; on confirm, reset every key.
-     * @param {Gio.Settings} settings
-     * @param {Gtk.Window} parent - the prefs window the dialog attaches to.
-     * @returns {void}
-     */
     _confirmResetAll(settings, parent) {
         const dialog = new Adw.AlertDialog({
             heading: _('Reset all settings?'),
@@ -232,23 +184,11 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         dialog.present(parent);
     }
 
-    /**
-     * Reset every schema key to its default. Bound rows and the manual
-     * combo/spin/color resync handlers repaint themselves off the `changed`
-     * signals GSettings emits per key.
-     * @param {Gio.Settings} settings
-     * @returns {void}
-     */
     _resetAll(settings) {
         for (const key of settings.settings_schema.list_keys())
             settings.reset(key);
     }
 
-    /**
-     * Anthropic page: enable switch + credentials-path override.
-     * @param {Gio.Settings} settings
-     * @returns {Adw.PreferencesPage}
-     */
     _buildAnthropicPage(settings) {
         // Translators: "Anthropic" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
@@ -265,12 +205,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
-    /**
-     * OpenAI page: enable switch + Codex auth-path override. The declared-but-
-     * unused `openai-admin-key-env` is intentionally not surfaced.
-     * @param {Gio.Settings} settings
-     * @returns {Adw.PreferencesPage}
-     */
     _buildOpenAiPage(settings) {
         // Translators: "OpenAI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
@@ -287,11 +221,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
-    /**
-     * Z.AI page: enable switch, env-var name, masked inline key, plan tier.
-     * @param {Gio.Settings} settings
-     * @returns {Adw.PreferencesPage}
-     */
     _buildZaiPage(settings) {
         // Translators: "Z.AI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
@@ -310,11 +239,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
-    /**
-     * OpenRouter page: enable switch, env-var name, masked inline key.
-     * @param {Gio.Settings} settings
-     * @returns {Adw.PreferencesPage}
-     */
     _buildOpenRouterPage(settings) {
         // Translators: "OpenRouter" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
@@ -332,11 +256,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
-    /**
-     * DeepSeek page: enable switch (off by default), env-var name, masked key.
-     * @param {Gio.Settings} settings
-     * @returns {Adw.PreferencesPage}
-     */
     _buildDeepSeekPage(settings) {
         // Translators: "DeepSeek" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
@@ -354,48 +273,18 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
-    /**
-     * A boolean `Adw.SwitchRow` two-way bound to `key`.
-     * @param {Gio.Settings} settings
-     * @param {string} key - boolean schema key.
-     * @param {string} title
-     * @returns {Adw.SwitchRow}
-     */
     _switchRow(settings, key, title) {
         const row = new Adw.SwitchRow({title});
         settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
         return row;
     }
 
-    /**
-     * A string `Adw.EntryRow` two-way bound to `key` (empty string = unset).
-     * @param {Gio.Settings} settings
-     * @param {string} key - string schema key.
-     * @param {string} title
-     * @returns {Adw.EntryRow}
-     */
     _entryRow(settings, key, title) {
         const row = new Adw.EntryRow({title});
         settings.bind(key, row, 'text', Gio.SettingsBindFlags.DEFAULT);
         return row;
     }
 
-    /**
-     * A severity-color row: an `Adw.ActionRow` whose suffixes are a
-     * `Gtk.ColorDialogButton` (the GTK 4 native swatch/chooser) and a flat reset
-     * button. GSettings stays the source of truth — the string key holds a
-     * '#rrggbb' hex, and the empty string means "use the built-in default".
-     * Picking writes hex; reset clears the key. Because a swatch always holds a
-     * color, an unset key displays `defaultHex` and the reset button goes
-     * insensitive. Programmatic `set_rgba` is gated by `syncing` so resyncing an
-     * unset key does not write the default hex back and silently mark it set.
-     * @param {Gio.Settings} settings
-     * @param {string} key - string `color-*` schema key.
-     * @param {string} title
-     * @param {string} defaultHex - the tier's built-in default, shown when unset.
-     * @param {Array<() => void>} cleanups - sink for manual-signal disconnects.
-     * @returns {Adw.ActionRow}
-     */
     _colorRow(settings, key, title, defaultHex, cleanups) {
         const row = new Adw.ActionRow({title});
 
@@ -444,14 +333,6 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return row;
     }
 
-    /**
-     * A masked `Adw.PasswordEntryRow` (built-in reveal toggle) two-way bound to
-     * `key`. The value lives only in dconf and is never logged.
-     * @param {Gio.Settings} settings
-     * @param {string} key - string schema key holding the secret.
-     * @param {string} title
-     * @returns {Adw.PasswordEntryRow}
-     */
     _passwordRow(settings, key, title) {
         const row = new Adw.PasswordEntryRow({title});
         settings.bind(key, row, 'text', Gio.SettingsBindFlags.DEFAULT);

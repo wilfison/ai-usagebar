@@ -90,7 +90,6 @@ function rmRf(path) {
     try { f.delete(null); } catch (_) { /* best-effort */ }
 }
 
-/** Run `fn({cache, credsPath, dir})` with a future-dated Codex auth.json. */
 function withTemp(fn) {
     return () => {
         const dir = GLib.Dir.make_tmp('ai-usagebar-oai-XXXXXX');

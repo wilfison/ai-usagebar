@@ -1,36 +1,10 @@
-/**
- * @file Full-width progress bar. St (GNOME 50 / St-18) exposes no `BarLevel`
- * widget, so the bar is a thin hand-drawn `St.Widget`: the widget itself is the
- * rounded translucent track and a single child is the fill, sized to a fraction
- * of the bar's *actual* allocated width on every layout pass (so it fills the
- * card width responsively). The track color lives in the `.aiusagebar-bar*` CSS
- * classes; the fill defaults to `-st-accent-color` (the one themed color token
- * St exposes) but is overridden inline with a severity hex when one is passed.
- */
-
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
-/**
- * Clamp `n` to the inclusive `[lo, hi]` range.
- * @param {number} n
- * @param {number} lo
- * @param {number} hi
- * @returns {number}
- */
 function clamp(n, lo, hi) {
     return n < lo ? lo : (n > hi ? hi : n);
 }
 
-/**
- * Build a full-width bar at `pct` percent. A `FixedLayout` lets the fill be
- * sized by hand against the live allocation; the bar's own size comes from CSS
- * height + `x_expand`, so resizing the fill cannot feed back into it.
- * @param {number} pct - fill percent; clamped to 0..100.
- * @param {?string} [color] - severity hex for the fill; null/undefined keeps the
- *   default `-st-accent-color` from CSS.
- * @returns {St.Widget}
- */
 export function makeBar(pct, color = null) {
     const fraction = clamp(pct, 0, 100) / 100;
 

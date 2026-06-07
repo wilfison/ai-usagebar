@@ -1,15 +1,6 @@
-/**
- * @file ESLint flat config for the extension. Encodes the GNOME Shell GJS
- * JavaScript style (4-space indent with SwitchCase:0, single quotes, mandatory
- * semicolons, trailing commas on multiline literals, `_`-prefixed throwaways)
- * directly on stock ESLint so no unmaintained third-party config is required.
- * Dev-only: the extension and `make test` run under gjs and need no Node.
- */
-
 import js from '@eslint/js';
 import globals from 'globals';
 
-/** GJS runtime globals available to extension/source modules. */
 const gjsGlobals = {
     ...globals.es2021,
     console: 'readonly',
@@ -24,7 +15,6 @@ const gjsGlobals = {
     pkg: 'readonly',
 };
 
-/** Shared GNOME-Shell-flavored style + correctness rules. */
 const rules = {
     ...js.configs.recommended.rules,
 

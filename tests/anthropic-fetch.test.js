@@ -46,11 +46,6 @@ function rmRf(path) {
     try { f.delete(null); } catch (_) { /* best-effort */ }
 }
 
-/**
- * Run `fn(ctx)` with a fresh temp XDG_CACHE_HOME and a credentials file.
- * `ctx = {cache, credsPath, dir}`. `expiresAt` (epoch-ms) defaults far-future
- * so no refresh is attempted; pass a small value to exercise the refresh path.
- */
 function withTemp(fn, {expiresAt = 9_999_999_999_000} = {}) {
     return () => {
         const dir = GLib.Dir.make_tmp('ai-usagebar-fetch-XXXXXX');

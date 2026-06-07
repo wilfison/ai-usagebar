@@ -1,25 +1,3 @@
-/**
- * @file Top-panel indicator widget. Polls the effective *active* vendor (the
- * scroll-selected one, falling back to the configured primary) on the refresh
- * interval (plus once immediately on construction), renders the configured bar
- * label colored by severity (with a trailing `⏸` when the data is stale), and
- * fills the popup with one collapsible sub-section per enabled vendor — the
- * active vendor's expanded — plus "Refresh now" / "Refresh all" actions.
- *
- * Scrolling the button cycles through enabled vendors (UP = next, DOWN = prev,
- * wrap-around): it writes `active-vendor`, mirrors it to disk best-effort, and
- * triggers an immediate re-resolve + fetch of the newly-active vendor. Only the
- * active vendor is fetched on the poll tick; other sub-sections render from an
- * in-memory results map (populated lazily on cycle or via "Refresh all") and
- * show a placeholder until they have data. While the popup is open a 60s timer
- * re-renders the active sub-section so countdowns tick without hitting the
- * network. The footer is a row of icon-only action buttons (Refresh now /
- * Refresh all / Preferences) with delayed hover tooltips. Owns the shared
- * cancellable, the refresh + live-render + tooltip timeout sources, the shared
- * tooltip label, the Soup session, the popup signal, and the scroll signal —
- * all torn down in `destroy()`.
- */
-
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -43,35 +21,13 @@ import {substitute, tooltipRows} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
 
-/** @type {number} Live countdown re-render cadence while the popup is open. */
 const RERENDER_INTERVAL_S = 60;
-/** @type {string} Suffix appended to the label when the served data is stale. */
 const STALE_MARK = ' ⏸';
-/** @type {string} Symbolic icon shown on every vendor sub-section header
- * (uniform, matching the per-vendor pages in prefs.js). */
 const VENDOR_HEADER_ICON = 'network-server-symbolic';
-/** @type {number} Delay before a hovered action button's tooltip appears (ms). */
 const TOOLTIP_DELAY_MS = 400;
 
-/**
- * `PanelMenu.Button` subclass that shows multi-vendor AI plan usage in the top
- * panel and cycles vendors on scroll.
- *
- * Construct via `new Indicator(settings)`; `GObject.registerClass` rewires the
- * constructor to call `_init` for you.
- * @class Indicator
- * @extends PanelMenu.Button
- */
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    /**
-     * Build the panel widget and popup, kick off an immediate refresh, and start
-     * the poll timer at the configured interval.
-     * @param {object} settings - the extension's Gio.Settings store.
-     * @param {() => void} [openPreferences] - opens the prefs window (bound
-     *   `Extension.openPreferences`); wired to the "Preferences" popup item.
-     * @returns {void}
-     */
     _init(settings, openPreferences) {
         super._init(0.0, 'ai-usagebar');
 
@@ -167,13 +123,6 @@ class Indicator extends PanelMenu.Button {
         this._rearmPollTimer(this._config.refreshIntervalSecs);
     }
 
-    /**
-     * (Re)arm the recurring poll timer at `secs`, removing any existing source
-     * first so there is never a duplicate timer. The tick fetches the active
-     * vendor only; a rejected promise never escapes into the event loop.
-     * @param {number} secs - schema-clamped refresh interval (>= 300).
-     * @returns {void}
-     */
     _rearmPollTimer(secs) {
         if (this._timeoutId) {
             GLib.Source.remove(this._timeoutId);
@@ -185,16 +134,6 @@ class Indicator extends PanelMenu.Button {
         });
     }
 
-    /**
-     * React to a GSettings change: cheap repaint by default; a full re-resolve +
-     * fetch only when the effective active vendor id actually changed; poll-timer
-     * re-arm only on `refresh-interval`; and `active-vendor := primary-vendor`
-     * sync on a `primary-vendor` change. Never fetches on a burst of
-     * credential/format edits — those land on the next tick or "Refresh now".
-     * @param {object} settings - the Gio.Settings store (same as this._settings).
-     * @param {string} key - the changed key name.
-     * @returns {void}
-     */
     _onSettingsChanged(settings, key) {
         if (this._destroyed)
             return;
@@ -246,34 +185,15 @@ class Indicator extends PanelMenu.Button {
             this._reRenderFromCache();
     }
 
-    /**
-     * Signature of the enabled-vendor set in canonical order. Used to rebuild the
-     * sub-sections only when the set changes, not on every tick.
-     * @param {import('../lib/config.js').ConfigSnapshot} config
-     * @returns {string}
-     */
     _enabledSignature(config) {
         return enabledVendors(config).join(',');
     }
 
-    /**
-     * Rebuild the per-vendor sub-sections only when the enabled set changed.
-     * @param {import('../lib/config.js').ConfigSnapshot} config
-     * @returns {void}
-     */
     _maybeRebuildVendorSections(config) {
         if (this._enabledSignature(config) !== this._enabledSig)
             this._rebuildVendorSections(config);
     }
 
-    /**
-     * Destroy the existing vendor sub-sections and recreate one
-     * `PopupSubMenuMenuItem` per enabled vendor (canonical order), inserted above
-     * the separator, each rendered from its current results-map entry. Expands
-     * the active vendor's sub-section.
-     * @param {import('../lib/config.js').ConfigSnapshot} config
-     * @returns {void}
-     */
     _rebuildVendorSections(config) {
         for (const item of this._vendorItems.values())
             item.destroy();
@@ -292,14 +212,6 @@ class Indicator extends PanelMenu.Button {
         this._setActiveExpansion(this._activeId);
     }
 
-    /**
-     * Render a single vendor's sub-section from its results-map entry: the
-     * adapter-built model when present and ok, a `Loading…`/placeholder/`⚠` row
-     * otherwise. Always renders via the vendor's own adapter (never the active
-     * one), so any entry paints correctly. No-op when the vendor has no item.
-     * @param {string} id - vendor id.
-     * @returns {void}
-     */
     _renderVendorSection(id) {
         const item = this._vendorItems.get(id);
         if (!item)
@@ -338,13 +250,6 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    /**
-     * Expand the active vendor's sub-section and collapse the rest. Skips
-     * sub-sections already in the wanted state so it never fights an animation or
-     * a user's manual expand/collapse on each tick.
-     * @param {string} activeId - vendor id to expand.
-     * @returns {void}
-     */
     _setActiveExpansion(activeId) {
         for (const [id, item] of this._vendorItems) {
             const want = id === activeId;
@@ -353,13 +258,6 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    /**
-     * Fetch the active vendor's snapshot and repaint the label + its sub-section.
-     * Re-reads config each tick so a gsettings change (active/primary vendor,
-     * creds path, bar format, interval) is picked up without a reactive handler.
-     * Guards against a post-destroy callback touching a freed widget. Never throws.
-     * @returns {Promise<void>}
-     */
     async _refresh() {
         this._config = readConfig(this._settings);
         this._barFormat = this._config.barFormat;
@@ -391,12 +289,6 @@ class Indicator extends PanelMenu.Button {
         this._render(res);
     }
 
-    /**
-     * Force-fetch every enabled vendor once, storing each `FetchResult` into the
-     * map and repainting its sub-section. Per-vendor failures are isolated and
-     * never throw into the caller. Repaints the active label/section at the end.
-     * @returns {Promise<void>}
-     */
     async _refreshAll() {
         const config = readConfig(this._settings);
         this._maybeRebuildVendorSections(config);
@@ -426,26 +318,12 @@ class Indicator extends PanelMenu.Button {
             this._render(activeRes);
     }
 
-    /**
-     * Store a vendor's fetch result and pin its footer timestamp (ok results
-     * only) so live re-renders keep showing the real fetch instant.
-     * @param {string} id - vendor id.
-     * @param {import('../lib/vendors/types.js').FetchResult} res
-     * @returns {void}
-     */
     _storeResult(id, res) {
         this._results.set(id, res);
         if (res.ok)
             this._fetchedAt.set(id, new Date(Date.now() - res.cacheAgeMs));
     }
 
-    /**
-     * Paint the label for the active vendor's {@link FetchResult} and re-render
-     * its sub-section. Expansion is managed separately (only on active change /
-     * rebuild) so it does not fight a user's manual collapse.
-     * @param {import('../lib/vendors/types.js').FetchResult} res
-     * @returns {void}
-     */
     _render(res) {
         if (res.ok) {
             const now = new Date();
@@ -461,12 +339,6 @@ class Indicator extends PanelMenu.Button {
         this._renderVendorSection(this._activeId);
     }
 
-    /**
-     * Re-render the active vendor's label + sub-section from cache without
-     * fetching. Uses a fresh clock for countdowns but the pinned fetch instant
-     * for the footer. No-op (never throws) when there is no usable cached result.
-     * @returns {void}
-     */
     _reRenderFromCache() {
         if (this._destroyed)
             return;
@@ -482,22 +354,10 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    /**
-     * Rebuild the active palette from the One-Dark default plus the user's
-     * severity-color overrides (empty/invalid entries fall back to the default).
-     * Call after `this._config` is (re)read so the theme tracks the prefs.
-     * @returns {void}
-     */
     _rebuildTheme() {
         this._theme = withOverrides(defaultTheme(), this._config.colors);
     }
 
-    /**
-     * Re-render the active label + every built vendor sub-section from cache,
-     * without fetching. Used by appearance-only changes (theme colors, popup
-     * format, pace marker) that affect all sections, not just the active one.
-     * @returns {void}
-     */
     _reRenderAllSections() {
         if (this._destroyed)
             return;
@@ -508,15 +368,6 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    /**
-     * Cycle to the next/previous enabled vendor on scroll. No-op (propagates the
-     * event) for non vertical scroll or when fewer than two vendors are enabled.
-     * On a real cycle it persists `active-vendor`, mirrors it to disk, expands the
-     * new sub-section, and triggers an immediate re-resolve + fetch.
-     * @param {Clutter.Actor} _actor
-     * @param {Clutter.Event} event
-     * @returns {number} `Clutter.EVENT_STOP` when consumed, else `EVENT_PROPAGATE`.
-     */
     _onScroll(_actor, event) {
         if (this._destroyed)
             return Clutter.EVENT_PROPAGATE;
@@ -548,14 +399,6 @@ class Indicator extends PanelMenu.Button {
         return Clutter.EVENT_STOP;
     }
 
-    /**
-     * Paint the panel label for a successful result, appending the stale marker
-     * when the data came from cache after a failed fetch.
-     * @param {*} snapshot - the active adapter's snapshot.
-     * @param {boolean} stale
-     * @param {Date} now
-     * @returns {void}
-     */
     _paintLabelOk(snapshot, stale, now) {
         let text = substitute(this._barFormat, this._adapter.placeholders(snapshot, now));
         if (stale)
@@ -563,13 +406,6 @@ class Indicator extends PanelMenu.Button {
         this._setLabel(text, severityColor(this._adapter.severity(snapshot), this._theme));
     }
 
-    /**
-     * On popup open: re-expand the active sub-section (GNOME collapses open
-     * submenus when the parent popup closes, so without this the active vendor
-     * shows only its header on the second open), re-render immediately from
-     * cache, then start the 60s live re-render timer (active sub-section only).
-     * @returns {void}
-     */
     _onPopupOpen() {
         this._setActiveExpansion(this._activeId);
         this._reRenderFromCache();
@@ -581,10 +417,6 @@ class Indicator extends PanelMenu.Button {
         });
     }
 
-    /**
-     * On popup close: stop the live re-render timer.
-     * @returns {void}
-     */
     _onPopupClose() {
         if (this._renderTimeoutId) {
             GLib.Source.remove(this._renderTimeoutId);
@@ -592,15 +424,6 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    /**
-     * Replace a (sub)menu section with a single message row (used for Loading…,
-     * placeholder, and error states). Dim states inherit the themed foreground;
-     * the error state takes an explicit severity color plus a symbolic icon.
-     * @param {PopupMenu.PopupMenuBase} menu - the section/submenu to fill.
-     * @param {string} text
-     * @param {{color?: string, iconName?: string, dim?: boolean}} [opts]
-     * @returns {void}
-     */
     _setSubmenuMessage(menu, text, opts = {}) {
         menu.removeAll();
         const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
@@ -622,27 +445,11 @@ class Indicator extends PanelMenu.Button {
         menu.addMenuItem(item);
     }
 
-    /**
-     * Set the label text and inline foreground color.
-     * @param {string} text
-     * @param {string} color - hex color.
-     * @returns {void}
-     */
     _setLabel(text, color) {
         this._label.text = text;
         this._label.set_style(`color: ${color};`);
     }
 
-    /**
-     * Build one icon-only footer action button: a symbolic `St.Icon` in an
-     * `St.Button`, with the (translated) label exposed as the accessible name and
-     * shown as a delayed hover tooltip. The click handler is guarded against a
-     * post-destroy invocation; hovering or clicking also dismisses the tooltip.
-     * @param {string} iconName - symbolic icon name.
-     * @param {string} label - already-translated action label (tooltip + a11y).
-     * @param {() => void} onClick - invoked on click when not destroyed.
-     * @returns {St.Button}
-     */
     _makeActionButton(iconName, label, onClick) {
         const button = new St.Button({
             style_class: 'aiusagebar-action-button',
@@ -661,13 +468,6 @@ class Indicator extends PanelMenu.Button {
         return button;
     }
 
-    /**
-     * Hover handler for an action button: arm the delayed tooltip on enter, or
-     * cancel any pending timer and hide the tooltip on leave.
-     * @param {St.Button} button - the hovered button.
-     * @param {string} label - tooltip text.
-     * @returns {void}
-     */
     _onActionHover(button, label) {
         if (this._destroyed)
             return;
@@ -683,13 +483,6 @@ class Indicator extends PanelMenu.Button {
         });
     }
 
-    /**
-     * Show the shared tooltip label (created lazily in the uiGroup) centered just
-     * below the given button. No-op if the button is no longer hovered.
-     * @param {St.Button} button - the button to anchor under.
-     * @param {string} label - tooltip text.
-     * @returns {void}
-     */
     _showTooltip(button, label) {
         if (this._destroyed || !button.hover)
             return;
@@ -706,18 +499,10 @@ class Indicator extends PanelMenu.Button {
         this._tooltip.set_position(Math.max(0, x), y);
     }
 
-    /**
-     * Hide the shared tooltip label if it exists.
-     * @returns {void}
-     */
     _hideTooltip() {
         this._tooltip?.hide();
     }
 
-    /**
-     * Cancel a pending tooltip-show timer, if any.
-     * @returns {void}
-     */
     _cancelTooltipTimer() {
         if (this._tooltipTimeoutId) {
             GLib.Source.remove(this._tooltipTimeoutId);
@@ -725,13 +510,6 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    /**
-     * Tear down: stop the poll + live re-render timers, disconnect the popup,
-     * scroll, and settings-changed signals, cancel pending I/O, dispose the Soup
-     * session, drop the in-memory maps, clear the popup, and chain to the GObject
-     * destructor. Idempotent.
-     * @returns {void}
-     */
     destroy() {
         this._destroyed = true;
 

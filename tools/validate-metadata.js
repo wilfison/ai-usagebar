@@ -1,16 +1,8 @@
-/**
- * @file Validate metadata.json before packaging/submission: assert it is
- * parseable JSON and carries the keys EGO requires. Exits non-zero with a
- * diagnostic on any failure so CI gates on it. Run via `gjs -m`.
- */
-
 import GLib from 'gi://GLib';
 import system from 'system';
 
-/** @type {string[]} Keys every shippable metadata.json must define. */
 const REQUIRED = ['uuid', 'name', 'description', 'url', 'shell-version', 'settings-schema'];
 
-/** @type {string} Path to the manifest, relative to the repo root. */
 const PATH = 'metadata.json';
 
 const [ok, bytes] = GLib.file_get_contents(PATH);

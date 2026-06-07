@@ -1,16 +1,3 @@
-/**
- * @file Thin renderer that walks a {@link SectionModel} and populates a
- * `PopupMenu` section with St widgets, laid out as a libadwaita boxed list:
- * the whole section lives in one non-reactive item; usage windows/gauges are
- * grouped into a rounded card, each row showing a leading symbolic icon, a
- * title with a dim subtitle stacked under it, a trailing severity-colored value,
- * and a full-width progress bar. Holds no business logic — all severity colors,
- * countdowns, and text come pre-resolved on the model; this module only maps row
- * kinds to widgets. Foreground/dim/accent text inherits the live shell theme via
- * CSS classes, so the popup tracks the user's GNOME theme. The section is cleared
- * and rebuilt on every refresh.
- */
-
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
@@ -18,14 +5,6 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {makeBar} from './bar.js';
 
-/**
- * Build a styled `St.Label`. Pass `color` only for severity-driven values
- * (which must override the theme); foreground/dim/title text uses `styleClass`
- * so it inherits the live shell theme.
- * @param {string} text
- * @param {?{color?: string, bold?: boolean, styleClass?: string}} [opts]
- * @returns {St.Label}
- */
 function label(text, opts = null) {
     const props = {text, y_align: Clutter.ActorAlign.CENTER};
     if (opts?.styleClass)
@@ -41,13 +20,6 @@ function label(text, opts = null) {
     return l;
 }
 
-/**
- * Build a system symbolic icon. Symbolic icons auto-recolor to the themed
- * foreground; `dim` applies the secondary-text opacity to match a dim label.
- * @param {string} name - symbolic icon name (e.g. `alarm-symbolic`).
- * @param {boolean} [dim] - render at secondary-text opacity.
- * @returns {St.Icon}
- */
 function makeIcon(name, dim = false) {
     return new St.Icon({
         icon_name: name,
@@ -56,16 +28,6 @@ function makeIcon(name, dim = false) {
     });
 }
 
-/**
- * Build the leading-icon + (title / dim subtitle) + trailing-value header shared
- * by every boxed card row. The title/subtitle column expands, pushing the
- * trailing value to the right edge (Adwaita row layout).
- * @param {?string} iconName - leading symbolic icon, or null for none.
- * @param {string} title
- * @param {{subtitle?: string, trailing?: string, trailingColor?: string}} [opts]
- *   - `trailingColor` is the pre-resolved severity hex for the trailing value.
- * @returns {St.BoxLayout}
- */
 function rowHeader(iconName, title, opts = {}) {
     const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
     if (iconName)
@@ -87,21 +49,10 @@ function rowHeader(iconName, title, opts = {}) {
     return head;
 }
 
-/**
- * Build an empty vertical card-row container (header line + bar stacked).
- * @returns {St.BoxLayout}
- */
 function cardRow() {
     return new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card-row'});
 }
 
-/**
- * Build a `window` boxed row: icon + title, dim pre-composed "Resets in …"
- * subtitle, trailing bold `pct% pace` value in its pre-resolved severity color,
- * and a full-width bar filled in that same severity color.
- * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {St.BoxLayout}
- */
 function buildWindowRow(row) {
     const r = cardRow();
     const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
@@ -114,13 +65,6 @@ function buildWindowRow(row) {
     return r;
 }
 
-/**
- * Build a `gauge` boxed row: icon + title, optional dim subtitle, trailing bold
- * value in its pre-resolved severity color, and a bar filled in that same
- * severity color (drawn only when `row.pct` is a number).
- * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {St.BoxLayout}
- */
 function buildGaugeRow(row) {
     const r = cardRow();
     r.add_child(rowHeader(row.icon, row.title, {
@@ -133,12 +77,6 @@ function buildGaugeRow(row) {
     return r;
 }
 
-/**
- * Build a standalone `text` line (lives outside the card). Color precedence is
- * explicit `row.color` hex, else `row.tone` ('dim' → dim class, else themed fg).
- * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {St.BoxLayout}
- */
 function buildTextLine(row) {
     const dim = row.tone === 'dim';
     const line = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
@@ -151,13 +89,6 @@ function buildTextLine(row) {
     return line;
 }
 
-/**
- * Build the `http-error` block: a thin rule, an icon + the pre-composed `HTTP
- * <code>` status line (themed foreground; the warning icon carries the error
- * semantics), then dim wrapped body lines.
- * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {St.BoxLayout}
- */
 function buildHttpError(row) {
     const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
     block.add_child(new St.Widget({style_class: 'aiusagebar-rule', x_expand: true}));
@@ -171,12 +102,6 @@ function buildHttpError(row) {
     return block;
 }
 
-/**
- * Build the dim `footer` line (pre-composed "Updated …" text) preceded by a thin
- * rule.
- * @param {import('../lib/vendors/anthropic-section.js').Row} row
- * @returns {St.BoxLayout}
- */
 function buildFooter(row) {
     const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
     block.add_child(new St.Widget({style_class: 'aiusagebar-rule', x_expand: true}));
@@ -188,15 +113,6 @@ function buildFooter(row) {
     return block;
 }
 
-/**
- * Clear `menuSection` and repopulate it from `model` as a single non-reactive
- * boxed-list item: the accent header first, then usage windows/gauges grouped
- * into a rounded card (thin separators between rows), with text/error/footer
- * lines breaking out of the card at their model position.
- * @param {PopupMenu.PopupMenuBase} menuSection
- * @param {import('../lib/vendors/anthropic-section.js').SectionModel} model
- * @returns {void}
- */
 export function renderSection(menuSection, model) {
     menuSection.removeAll();
 

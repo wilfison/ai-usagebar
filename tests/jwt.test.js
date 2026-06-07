@@ -3,7 +3,6 @@ import system from 'system';
 import {parseJwtClaims, jwtExpSecs, chatgptPlanType} from '../lib/oauth/jwt.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 
-/** Encode a UTF-8 string as no-pad base64url (matches the Codex CLI's tokens). */
 function b64url(str) {
     const bytes = new TextEncoder().encode(str);
     const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -24,7 +23,6 @@ function b64url(str) {
     return out;
 }
 
-/** Build a fake `{alg:none}` JWT with the given claims (no signature). */
 function fakeJwt(claims) {
     return `${b64url(JSON.stringify({alg: 'none', typ: 'JWT'}))}.${b64url(JSON.stringify(claims))}.sig`;
 }

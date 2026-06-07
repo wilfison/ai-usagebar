@@ -199,15 +199,6 @@ spot-check the other catalogs.
 - `*.credentials.json`, `auth.json`, and `*.compiled` are gitignored; never
   commit real OAuth creds or API keys. Don't `cat` credential files — use
   `jq 'keys'`.
-- **Source `*.js` files must be documented with JSDoc.** Every file under
-  `lib/`, `ui/`, `tools/`, `extension.js`, `prefs.js`, and shared test utilities
-  (`tests/_assert.js`, `tests/_http-server.js`, `tests/run.js`) starts with a
-  `@file` block. Every exported function, class, and constant carries a JSDoc
-  block with `@param` / `@returns` (and `@throws` when it throws). Use `@typedef`
-  for structured shapes reused across functions (HTTP results, OAuth creds,
-  vendor payloads/snapshots). **`tests/*.test.js` files do NOT need JSDoc** — the
-  `describe`/`it` names already describe intent. Keep blocks tight: types and
-  contract first, prose only when the WHY isn't obvious.
 - Keep API usage on the GNOME 50 ESM surface — `gi://` imports and
   `resource:///org/gnome/shell/…`, no legacy `imports.*` syntax (the lint
   enforces this).
