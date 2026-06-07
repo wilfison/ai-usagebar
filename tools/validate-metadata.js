@@ -8,7 +8,7 @@ import GLib from 'gi://GLib';
 import system from 'system';
 
 /** @type {string[]} Keys every shippable metadata.json must define. */
-const REQUIRED = ['uuid', 'name', 'description', 'shell-version', 'settings-schema'];
+const REQUIRED = ['uuid', 'name', 'description', 'url', 'shell-version', 'settings-schema'];
 
 /** @type {string} Path to the manifest, relative to the repo root. */
 const PATH = 'metadata.json';
