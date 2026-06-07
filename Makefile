@@ -1,25 +1,24 @@
 UUID := ai-usagebar@wilfison
 
-# Default target — list every target with a one-line description.
 help:
 	@echo "Targets:"
-	@echo "  schemas  Compile the GSettings schema (schemas/)"
-	@echo "  enable   Enable the extension via gnome-extensions"
-	@echo "  disable  Disable the extension via gnome-extensions"
-	@echo "  reload   Disable then enable in one step"
-	@echo "  logs     Tail gnome-shell logs (journalctl -f)"
-	@echo "  test     Run the gjs unit-test suite (tests/run.js)"
-	@echo "  lint     Check trailing newline + no imports.* in JS files"
-	@echo "  eslint   Run eslint (GNOME Shell style); needs 'npm ci' first"
-	@echo "  validate Validate metadata.json + compile schema with --strict"
-	@echo "  watch    Re-run 'make test' on changes under lib/ ui/ tests/"
-	@echo "  run      Launch a nested gnome-shell (Wayland) to test the extension"
-	@echo "  pot      Extract translatable strings into po/$(UUID).pot"
+	@echo "  schemas         Compile the GSettings schema (schemas/)"
+	@echo "  enable          Enable the extension via gnome-extensions"
+	@echo "  disable         Disable the extension via gnome-extensions"
+	@echo "  reload          Disable then enable in one step"
+	@echo "  logs            Tail gnome-shell logs (journalctl -f)"
+	@echo "  test            Run the gjs unit-test suite (tests/run.js)"
+	@echo "  lint            Check trailing newline + no imports.* in JS files"
+	@echo "  eslint          Run eslint (GNOME Shell style); needs 'npm ci' first"
+	@echo "  validate        Validate metadata.json + compile schema with --strict"
+	@echo "  watch           Re-run 'make test' on changes under lib/ ui/ tests/"
+	@echo "  run             Launch a nested gnome-shell (Wayland) to test the extension"
+	@echo "  pot             Extract translatable strings into po/$(UUID).pot"
 	@echo "  update-po       Merge each po/*.po against the refreshed template"
 	@echo "  compile-locale  Compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo"
 	@echo "  i18n-check      Fail on a stale .pot or a malformed po/*.po (CI gate)"
-	@echo "  pack     Build the upload zip via gnome-extensions pack (--podir=po)"
-	@echo "  info     Show gnome-extensions info for $(UUID)"
+	@echo "  pack            Build the upload zip via gnome-extensions pack (--podir=po)"
+	@echo "  info            Show gnome-extensions info for $(UUID)"
 
 schemas:
 	glib-compile-schemas schemas/
@@ -47,8 +46,7 @@ eslint:
 validate:
 	@./tools/validate.sh
 
-# Re-run the test suite whenever a source/test file changes. Requires
-# inotify-tools; degrades to a clear message when inotifywait is absent.
+# Re-run the test suite whenever a source/test file changes.
 watch:
 	@command -v inotifywait >/dev/null 2>&1 || { \
 		echo "watch: inotifywait not found — install inotify-tools to use 'make watch'"; \
@@ -59,13 +57,9 @@ watch:
 		$(MAKE) --no-print-directory test || true; \
 	done
 
-# Run the extension inside a throwaway nested gnome-shell so you can iterate
-# without logging out of your Wayland session. The nested shell gets its own
-# D-Bus session; close its window to exit.
 run:
-	MUTTER_DEBUG="focus,stack" dbus-run-session -- gnome-shell --wayland --devkit
+	dbus-run-session -- gnome-shell --wayland --devkit
 
-# --- i18n (gettext) ---------------------------------------------------------
 # Extract every marked string into the tracked .pot template.
 pot:
 	@./tools/i18n.sh pot
@@ -74,21 +68,15 @@ pot:
 update-po:
 	@./tools/i18n.sh update-po
 
-# Compile locales into locale/<lang>/LC_MESSAGES/*.mo for live/dev testing in
-# this installed-extension directory (gitignored build artifacts).
+# Compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo for live/dev testing (gitignored).
 compile-locale:
 	@./tools/i18n.sh compile-locale
 
-# CI gate: regenerate the .pot and diff it against the committed one (fail on
-# drift), then msgfmt --check every po/*.po (fail on syntax/format errors).
+# CI gate: fail on .pot drift (regenerate + diff), then msgfmt --check every po/*.po.
 i18n-check:
 	@./tools/i18n.sh check
 
-# gnome-extensions pack only bundles a fixed top-level set (extension.js,
-# prefs.js, metadata.json, stylesheet.css, schemas/), so the lib/ and ui/ module
-# trees must be added explicitly with --extra-source. --podir=po compiles po/*.po
-# into the zip as locale/<lang>/LC_MESSAGES/$(UUID).mo, so packaged installs are
-# translated.
+# pack bundles only a fixed top-level set, so lib/ and ui/ need --extra-source; --podir=po ships the .mo files.
 pack: schemas
 	gnome-extensions pack . --extra-source=lib --extra-source=ui --podir=po --force
 

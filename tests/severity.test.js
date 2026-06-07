@@ -3,8 +3,7 @@ import system from 'system';
 import {severityFor, severityColor, Severity} from '../lib/severity.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 
-// Local fixture palette. lib/theme.js (US-008) will provide defaultTheme();
-// severityColor is theme-agnostic — it just reads the four keys.
+// Local fixture palette; severityColor is theme-agnostic — it just reads the four keys.
 const palette = {
     green: '#98c379',
     yellow: '#e5c07b',
