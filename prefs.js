@@ -5,8 +5,9 @@
  * registry. Adds six pages (General + one per vendor) bound to GSettings.
  *
  * Surfaces the keys the extension consumes: the General page covers the primary
- * vendor, refresh cadence, bar/popup formats, severity-color overrides, and the
- * pace-marker toggle; `openai-admin-key-env` is intentionally not shown (OpenAI
+ * vendor, refresh cadence, bar/popup formats, severity-color overrides, the
+ * pace-marker toggle, and a confirmed "reset all settings" action;
+ * `openai-admin-key-env` is intentionally not shown (OpenAI
  * is Codex-OAuth-only). Inline API keys use a masked entry with a reveal toggle
  * and live only in dconf.
  */
@@ -192,7 +193,55 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         colorGroup.add(this._colorRow(settings, 'color-critical', _('Critical'), theme[COLOR_KEY_PALETTE['color-critical']], cleanups));
         page.add(colorGroup);
 
+        // --- Reset everything (destructive, confirmed) ---
+        const resetGroup = new Adw.PreferencesGroup({
+            title: _('Reset'),
+            description: _('Restore every setting — vendor toggles, paths, keys, formats, and colors — to its built-in default.'),
+        });
+        const resetRow = new Adw.ButtonRow({title: _('Reset all settings')});
+        resetRow.add_css_class('destructive-action');
+        const resetActivatedId = resetRow.connect('activated', () =>
+            this._confirmResetAll(settings, resetRow.get_root()));
+        cleanups.push(() => resetRow.disconnect(resetActivatedId));
+        resetGroup.add(resetRow);
+        page.add(resetGroup);
+
         return page;
+    }
+
+    /**
+     * Present a destructive confirmation dialog; on confirm, reset every key.
+     * @param {Gio.Settings} settings
+     * @param {Gtk.Window} parent - the prefs window the dialog attaches to.
+     * @returns {void}
+     */
+    _confirmResetAll(settings, parent) {
+        const dialog = new Adw.AlertDialog({
+            heading: _('Reset all settings?'),
+            body: _('This restores every setting to its built-in default and cannot be undone.'),
+        });
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('reset', _('Reset'));
+        dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.set_default_response('cancel');
+        dialog.set_close_response('cancel');
+        dialog.connect('response', (_d, response) => {
+            if (response === 'reset')
+                this._resetAll(settings);
+        });
+        dialog.present(parent);
+    }
+
+    /**
+     * Reset every schema key to its default. Bound rows and the manual
+     * combo/spin/color resync handlers repaint themselves off the `changed`
+     * signals GSettings emits per key.
+     * @param {Gio.Settings} settings
+     * @returns {void}
+     */
+    _resetAll(settings) {
+        for (const key of settings.settings_schema.list_keys())
+            settings.reset(key);
     }
 
     /**

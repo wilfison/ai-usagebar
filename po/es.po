@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-06-06 23:27-0300\n"
+"POT-Creation-Date: 2026-06-06 23:36-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Spanish\n"
@@ -175,46 +175,46 @@ msgstr "Herramientas MCP (mensual)"
 msgid "no usage windows reported"
 msgstr "no se informaron ventanas de uso"
 
-#: prefs.js:89
+#: prefs.js:90
 msgid "General"
 msgstr "General"
 
-#: prefs.js:94
+#: prefs.js:95
 msgid "Display"
 msgstr "Visualización"
 
-#: prefs.js:100
+#: prefs.js:101
 msgid "Primary vendor"
 msgstr "Proveedor principal"
 
-#: prefs.js:101
+#: prefs.js:102
 msgid "Shown by default and used as the scroll-cycle reset target"
 msgstr ""
 "Se muestra de forma predeterminada y se usa como destino de reinicio al "
 "desplazar"
 
-#: prefs.js:126
+#: prefs.js:127
 msgid "Refresh"
 msgstr "Actualización"
 
 #. Translators: %d is the minimum refresh interval in seconds.
-#: prefs.js:128
+#: prefs.js:129
 #, javascript-format
 msgid "Minimum %d s — the upstream endpoints rate-limit below that."
 msgstr ""
 "Mínimo %d s — los endpoints upstream limitan la tasa por debajo de eso."
 
-#: prefs.js:137
+#: prefs.js:138
 msgid "Refresh interval (seconds)"
 msgstr "Intervalo de actualización (segundos)"
 
-#: prefs.js:161
+#: prefs.js:162
 msgid "Panel label"
 msgstr "Etiqueta del panel"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types — keep them verbatim, only translate the surrounding prose.
-#: prefs.js:164
+#: prefs.js:165
 msgid ""
 "Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
@@ -222,17 +222,17 @@ msgstr ""
 "Marcadores: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:166
+#: prefs.js:167
 msgid "Bar format"
 msgstr "Formato de la barra"
 
-#: prefs.js:173
+#: prefs.js:174
 msgid "Popup"
 msgstr "Ventana emergente"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types — keep them verbatim, only translate the surrounding prose.
-#: prefs.js:176
+#: prefs.js:177
 msgid ""
 "Optional extra lines shown above the popup. Empty uses the built-in layout. "
 "Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} "
@@ -242,19 +242,19 @@ msgstr ""
 "diseño interno. Marcadores: {plan} {session_pct} {session_reset} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:178
+#: prefs.js:179
 msgid "Popup format"
 msgstr "Formato de la ventana emergente"
 
-#: prefs.js:179
+#: prefs.js:180
 msgid "Show pace marker"
 msgstr "Mostrar marcador de ritmo"
 
-#: prefs.js:184
+#: prefs.js:185
 msgid "Severity colors"
 msgstr "Colores de severidad"
 
-#: prefs.js:185
+#: prefs.js:186
 msgid ""
 "Pick a color per severity tier. Reset returns a tier to its built-in default."
 msgstr ""
@@ -262,87 +262,117 @@ msgstr ""
 "su valor predeterminado."
 
 #. Translators: Low/Mid/High/Critical are usage-severity tier names.
-#: prefs.js:189
+#: prefs.js:190
 msgid "Low"
 msgstr "Bajo"
 
-#: prefs.js:190
+#: prefs.js:191
 msgid "Mid"
 msgstr "Medio"
 
-#: prefs.js:191
+#: prefs.js:192
 msgid "High"
 msgstr "Alto"
 
-#: prefs.js:192
+#: prefs.js:193
 msgid "Critical"
 msgstr "Crítico"
 
-#: prefs.js:206 prefs.js:210
+#: prefs.js:198 prefs.js:224
+msgid "Reset"
+msgstr "Restablecer"
+
+#: prefs.js:199
+msgid ""
+"Restore every setting — vendor toggles, paths, keys, formats, and colors — "
+"to its built-in default."
+msgstr ""
+"Restablece cada ajuste — interruptores de proveedores, rutas, claves, "
+"formatos y colores — a su valor predeterminado."
+
+#: prefs.js:201
+msgid "Reset all settings"
+msgstr "Restablecer todos los ajustes"
+
+#: prefs.js:220
+msgid "Reset all settings?"
+msgstr "¿Restablecer todos los ajustes?"
+
+#: prefs.js:221
+msgid ""
+"This restores every setting to its built-in default and cannot be undone."
+msgstr ""
+"Esto restablece cada ajuste a su valor predeterminado y no se puede deshacer."
+
+#: prefs.js:223
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: prefs.js:255 prefs.js:259
 msgid "Anthropic"
 msgstr "Anthropic"
 
-#: prefs.js:211
+#: prefs.js:260
 msgid "Credentials path — empty uses ~/.claude/.credentials.json."
 msgstr "Ruta de credenciales — vacío usa ~/.claude/.credentials.json."
 
-#: prefs.js:213 prefs.js:235 prefs.js:256 prefs.js:279 prefs.js:301
+#: prefs.js:262 prefs.js:284 prefs.js:305 prefs.js:328 prefs.js:350
 msgid "Enabled"
 msgstr "Activado"
 
-#: prefs.js:214
+#: prefs.js:263
 msgid "Credentials path"
 msgstr "Ruta de credenciales"
 
-#: prefs.js:228 prefs.js:232
+#: prefs.js:277 prefs.js:281
 msgid "OpenAI"
 msgstr "OpenAI"
 
-#: prefs.js:233
+#: prefs.js:282
 msgid "Codex auth path — empty uses ~/.codex/auth.json."
 msgstr "Ruta de autenticación de Codex — vacío usa ~/.codex/auth.json."
 
-#: prefs.js:236
+#: prefs.js:285
 msgid "Codex auth path"
 msgstr "Ruta de autenticación de Codex"
 
-#: prefs.js:249 prefs.js:253
+#: prefs.js:298 prefs.js:302
 msgid "Z.AI"
 msgstr "Z.AI"
 
-#: prefs.js:254 prefs.js:277
+#: prefs.js:303 prefs.js:326
 msgid "Set the API key inline or via the environment variable (env wins)."
 msgstr ""
 "Establezca la clave de API en línea o mediante la variable de entorno (el "
 "entorno tiene prioridad)."
 
-#: prefs.js:257 prefs.js:280 prefs.js:302
+#: prefs.js:306 prefs.js:329 prefs.js:351
 msgid "API key env var"
 msgstr "Variable de entorno de la clave de API"
 
-#: prefs.js:258 prefs.js:281 prefs.js:303
+#: prefs.js:307 prefs.js:330 prefs.js:352
 msgid "API key (inline)"
 msgstr "Clave de API (en línea)"
 
-#: prefs.js:259
+#: prefs.js:308
 msgid "Plan tier (lite/pro/max)"
 msgstr "Nivel del plan (lite/pro/max)"
 
-#: prefs.js:272 prefs.js:276
+#: prefs.js:321 prefs.js:325
 msgid "OpenRouter"
 msgstr "OpenRouter"
 
-#: prefs.js:294 prefs.js:298
+#: prefs.js:343 prefs.js:347
 msgid "DeepSeek"
 msgstr "DeepSeek"
 
-#: prefs.js:299
+#: prefs.js:348
 msgid "Disabled by default; requires an API key (env var or inline)."
 msgstr ""
 "Desactivado de forma predeterminada; requiere una clave de API (variable de "
 "entorno o en línea)."
 
-#: prefs.js:359
+#: prefs.js:408
 msgid "Reset to default"
 msgstr "Restablecer al valor predeterminado"
 
