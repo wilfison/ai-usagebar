@@ -32,7 +32,7 @@ describe('readConfig — schema defaults', () => {
     const cfg = readConfig(makeSettings());
     it('refresh interval defaults to 300', () => assertEqual(cfg.refreshIntervalSecs, 300));
     it('default bar format', () =>
-        assertEqual(cfg.barFormat, '{vendor_short} {session_pct}% · {session_reset}'));
+        assertEqual(cfg.barFormat, '{session_pct}% · {session_reset}'));
     it('primary vendor defaults to anthropic', () => assertEqual(cfg.primaryVendor, 'anthropic'));
     it('anthropic enabled by default', () => assertEqual(cfg.vendors.anthropic.enabled, true));
     it('anthropic creds path unset → null', () => assertEqual(cfg.vendors.anthropic.credentialsPath, null));

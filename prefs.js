@@ -29,6 +29,9 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         const settings = this.getSettings();
         const cleanups = [];
 
+        this._registerVendorIcons();
+        this._loadStyles();
+
         window.add(this._buildGeneralPage(settings, cleanups));
         window.add(this._buildAnthropicPage(settings));
         window.add(this._buildOpenAiPage(settings));
@@ -161,6 +164,25 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         return page;
     }
 
+    _registerVendorIcons() {
+        // The bundled vendor SVGs (icons/<id>.svg) live outside any icon theme,
+        // so add the dir to the display's search path; pages then reference them
+        // by bare basename via icon_name.
+        const iconDir = `${this.path}/icons`;
+        const iconTheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
+        if (!iconTheme.get_search_path().includes(iconDir))
+            iconTheme.add_search_path(iconDir);
+    }
+
+    _loadStyles() {
+        // Bottom tabs are AdwViewSwitcher buttons stacking icon over label with
+        // no spacing; push the icon up so the label has a vertical gap.
+        const provider = new Gtk.CssProvider();
+        provider.load_from_string('viewswitcher button image { margin-bottom: 6px; }');
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+
     _confirmResetAll(settings, parent) {
         const dialog = new Adw.AlertDialog({
             heading: _('Reset all settings?'),
@@ -187,7 +209,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "Anthropic" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('Anthropic'),
-            icon_name: 'network-server-symbolic',
+            icon_name: 'anthropic',
         });
         const group = new Adw.PreferencesGroup({
             title: _('Anthropic'),
@@ -203,7 +225,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "OpenAI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('OpenAI'),
-            icon_name: 'network-server-symbolic',
+            icon_name: 'openai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('OpenAI'),
@@ -219,7 +241,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "Z.AI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('Z.AI'),
-            icon_name: 'network-server-symbolic',
+            icon_name: 'zai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('Z.AI'),
@@ -237,7 +259,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "OpenRouter" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('OpenRouter'),
-            icon_name: 'network-server-symbolic',
+            icon_name: 'openrouter',
         });
         const group = new Adw.PreferencesGroup({
             title: _('OpenRouter'),
@@ -254,7 +276,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "DeepSeek" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('DeepSeek'),
-            icon_name: 'network-server-symbolic',
+            icon_name: 'deepseek',
         });
         const group = new Adw.PreferencesGroup({
             title: _('DeepSeek'),

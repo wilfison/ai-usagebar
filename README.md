@@ -95,7 +95,9 @@ gear button in the popup footer). The prefs window exposes:
 - **Per-vendor enable** — toggle each of the five vendors on or off; only enabled
   vendors appear in the popup and the scroll cycle.
 - **Panel label format** (`bar-format`) — a template with `{token}` placeholders,
-  e.g. the default `{vendor_short} {session_pct}% · {session_reset}`.
+  e.g. the default `{session_pct}% · {session_reset}`. The active vendor's
+  identity is shown as an SVG icon before the text; add the `{vendor_short}`
+  token if you also want the textual short code (`cld`, `gpt`, …).
 - **Tooltip / extra rows format** (`tooltip-format`) — optional additive rows
   prepended to a vendor's popup section.
 - **Severity colors** — the green / orange / red / critical threshold colors.
@@ -166,6 +168,20 @@ This extension is an independent GNOME Shell port inspired by the
 [`akitaonrails/ai-usagebar`](https://github.com/akitaonrails/ai-usagebar) Waybar
 widget. Vendor names (Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek) are used
 nominatively to identify each provider; no affiliation or endorsement is implied.
+
+## Trademarks & logos
+
+The vendor logos bundled under [`icons/`](icons/) (Anthropic/Claude, OpenAI,
+Z.AI/GLM, OpenRouter, DeepSeek) are the trademarks and property of their
+respective owners. They are included **solely to identify each provider** within
+the UI — a nominative, descriptive use — and their presence does **not** imply
+any affiliation with, sponsorship by, or endorsement from those companies. This
+project is not affiliated with any of them.
+
+If you are a rights holder and believe a logo is used improperly, open an issue
+or send a DMCA / takedown request to the maintainer and the asset will be
+removed or replaced promptly. The MIT license below covers this project's own
+code and does **not** grant any rights to these third-party marks.
 
 ## License
 

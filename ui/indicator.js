@@ -23,12 +23,11 @@ import {defaultTheme, withOverrides} from '../lib/theme.js';
 
 const RERENDER_INTERVAL_S = 60;
 const STALE_MARK = ' ⏸';
-const VENDOR_HEADER_ICON = 'network-server-symbolic';
 const TOOLTIP_DELAY_MS = 400;
 
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    _init(settings, openPreferences) {
+    _init(settings, openPreferences, extensionPath) {
         super._init(0.0, 'ai-usagebar');
 
         // Pin the whole popup to a consistent width (see .aiusagebar-popup). Set
@@ -38,6 +37,7 @@ class Indicator extends PanelMenu.Button {
 
         this._settings = settings;
         this._openPreferences = openPreferences;
+        this._path = extensionPath;
         this._config = readConfig(settings);
         this._barFormat = this._config.barFormat;
 
@@ -63,13 +63,17 @@ class Indicator extends PanelMenu.Button {
         this._enabledSig = '';
 
         this._box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
+        this._icon = new St.Icon({
+            style_class: 'aiusagebar-panel-icon',
+            gicon: this._vendorGicon(this._activeId),
+            y_align: Clutter.ActorAlign.CENTER,
+        });
         this._label = new St.Label({
-            // Vendor short codes (e.g. "Claude", "GPT") are proper nouns — not
-            // translated; the trailing em-dash is punctuation.
-            text: `${this._adapter.vendorShort} —`,
+            text: '',
             y_align: Clutter.ActorAlign.CENTER,
             y_expand: true,
         });
+        this._box.add_child(this._icon);
         this._box.add_child(this._label);
         this.add_child(this._box);
 
@@ -200,7 +204,7 @@ class Indicator extends PanelMenu.Button {
 
         enabledVendors(config).forEach((id, idx) => {
             const sub = new PopupMenu.PopupSubMenuMenuItem('', true);
-            sub.icon.icon_name = VENDOR_HEADER_ICON;
+            sub.icon.gicon = this._vendorGicon(id);
             sub.label.text = vendorLabel(id);
             this.menu.addMenuItem(sub, idx);
             this._vendorItems.set(id, sub);
@@ -269,6 +273,7 @@ class Indicator extends PanelMenu.Button {
         if (activeChanged) {
             this._adapter = getAdapter(activeId);
             this._cache = Cache.forVendor(this._adapter.cacheId);
+            this._setVendorIcon(activeId);
         }
         this._activeId = activeId;
 
@@ -447,6 +452,15 @@ class Indicator extends PanelMenu.Button {
     _setLabel(text, color) {
         this._label.text = text;
         this._label.set_style(`color: ${color};`);
+    }
+
+    _vendorGicon(id) {
+        const f = Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', `${id}.svg`]));
+        return new Gio.FileIcon({file: f});
+    }
+
+    _setVendorIcon(id) {
+        this._icon.gicon = this._vendorGicon(id);
     }
 
     _makeActionButton(iconName, label, onClick) {

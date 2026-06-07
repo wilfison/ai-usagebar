@@ -3,6 +3,12 @@
     spacing: 8px;
 }
 
+/* Panel vendor icon: full-color brand SVG before the usage text. */
+.aiusagebar-panel-icon {
+    icon-size: 16px;
+    margin-right: 4px;
+}
+
 /* The popup's item box (class added to this.menu.box in ui/indicator.js): pin a
    consistent minimum width so every vendor sub-menu opens at the same roomy
    Adwaita width instead of resizing to each one's content. Bump for a wider popup. */

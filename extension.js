@@ -5,7 +5,7 @@ import {Indicator} from './ui/indicator.js';
 
 export default class AiUsagebarExtension extends Extension {
     enable() {
-        this._indicator = new Indicator(this.getSettings(), () => this.openPreferences());
+        this._indicator = new Indicator(this.getSettings(), () => this.openPreferences(), this.path);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
     }
 
