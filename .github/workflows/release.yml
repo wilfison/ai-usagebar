@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag to build (e.g. v0.2.0)"
+        required: true
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Install Gnome Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gjs libglib2.0-bin gettext gir1.2-soup-3.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install eslint deps
+        run: npm ci
+
+      # Re-run the full CI gate so a tag can never ship a build that main would
+      # have rejected.
+      - name: Compile schemas
+        run: make schemas
+
+      - name: Unit tests (gjs)
+        run: make test
+
+      - name: Hygiene lint
+        run: ./tools/lint.sh
+
+      - name: ESLint
+        run: npx eslint .
+
+      - name: Validate metadata + schema
+        run: make validate
+
+      - name: i18n template + catalog check
+        run: make i18n-check
+
+      - name: Verify tag matches metadata version-name
+        env:
+          TAG: ${{ inputs.ref || github.ref_name }}
+        run: |
+          want="${TAG#v}"
+          meta="$(jq -r '."version-name"' metadata.json)"
+          if [ "$want" != "$meta" ]; then
+            echo "::error::tag v$want does not match metadata.json version-name $meta"
+            exit 1
+          fi
+
+      - name: Pack extension
+        run: make pack
+
+      - name: Compute SHA256
+        run: |
+          ZIP=ai-usagebar@wilfison.shell-extension.zip
+          sha256sum "$ZIP" > "$ZIP.sha256"
+          echo "Built $ZIP"
+          cat "$ZIP.sha256"
+
+      - name: Generate release body
+        env:
+          TAG: ${{ inputs.ref || github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          # `-Fxv "$TAG"`: -F fixed string (dots aren't regex wildcards),
+          # -x whole-line match. Robust against dots in version strings.
+          PREV_TAG=$(git tag --sort=-v:refname | grep -Fxv "$TAG" | head -1)
+
+          # Extract the matching "## [VERSION]" section from CHANGELOG.md if one
+          # exists (Keep-A-Changelog format). Skipped silently when absent.
+          : > changelog_section.md
+          if [ -f CHANGELOG.md ]; then
+            awk -v ver="$VERSION" '
+              BEGIN { hdr = "## [" ver "]" }
+              index($0, hdr) == 1 { flag=1; next }
+              flag && index($0, "## [") == 1 { exit }
+              flag { print }
+            ' CHANGELOG.md > changelog_section.md
+          fi
+
+          {
+            if [ -s changelog_section.md ]; then
+              echo "## What's changed"
+              echo
+              cat changelog_section.md
+              echo
+            fi
+
+            echo "## Install"
+            echo
+            echo '```bash'
+            echo "curl -fsSLO https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/ai-usagebar@wilfison.shell-extension.zip"
+            echo "gnome-extensions install --force ai-usagebar@wilfison.shell-extension.zip"
+            echo '```'
+            echo
+            echo "Then **log out and back in** (Wayland requires a full relog to load a"
+            echo "new extension) and enable it:"
+            echo
+            echo '```bash'
+            echo "gnome-extensions enable ai-usagebar@wilfison"
+            echo '```'
+            echo
+            echo "## Checksums (SHA256)"
+            echo '```'
+            cat ai-usagebar@wilfison.shell-extension.zip.sha256
+            echo '```'
+
+            if [ -n "$PREV_TAG" ]; then
+              echo
+              echo "**Full diff**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${TAG}"
+            fi
+          } > body.md
+
+      - name: Create / update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.ref || github.ref_name }}
+        run: |
+          ASSETS="ai-usagebar@wilfison.shell-extension.zip ai-usagebar@wilfison.shell-extension.zip.sha256"
+          # Idempotent: a workflow_dispatch re-run against an existing tag
+          # overwrites assets and notes instead of failing.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" $ASSETS --clobber
+            gh release edit "$TAG" --notes-file body.md
+          else
+            gh release create "$TAG" $ASSETS \
+              --title "$TAG" \
+              --notes-file body.md \
+              --latest
+          fi
