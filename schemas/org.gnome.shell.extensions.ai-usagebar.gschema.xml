@@ -72,6 +72,19 @@
       <description>When enabled, each popup window bar draws a thin marker at the fraction of the window that has elapsed, so usage can be compared against pace at a glance.</description>
     </key>
 
+    <key name="notify-enabled" type="b">
+      <default>true</default>
+      <summary>Notify when usage crosses the threshold</summary>
+      <description>When enabled, a desktop notification is shown the first time a vendor's peak usage reaches the notification threshold. It fires once per crossing and re-arms after usage drops back below the threshold or the usage window resets.</description>
+    </key>
+
+    <key name="notify-threshold" type="i">
+      <default>90</default>
+      <range min="0" max="100"/>
+      <summary>Notification threshold (percent)</summary>
+      <description>Peak usage percentage at which a notification fires. The default of 90 matches the critical-severity tier. Vendors without a percentage (DeepSeek) notify on their critical tier instead.</description>
+    </key>
+
     <key name="anthropic-enabled" type="b">
       <default>true</default>
       <summary>Enable Anthropic</summary>

@@ -2,7 +2,7 @@ import system from 'system';
 
 import {
     parseCredits, parseKey, combine, balance, consumedPct,
-    snapshotToCacheJson, parseCacheJson, openrouterSeverity, placeholders,
+    snapshotToCacheJson, parseCacheJson, openrouterSeverity, openrouterPeakUsage, placeholders,
 } from '../lib/vendors/openrouter-parse.js';
 import {substitute} from '../lib/format.js';
 import {Severity} from '../lib/severity.js';
@@ -68,6 +68,15 @@ describe('openrouterSeverity', () => {
         assertEqual(openrouterSeverity(crit), Severity.CRITICAL);
         const mid = combine({totalCredits: 100, totalUsage: 60}, {label: '', limit: null, limitRemaining: null, usageDaily: 0, usageWeekly: 0, usageMonthly: 0, isFreeTier: false});
         assertEqual(openrouterSeverity(mid), Severity.MID);
+    });
+});
+
+describe('openrouterPeakUsage', () => {
+    it('returns consumed percentage with no reset window', () => {
+        const snap = combine({totalCredits: 100, totalUsage: 92}, {label: '', limit: null, limitRemaining: null, usageDaily: 0, usageWeekly: 0, usageMonthly: 0, isFreeTier: false});
+        const p = openrouterPeakUsage(snap);
+        assertEqual(p.percent, 92);
+        assertEqual(p.resetsAt, null);
     });
 });
 

@@ -149,6 +149,40 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         colorGroup.add(this._colorRow(settings, 'color-critical', _('Critical'), theme[COLOR_KEY_PALETTE['color-critical']], cleanups));
         page.add(colorGroup);
 
+        const notifyGroup = new Adw.PreferencesGroup({
+            title: _('Notifications'),
+            description: _('Show a desktop notification the first time a vendor reaches the threshold. It re-arms when usage drops back or the window resets.'),
+        });
+        notifyGroup.add(this._switchRow(settings, 'notify-enabled', _('Notify on high usage')));
+        const notifyAdj = new Gtk.Adjustment({
+            lower: 0,
+            upper: 100,
+            step_increment: 5,
+            page_increment: 10,
+        });
+        const threshold = new Adw.SpinRow({
+            title: _('Notification threshold (%)'),
+            adjustment: notifyAdj,
+            digits: 0,
+        });
+        threshold.set_value(settings.get_int('notify-threshold'));
+        const thresholdNotifyId = threshold.connect('notify::value', () => {
+            const v = Math.round(threshold.get_value());
+            if (settings.get_int('notify-threshold') !== v)
+                settings.set_int('notify-threshold', v);
+        });
+        const thresholdResyncId = settings.connect('changed::notify-threshold', () => {
+            const v = settings.get_int('notify-threshold');
+            if (Math.round(threshold.get_value()) !== v)
+                threshold.set_value(v);
+        });
+        cleanups.push(() => {
+            threshold.disconnect(thresholdNotifyId);
+            settings.disconnect(thresholdResyncId);
+        });
+        notifyGroup.add(threshold);
+        page.add(notifyGroup);
+
         const resetGroup = new Adw.PreferencesGroup({
             title: _('Reset'),
             description: _('Restore every setting — vendor toggles, paths, keys, formats, and colors — to its built-in default.'),

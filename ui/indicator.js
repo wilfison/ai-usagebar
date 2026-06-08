@@ -18,6 +18,7 @@ import {getAdapter} from '../lib/vendors/registry.js';
 import {vendorLabel} from '../lib/vendors.js';
 import {renderSection} from './vendorSection.js';
 import {substitute, tooltipRows} from '../lib/format.js';
+import {evaluateNotification, notificationText} from '../lib/notify.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
 
@@ -290,6 +291,7 @@ class Indicator extends PanelMenu.Button {
         if (this._destroyed)
             return;
         this._storeResult(activeId, res);
+        this._maybeNotify(this._adapter, this._cache, res, this._config);
         this._render(res);
     }
 
@@ -314,6 +316,7 @@ class Indicator extends PanelMenu.Button {
             if (this._destroyed)
                 return;
             this._storeResult(id, res);
+            this._maybeNotify(adapter, cache, res, config);
             this._renderVendorSection(id);
         }
 
@@ -326,6 +329,27 @@ class Indicator extends PanelMenu.Button {
         this._results.set(id, res);
         if (res.ok)
             this._fetchedAt.set(id, new Date(Date.now() - res.cacheAgeMs));
+    }
+
+    // Once-per-crossing notification; the per-vendor cache flag debounces re-fires.
+    _maybeNotify(adapter, cache, res, config) {
+        if (!res.ok || !config.notifications.enabled)
+            return;
+        try {
+            const peak = adapter.peakUsage(res.snapshot);
+            const {notify, alerting, windowKey} = evaluateNotification({
+                enabled: true,
+                peak,
+                severity: adapter.severity(res.snapshot),
+                threshold: config.notifications.threshold,
+                last: cache.readNotified(),
+            });
+            cache.writeNotified(alerting, windowKey);
+            if (notify)
+                Main.notify(vendorLabel(adapter.id), notificationText(peak, _));
+        } catch (e) {
+            console.warn(`ai-usagebar: notification check failed: ${e}`);
+        }
     }
 
     _render(res) {

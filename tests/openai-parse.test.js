@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseUsage, openaiSeverity, placeholders, SESSION_MS, WEEKLY_MS,
+    parseUsage, openaiSeverity, openaiPeakUsage, placeholders, SESSION_MS, WEEKLY_MS,
 } from '../lib/vendors/openai-parse.js';
 import {substitute} from '../lib/format.js';
 import {Severity} from '../lib/severity.js';
@@ -85,6 +85,20 @@ describe('openaiSeverity', () => {
             rate_limit: {primary_window: {used_percent: 10}, secondary_window: {used_percent: 95}},
         }), null);
         assertEqual(openaiSeverity(s), Severity.CRITICAL);
+    });
+});
+
+describe('openaiPeakUsage', () => {
+    it('returns the peak percent and the winning window resets_at', () => {
+        const s = parseUsage(JSON.stringify({
+            rate_limit: {
+                primary_window: {used_percent: 10, reset_at: 1779597324},
+                secondary_window: {used_percent: 95, reset_at: 1780184124},
+            },
+        }), null);
+        const p = openaiPeakUsage(s);
+        assertEqual(p.percent, 95);
+        assertEqual(p.resetsAt, s.weekly.resetsAt);
     });
 });
 

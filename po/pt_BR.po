@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-06-07 19:57-0300\n"
+"POT-Creation-Date: 2026-06-08 17:19-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Portuguese (Brazil)\n"
@@ -30,6 +30,15 @@ msgstr "%dd %dh"
 #, javascript-format
 msgid "%dh %02dm"
 msgstr "%dh %02dm"
+
+#: lib/notify.js:26
+msgid "Usage is critical"
+msgstr "Uso crítico"
+
+#: lib/notify.js:27
+#, javascript-format
+msgid "Usage at %d%%"
+msgstr "Uso em %d%%"
 
 #: lib/vendors/anthropic-section.js:28 lib/vendors/openai-section.js:23
 #: lib/vendors/zai-section.js:22
@@ -275,11 +284,31 @@ msgstr "Alto"
 msgid "Critical"
 msgstr "Crítico"
 
-#: prefs.js:153 prefs.js:192
+#: prefs.js:153
+msgid "Notifications"
+msgstr "Notificações"
+
+#: prefs.js:154
+msgid ""
+"Show a desktop notification the first time a vendor reaches the threshold. "
+"It re-arms when usage drops back or the window resets."
+msgstr ""
+"Mostra uma notificação na primeira vez que um provedor atinge o limite. É "
+"rearmada quando o uso cai ou a janela é reiniciada."
+
+#: prefs.js:156
+msgid "Notify on high usage"
+msgstr "Notificar em uso elevado"
+
+#: prefs.js:164
+msgid "Notification threshold (%)"
+msgstr "Limite de notificação (%)"
+
+#: prefs.js:187 prefs.js:226
 msgid "Reset"
 msgstr "Restaurar"
 
-#: prefs.js:154
+#: prefs.js:188
 msgid ""
 "Restore every setting — vendor toggles, paths, keys, formats, and colors — "
 "to its built-in default."
@@ -287,109 +316,109 @@ msgstr ""
 "Restaura todas as configurações — alternâncias de fornecedores, caminhos, "
 "chaves, formatos e cores — para o padrão original."
 
-#: prefs.js:156
+#: prefs.js:190
 msgid "Reset all settings"
 msgstr "Restaurar todas as configurações"
 
-#: prefs.js:188
+#: prefs.js:222
 msgid "Reset all settings?"
 msgstr "Restaurar todas as configurações?"
 
-#: prefs.js:189
+#: prefs.js:223
 msgid ""
 "This restores every setting to its built-in default and cannot be undone."
 msgstr ""
 "Isso restaura todas as configurações para o padrão original e não pode ser "
 "desfeito."
 
-#: prefs.js:191
+#: prefs.js:225
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: prefs.js:211 prefs.js:215
+#: prefs.js:245 prefs.js:249
 msgid "Anthropic"
 msgstr "Anthropic"
 
-#: prefs.js:216
+#: prefs.js:250
 msgid "Credentials path — empty uses ~/.claude/.credentials.json."
 msgstr "Caminho das credenciais — vazio usa ~/.claude/.credentials.json."
 
-#: prefs.js:218 prefs.js:234 prefs.js:250 prefs.js:268 prefs.js:285
+#: prefs.js:252 prefs.js:268 prefs.js:284 prefs.js:302 prefs.js:319
 msgid "Enabled"
 msgstr "Ativado"
 
-#: prefs.js:219
+#: prefs.js:253
 msgid "Credentials path"
 msgstr "Caminho das credenciais"
 
-#: prefs.js:227 prefs.js:231
+#: prefs.js:261 prefs.js:265
 msgid "OpenAI"
 msgstr "OpenAI"
 
-#: prefs.js:232
+#: prefs.js:266
 msgid "Codex auth path — empty uses ~/.codex/auth.json."
 msgstr "Caminho de autenticação do Codex — vazio usa ~/.codex/auth.json."
 
-#: prefs.js:235
+#: prefs.js:269
 msgid "Codex auth path"
 msgstr "Caminho de autenticação do Codex"
 
-#: prefs.js:243 prefs.js:247
+#: prefs.js:277 prefs.js:281
 msgid "Z.AI"
 msgstr "Z.AI"
 
-#: prefs.js:248 prefs.js:266
+#: prefs.js:282 prefs.js:300
 msgid "Set the API key inline or via the environment variable (env wins)."
 msgstr ""
 "Defina a chave de API embutida ou via variável de ambiente (ambiente "
 "prevalece)."
 
-#: prefs.js:251 prefs.js:269 prefs.js:286
+#: prefs.js:285 prefs.js:303 prefs.js:320
 msgid "API key env var"
 msgstr "Variável de ambiente da chave de API"
 
-#: prefs.js:252 prefs.js:270 prefs.js:287
+#: prefs.js:286 prefs.js:304 prefs.js:321
 msgid "API key (inline)"
 msgstr "Chave de API (embutida)"
 
-#: prefs.js:253
+#: prefs.js:287
 msgid "Plan tier (lite/pro/max)"
 msgstr "Nível do plano (lite/pro/max)"
 
-#: prefs.js:261 prefs.js:265
+#: prefs.js:295 prefs.js:299
 msgid "OpenRouter"
 msgstr "OpenRouter"
 
-#: prefs.js:278 prefs.js:282
+#: prefs.js:312 prefs.js:316
 msgid "DeepSeek"
 msgstr "DeepSeek"
 
-#: prefs.js:283
+#: prefs.js:317
 msgid "Disabled by default; requires an API key (env var or inline)."
 msgstr ""
 "Desativado por padrão; requer uma chave de API (variável de ambiente ou "
 "embutida)."
 
-#: prefs.js:313
+#: prefs.js:347
 msgid "Reset to default"
 msgstr "Redefinir para o padrão"
 
-#: ui/indicator.js:94
+#: ui/indicator.js:95
 msgid "Refresh now"
 msgstr "Atualizar agora"
 
-#: ui/indicator.js:96
+#: ui/indicator.js:97
 msgid "Refresh all"
 msgstr "Atualizar tudo"
 
-#: ui/indicator.js:98
+#: ui/indicator.js:99
 msgid "Preferences"
 msgstr "Preferências"
 
-#: ui/indicator.js:225
+#: ui/indicator.js:226
 msgid "No data — use \"Refresh all\""
 msgstr "Sem dados — use \"Atualizar tudo\""
 
-#: ui/indicator.js:247 ui/indicator.js:336
+#: ui/indicator.js:248 ui/indicator.js:360
 msgid "Loading…"
 msgstr "Carregando…"

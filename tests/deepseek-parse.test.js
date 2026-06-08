@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseBalance, deepseekSeverity, formatMoney, placeholders,
+    parseBalance, deepseekSeverity, deepseekPeakUsage, formatMoney, placeholders,
     snapshotToCacheJson, parseCacheJson,
 } from '../lib/vendors/deepseek-parse.js';
 import {Severity} from '../lib/severity.js';
@@ -54,6 +54,14 @@ describe('deepseekSeverity', () => {
         assertEqual(deepseekSeverity({isAvailable: true, balance: 20, currency: 'CNY'}), Severity.HIGH);
         assertEqual(deepseekSeverity({isAvailable: true, balance: 100, currency: 'CNY'}), Severity.MID);
         assertEqual(deepseekSeverity({isAvailable: true, balance: 200, currency: 'CNY'}), Severity.LOW);
+    });
+});
+
+describe('deepseekPeakUsage', () => {
+    it('has no percentage or reset window (notifies via severity)', () => {
+        const p = deepseekPeakUsage({isAvailable: true, balance: 0.5, currency: 'USD'});
+        assertEqual(p.percent, null);
+        assertEqual(p.resetsAt, null);
     });
 });
 

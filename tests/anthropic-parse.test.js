@@ -3,6 +3,7 @@ import system from 'system';
 import {
     parseUsage,
     anthropicSeverity,
+    anthropicPeakUsage,
     fmtDollars,
     placeholders,
     SchemaError,
@@ -127,6 +128,24 @@ describe('anthropicSeverity', () => {
 
     it('falls through to extra when extra higher than capped window', () => {
         assertEqual(anthropicSeverity(snap(100, 50, null, [10000, 10000])), Severity.CRITICAL);
+    });
+});
+
+describe('anthropicPeakUsage', () => {
+    it('returns the peak percent and the winning window resets_at', () => {
+        const s = parseUsage(FULL, 'Max 5x'); // session 42.7→43 is the max
+        const p = anthropicPeakUsage(s);
+        assertEqual(p.percent, 43);
+        assertEqual(p.resetsAt, s.session.resetsAt);
+    });
+    it('selects the weekly window when it is the peak', () => {
+        const s = parseUsage(JSON.stringify({
+            five_hour: {utilization: 10, resets_at: '2026-05-23T17:30:00Z'},
+            seven_day: {utilization: 80, resets_at: '2026-05-30T12:00:00Z'},
+        }), 'Pro');
+        const p = anthropicPeakUsage(s);
+        assertEqual(p.percent, 80);
+        assertEqual(p.resetsAt, s.weekly.resetsAt);
     });
 });
 

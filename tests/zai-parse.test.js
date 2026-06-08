@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseEnvelope, zaiSeverity, placeholders, SESSION_MS, WEEKLY_MS, MCP_MS,
+    parseEnvelope, zaiSeverity, zaiPeakUsage, placeholders, SESSION_MS, WEEKLY_MS, MCP_MS,
 } from '../lib/vendors/zai-parse.js';
 import {substitute} from '../lib/format.js';
 import {Severity} from '../lib/severity.js';
@@ -83,6 +83,23 @@ describe('zaiSeverity', () => {
 
     it('all windows absent → low', () =>
         assertEqual(zaiSeverity(parseEnvelope('{}', null)), Severity.LOW));
+});
+
+describe('zaiPeakUsage', () => {
+    it('returns the peak percent and the winning window resets_at', () => {
+        const s = parseEnvelope(JSON.stringify({data: {limits: [
+            {type: 'TOKENS_LIMIT', percentage: 10},
+            {type: 'TOKENS_LIMIT', percentage: 95, nextResetTime: 1779792169974},
+        ]}}), null);
+        const p = zaiPeakUsage(s);
+        assertEqual(p.percent, 95);
+        assertEqual(p.resetsAt, s.weekly.resetsAt);
+    });
+    it('all windows absent → 0 percent, null reset', () => {
+        const p = zaiPeakUsage(parseEnvelope('{}', null));
+        assertEqual(p.percent, 0);
+        assertEqual(p.resetsAt, null);
+    });
 });
 
 describe('placeholders', () => {

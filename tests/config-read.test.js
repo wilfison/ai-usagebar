@@ -52,6 +52,8 @@ describe('readConfig — schema defaults', () => {
     it('deepseek api key unset → null', () => assertEqual(cfg.vendors.deepseek.apiKey, null));
     it('active vendor defaults to anthropic', () => assertEqual(cfg.activeVendor, 'anthropic'));
     it('pace marker off by default', () => assertEqual(cfg.showPaceMarker, false));
+    it('notifications on by default', () => assertEqual(cfg.notifications.enabled, true));
+    it('notify threshold defaults to 90', () => assertEqual(cfg.notifications.threshold, 90));
     it('openrouter env var name default', () =>
         assertEqual(cfg.vendors.openrouter.apiKeyEnv, 'OPENROUTER_API_KEY'));
     it('deepseek env var name default', () =>
@@ -74,6 +76,8 @@ describe('readConfig — overrides', () => {
     settings.set_boolean('show-pace-marker', true);
     settings.set_int('refresh-interval', 600);
     settings.set_boolean('deepseek-enabled', true);
+    settings.set_boolean('notify-enabled', true);
+    settings.set_int('notify-threshold', 75);
     const cfg = readConfig(settings);
     it('honors the creds-path override', () =>
         assertEqual(cfg.vendors.anthropic.credentialsPath, '/tmp/x.json'));
@@ -93,6 +97,8 @@ describe('readConfig — overrides', () => {
     it('honors the pace-marker toggle', () => assertEqual(cfg.showPaceMarker, true));
     it('honors the refresh-interval override', () => assertEqual(cfg.refreshIntervalSecs, 600));
     it('honors a vendor enable toggle', () => assertEqual(cfg.vendors.deepseek.enabled, true));
+    it('honors the notify-enabled toggle', () => assertEqual(cfg.notifications.enabled, true));
+    it('honors the notify-threshold override', () => assertEqual(cfg.notifications.threshold, 75));
 });
 
 system.exit(summary());
