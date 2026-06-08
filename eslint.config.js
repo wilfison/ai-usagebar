@@ -7,6 +7,7 @@ const gjsGlobals = {
     TextEncoder: 'readonly',
     TextDecoder: 'readonly',
     globalThis: 'readonly',
+    global: 'readonly',
     log: 'readonly',
     logError: 'readonly',
     print: 'readonly',

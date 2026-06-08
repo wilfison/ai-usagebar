@@ -345,8 +345,11 @@ class Indicator extends PanelMenu.Button {
                 last: cache.readNotified(),
             });
             cache.writeNotified(alerting, windowKey);
-            if (notify)
+            if (notify) {
                 Main.notify(vendorLabel(adapter.id), notificationText(peak, _));
+                global.display.get_sound_player().play_from_theme(
+                    'message-new-instant', vendorLabel(adapter.id), null);
+            }
         } catch (e) {
             console.warn(`ai-usagebar: notification check failed: ${e}`);
         }
