@@ -212,6 +212,10 @@ spot-check the other catalogs.
   literal inside `_()`; interpolate with `vformat()` (see Internationalization),
   never a template literal. Wrapping the same string in two places is fine —
   `xgettext` dedupes identical `msgid`s.
+- **Comments are a last resort — make the code self-explanatory first.** Don't
+  restate what the code already says; add a comment only for the non-obvious
+  *why* (a workaround, an invariant, a gotcha). When one is needed, keep it
+  short — one line where possible.
 
 ## Testing policy
 
