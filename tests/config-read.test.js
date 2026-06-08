@@ -6,7 +6,7 @@ import system from 'system';
 // any Gio.Settings is constructed.
 GLib.setenv('GSETTINGS_BACKEND', 'memory', true);
 
-import {readConfig, anthropicCredsPath} from '../lib/config.js';
+import {readConfig, anthropicCredsPath, codexAuthPath} from '../lib/config.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
@@ -41,13 +41,37 @@ describe('readConfig — schema defaults', () => {
     it('openai admin env default', () => assertEqual(cfg.vendors.openai.adminKeyEnv, 'OPENAI_ADMIN_KEY'));
     it('tooltip format unset → null', () => assertEqual(cfg.tooltipFormat, null));
     it('color override unset → null', () => assertEqual(cfg.colors.low, null));
+    it('mid color unset → null', () => assertEqual(cfg.colors.mid, null));
+    it('high color unset → null', () => assertEqual(cfg.colors.high, null));
+    it('critical color unset → null', () => assertEqual(cfg.colors.critical, null));
+    it('openai codex auth path unset → null', () =>
+        assertEqual(cfg.vendors.openai.codexAuthPath, null));
+    it('zai api key unset → null', () => assertEqual(cfg.vendors.zai.apiKey, null));
+    it('zai plan tier unset → null', () => assertEqual(cfg.vendors.zai.planTier, null));
+    it('openrouter api key unset → null', () => assertEqual(cfg.vendors.openrouter.apiKey, null));
+    it('deepseek api key unset → null', () => assertEqual(cfg.vendors.deepseek.apiKey, null));
+    it('active vendor defaults to anthropic', () => assertEqual(cfg.activeVendor, 'anthropic'));
+    it('pace marker off by default', () => assertEqual(cfg.showPaceMarker, false));
+    it('openrouter env var name default', () =>
+        assertEqual(cfg.vendors.openrouter.apiKeyEnv, 'OPENROUTER_API_KEY'));
+    it('deepseek env var name default', () =>
+        assertEqual(cfg.vendors.deepseek.apiKeyEnv, 'DEEPSEEK_API_KEY'));
     it('anthropicCredsPath falls back to the default path', () =>
         assertEqual(anthropicCredsPath(cfg).endsWith('/.claude/.credentials.json'), true));
+    it('codexAuthPath falls back to the default path', () =>
+        assertEqual(codexAuthPath(cfg).endsWith('/.codex/auth.json'), true));
 });
 
 describe('readConfig — overrides', () => {
     const settings = makeSettings();
     settings.set_string('anthropic-credentials-path', '/tmp/x.json');
+    settings.set_string('openai-codex-auth-path', '/tmp/auth.json');
+    settings.set_string('color-mid', '#abcdef');
+    settings.set_string('zai-api-key', 'zk');
+    settings.set_string('openrouter-api-key', 'ork');
+    settings.set_string('deepseek-api-key', 'dsk');
+    settings.set_string('active-vendor', 'zai');
+    settings.set_boolean('show-pace-marker', true);
     settings.set_int('refresh-interval', 600);
     settings.set_boolean('deepseek-enabled', true);
     const cfg = readConfig(settings);
@@ -55,6 +79,18 @@ describe('readConfig — overrides', () => {
         assertEqual(cfg.vendors.anthropic.credentialsPath, '/tmp/x.json'));
     it('anthropicCredsPath uses the override', () =>
         assertEqual(anthropicCredsPath(cfg), '/tmp/x.json'));
+    it('honors the codex-auth-path override', () =>
+        assertEqual(cfg.vendors.openai.codexAuthPath, '/tmp/auth.json'));
+    it('codexAuthPath uses the override', () =>
+        assertEqual(codexAuthPath(cfg), '/tmp/auth.json'));
+    it('passes a non-empty color through', () => assertEqual(cfg.colors.mid, '#abcdef'));
+    it('passes a non-empty zai key through', () => assertEqual(cfg.vendors.zai.apiKey, 'zk'));
+    it('passes a non-empty openrouter key through', () =>
+        assertEqual(cfg.vendors.openrouter.apiKey, 'ork'));
+    it('passes a non-empty deepseek key through', () =>
+        assertEqual(cfg.vendors.deepseek.apiKey, 'dsk'));
+    it('honors the active-vendor override', () => assertEqual(cfg.activeVendor, 'zai'));
+    it('honors the pace-marker toggle', () => assertEqual(cfg.showPaceMarker, true));
     it('honors the refresh-interval override', () => assertEqual(cfg.refreshIntervalSecs, 600));
     it('honors a vendor enable toggle', () => assertEqual(cfg.vendors.deepseek.enabled, true));
 });
