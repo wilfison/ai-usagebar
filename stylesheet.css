@@ -1,97 +1,80 @@
-/* Vertical spacing between a section's header, card, and footer blocks. */
 .aiusagebar-section {
     spacing: 8px;
 }
 
-/* Panel vendor icon: full-color brand SVG before the usage text. */
 .aiusagebar-panel-icon {
     icon-size: 16px;
     margin-right: 4px;
 }
 
-/* The popup's item box (class added to this.menu.box in ui/indicator.js): pin a
-   consistent minimum width so every vendor sub-menu opens at the same roomy
-   Adwaita width instead of resizing to each one's content. Bump for a wider popup. */
 .aiusagebar-popup {
     min-width: 320px;
 }
 
-/* Horizontal line: icon + label(s) laid out with a gap. */
+.aiusagebar-popup .popup-submenu-menu-item {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.aiusagebar-popup .popup-sub-menu {
+    background-color: rgba(0, 0, 0, 0.1);
+    box-shadow: none;
+    border: none;
+}
+
 .aiusagebar-row {
     spacing: 8px;
 }
 
-/* Section header (vendor plan name): bold, no custom color — inherits the
-   popup's themed foreground so it stays high-contrast on light and dark shells. */
 .aiusagebar-title {
     font-weight: bold;
 }
 
-/* Boxed-row primary text (window/gauge name). */
 .aiusagebar-row-title {
     font-weight: bold;
 }
 
-/* Boxed-row dim subtitle (reset countdown, gauge limit) — slightly smaller. */
 .aiusagebar-row-subtitle {
     font-size: 0.85em;
 }
 
-/* Secondary text (countdowns, footer, error body): Adwaita dim-label feel,
-   inherits the themed foreground color so it adapts to light/dark. */
 .aiusagebar-dim {
     opacity: 0.55;
 }
 
-/* Adwaita boxed list: rows are grouped only by the hairline separators below;
-   the card draws no fill of its own, so labels sit on the popup's native
-   GNOME-themed background and keep the shell theme's contrast. */
 .aiusagebar-card-row {
     spacing: 6px;
     padding: 8px 4px;
 }
 
-/* Hairline divider between card rows (full-bleed, like an Adwaita list). A thin
-   line, not a background — kept faint so it structures without muddying text. */
 .aiusagebar-card-sep {
     height: 1px;
     background-color: rgba(127, 127, 127, 0.16);
 }
 
-/* Standalone rule above the error/footer blocks. */
 .aiusagebar-rule {
     height: 1px;
     background-color: rgba(127, 127, 127, 0.16);
 }
 
-/* Progress bar: fixed height, fully rounded. The bar widget itself is the
-   track; a child widget is the fill (sized in ui/bar.js). */
 .aiusagebar-bar {
     height: 8px;
     border-radius: 4px;
 }
 
-/* Track: theme-neutral translucent grey that reads on light and dark shells
-   (St exposes no adaptive neutral color token). */
 .aiusagebar-bar-track {
     background-color: rgba(127, 127, 127, 0.25);
     border-radius: 4px;
 }
 
-/* Fill: defaults to the GNOME accent color (the one themed color token St
-   exposes); ui/bar.js overrides it inline with the row's severity hex. */
 .aiusagebar-bar-fill {
     background-color: -st-accent-color;
     border-radius: 4px;
 }
 
-/* Footer action row: icon-only buttons centered below the separator. */
 .aiusagebar-actions {
     spacing: 12px;
 }
 
-/* Footer action button: square-ish icon button with an Adwaita-style hover/
-   active wash. Neutral translucent grey reads on light and dark shells. */
 .aiusagebar-action-button {
     padding: 10px;
     border-radius: 6px;
@@ -106,8 +89,6 @@
     background-color: rgba(127, 127, 127, 0.25);
 }
 
-/* Hover tooltip for the footer action buttons: a small dark pill floated in the
-   uiGroup (ui/indicator.js positions it under the button). */
 .aiusagebar-tooltip {
     background-color: rgba(0, 0, 0, 0.85);
     color: #ffffff;
