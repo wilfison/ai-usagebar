@@ -128,21 +128,22 @@ describe('Cache', () => {
         const c = Cache.forVendor('test');
         assertEqual(c.readNotified(), null);
 
-        c.writeNotified(true, '2026-06-08T12:00:00.000Z');
-        assertDeepEqual(c.readNotified(), {alerting: true, windowKey: '2026-06-08T12:00:00.000Z'});
+        c.writeNotified({percent: 95, at: 1700000000000, windowKey: '2026-06-08T12:00:00.000Z'});
+        assertDeepEqual(c.readNotified(),
+            {percent: 95, at: 1700000000000, windowKey: '2026-06-08T12:00:00.000Z'});
 
         const path = GLib.build_filenamev([dir, 'ai-usagebar', 'test', '.notified']);
         const [ok, contents] = Gio.File.new_for_path(path).load_contents(null);
         assertEqual(ok, true);
-        assertEqual(bytesToString(contents), '1\n2026-06-08T12:00:00.000Z');
+        assertEqual(bytesToString(contents), '95\n1700000000000\n2026-06-08T12:00:00.000Z');
 
-        // No window key (e.g. DeepSeek) round-trips as an empty string.
-        c.writeNotified(false, '');
-        assertDeepEqual(c.readNotified(), {alerting: false, windowKey: ''});
+        // No percentage / no window key (e.g. DeepSeek) round-trip as null / ''.
+        c.writeNotified({percent: null, at: 1700000000000, windowKey: ''});
+        assertDeepEqual(c.readNotified(), {percent: null, at: 1700000000000, windowKey: ''});
 
-        // The debounce flag must survive a payload write (unlike .stale/.last_error).
+        // The debounce state must survive a payload write (unlike .stale/.last_error).
         c.writePayload('{}');
-        assertDeepEqual(c.readNotified(), {alerting: false, windowKey: ''});
+        assertDeepEqual(c.readNotified(), {percent: null, at: 1700000000000, windowKey: ''});
     }));
 
     it('atomic write: orphan sibling tempfile leaves usage.json unchanged', withTempCache(() => {

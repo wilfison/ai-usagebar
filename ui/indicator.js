@@ -337,15 +337,16 @@ class Indicator extends PanelMenu.Button {
             return;
         try {
             const peak = adapter.peakUsage(res.snapshot);
-            const {notify, alerting, windowKey} = evaluateNotification({
+            const state = evaluateNotification({
                 enabled: true,
                 peak,
                 severity: adapter.severity(res.snapshot),
                 threshold: config.notifications.threshold,
                 last: cache.readNotified(),
+                now: Date.now(),
             });
-            cache.writeNotified(alerting, windowKey);
-            if (notify) {
+            cache.writeNotified(state);
+            if (state.notify) {
                 Main.notify(vendorLabel(adapter.id), notificationText(peak, _));
                 global.display.get_sound_player().play_from_theme(
                     'message-new-instant', vendorLabel(adapter.id), null);
