@@ -22,8 +22,11 @@ function discoverTests(dir) {
     const d = GLib.Dir.open(dir, 0);
     let name;
     while ((name = d.read_name()) !== null) {
-        if (name.endsWith('.test.js'))
-            found.push(GLib.build_filenamev([dir, name]));
+        const path = GLib.build_filenamev([dir, name]);
+        if (GLib.file_test(path, GLib.FileTest.IS_DIR))
+            found.push(...discoverTests(path));
+        else if (name.endsWith('.test.js'))
+            found.push(path);
     }
     d.close();
     found.sort();
@@ -50,6 +53,10 @@ function summaryFor(stdout) {
     return null;
 }
 
+function relTo(base, path) {
+    return path.startsWith(`${base}/`) ? path.slice(base.length + 1) : path;
+}
+
 function main() {
     const dir = testsDir();
     const files = discoverTests(dir);
@@ -64,7 +71,7 @@ function main() {
     const failures = [];
 
     for (const path of files) {
-        const rel = GLib.path_get_basename(path);
+        const rel = relTo(dir, path);
         const {ok, stdout} = runOne(path);
         const s = summaryFor(stdout);
 
