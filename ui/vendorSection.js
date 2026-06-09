@@ -53,7 +53,7 @@ function cardRow() {
     return new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card-row'});
 }
 
-function buildWindowRow(row) {
+function buildWindowRow(row, showPace) {
     const r = cardRow();
     const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
     r.add_child(rowHeader(row.icon, row.title, {
@@ -61,7 +61,7 @@ function buildWindowRow(row) {
         trailing: pctText,
         trailingColor: row.color,
     }));
-    r.add_child(makeBar(row.pct, row.color));
+    r.add_child(makeBar(row.pct, row.color, showPace ? row.elapsedPct ?? null : null));
     return r;
 }
 
@@ -113,7 +113,7 @@ function buildFooter(row) {
     return block;
 }
 
-export function renderSection(menuSection, model) {
+export function renderSection(menuSection, model, showPace = false) {
     menuSection.removeAll();
 
     const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
@@ -143,7 +143,7 @@ export function renderSection(menuSection, model) {
     for (const row of model.rows) {
         switch (row.kind) {
         case 'window':
-            pushCardRow(buildWindowRow(row));
+            pushCardRow(buildWindowRow(row, showPace));
             break;
         case 'gauge':
             pushCardRow(buildGaugeRow(row));
