@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-08
+
+### Added
+
+- Desktop notification when a vendor's peak usage crosses a configurable
+  threshold (default 90%). Opt-out, enabled by default, with an enable toggle
+  and threshold control in preferences.
+- The threshold notification plays the standard system notification sound
+  alongside the desktop banner.
+
+### Changed
+
+- Notifications are now debounced per vendor: a banner fires only when the peak
+  percentage changes and at least 30 minutes have passed since the last alert
+  for that vendor, so a steady usage level no longer re-pings every poll. A
+  fresh usage window still re-arms alerting immediately.
+- An expanded vendor section in the popup now blends with the popup background
+  instead of showing the default inset fill and shadow.
+
 ## [1.0.1] - 2026-06-07
 
 ### Added
