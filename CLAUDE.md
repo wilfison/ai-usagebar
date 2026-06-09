@@ -67,8 +67,15 @@ The indicator never branches per vendor. `lib/vendors/registry.js` maps a vendor
 id → a uniform `Adapter` (`{ id, cacheId, icon, vendorShort, fetchSnapshot,
 severity, placeholders, buildSection }`); the indicator calls `getAdapter(id)`
 and drives it generically. Each vendor lives in its own directory
-`lib/vendors/<vendor>/` as a **module triple**:
+`lib/vendors/<vendor>/` as a **module quad**:
 
+- `lib/vendors/<vendor>/adapter.js` — wires the triple into the uniform `Adapter`
+  object and exports it (e.g. `anthropicAdapter`). Derives the creds path /
+  resolved API key from config, catching resolution errors into the standard
+  error result, and exposes the pure `buildSection` as-is (the indicator injects
+  the real `gettext` at the call site). Imports `main.js` (transitively `Gio`)
+  but **no** `resource://`, so the whole `ADAPTERS` graph loads under `gjs -m` —
+  its shape is checked in `tests/lib/vendors/registry.test.js`.
 - `lib/vendors/<vendor>/main.js` — fetch state machine (`fetchSnapshot`). Reads
   creds/key, maybe-refreshes the OAuth token, GETs the usage endpoint, caches,
   and falls back to stale cache on failure. Transitively imports `Gio` (via
@@ -82,10 +89,10 @@ now, theme) → SectionModel` (an ordered list of typed rows). No `gi://`;
   unit-tested.
 
 Shared helpers (`registry.js`, `section-common.js`) stay flat at
-`lib/vendors/`. `registry.js` wires the triple together and derives the creds
-path / resolved API key from config, catching resolution errors into the
-standard error result. To add a vendor: create `lib/vendors/<vendor>/` with the
-triple, register it in `ADAPTERS`, and add its id/label to `lib/vendors.js`
+`lib/vendors/`. `registry.js` is now thin: it imports each vendor's
+`adapter.js` and maps id → adapter in `ADAPTERS`. To add a vendor: create
+`lib/vendors/<vendor>/` with the quad (the adapter wires the rest), register its
+adapter in `ADAPTERS`, and add its id/label to `lib/vendors.js`
 (`VENDOR_IDS` / `VENDOR_LABELS`) + the gschema keys.
 
 ### Data flow
@@ -139,16 +146,16 @@ user-facing string is wrapped in `_()` (gettext) using a **plain string literal*
 as the argument — never a template literal, which `xgettext` cannot extract.
 
 - **Where `_` comes from.** gi-bound modules import the real translator:
-  `ui/indicator.js` and `lib/vendors/registry.js` from
+  `ui/indicator.js` from
   `resource:///org/gnome/shell/extensions/extension.js`; `prefs.js` from
   `resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js`. **Pure modules
   never import gettext** (it is gi-bound) — see the injected-translator rule below.
 - **Injected translator (pure modules).** `lib/countdown.js`,
   `lib/vendors/section-common.js`, and every `lib/vendors/*/section.js` take a
   trailing `_ = (s) => s` parameter defaulting to the identity function. The
-  builders call `_('…')` on it; `registry.js` injects the real `gettext` when it
-  wraps each adapter's `buildSection`. Tests call these with no translator (or a
-  fake one) and stay 100% `gi://`-free. `xgettext` extraction is syntactic, so
+  builders call `_('…')` on it; `ui/indicator.js` injects the real `gettext` as
+  the trailing arg when it calls `adapter.buildSection(...)`. Tests call these
+  with no translator (or a fake one) and stay 100% `gi://`-free. `xgettext` extraction is syntactic, so
   `_('Session')` is extracted regardless of where `_` is defined.
 - **Interpolation.** GJS's `String.prototype.format` is absent in the prefs
   process and in bare-`gjs -m` tests, so we use the pure `vformat()` helper in
