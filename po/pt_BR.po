@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-06-08 17:19-0300\n"
+"POT-Creation-Date: 2026-06-08 21:38-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Portuguese (Brazil)\n"
@@ -31,134 +31,134 @@ msgstr "%dd %dh"
 msgid "%dh %02dm"
 msgstr "%dh %02dm"
 
-#: lib/notify.js:26
+#: lib/notify.js:47
 msgid "Usage is critical"
 msgstr "Uso crítico"
 
-#: lib/notify.js:27
+#: lib/notify.js:48
 #, javascript-format
 msgid "Usage at %d%%"
 msgstr "Uso em %d%%"
 
-#: lib/vendors/anthropic-section.js:28 lib/vendors/openai-section.js:23
-#: lib/vendors/zai-section.js:22
+#: lib/vendors/anthropic/section.js:28 lib/vendors/openai/section.js:23
+#: lib/vendors/zai/section.js:22
 #, javascript-format
 msgid "Resets in %s"
 msgstr "Reinicia em %s"
 
-#: lib/vendors/anthropic-section.js:37
+#: lib/vendors/anthropic/section.js:37
 msgid "Session"
 msgstr "Sessão"
 
-#: lib/vendors/anthropic-section.js:38 lib/vendors/zai-section.js:34
+#: lib/vendors/anthropic/section.js:38 lib/vendors/zai/section.js:34
 msgid "Weekly"
 msgstr "Semanal"
 
-#: lib/vendors/anthropic-section.js:40
+#: lib/vendors/anthropic/section.js:40
 msgid "Sonnet only"
 msgstr "Apenas Sonnet"
 
-#: lib/vendors/anthropic-section.js:47
+#: lib/vendors/anthropic/section.js:47
 msgid "Extra usage"
 msgstr "Uso extra"
 
-#: lib/vendors/anthropic-section.js:50
+#: lib/vendors/anthropic/section.js:50
 #, javascript-format
 msgid "Limit: %s"
 msgstr "Limite: %s"
 
 #. Translators: %s is the Anthropic plan name (e.g. "Max 5x") — kept verbatim.
-#: lib/vendors/anthropic-section.js:62
+#: lib/vendors/anthropic/section.js:62
 #, javascript-format
 msgid "Claude %s"
 msgstr "Claude %s"
 
-#: lib/vendors/deepseek-section.js:16 lib/vendors/openrouter-section.js:18
+#: lib/vendors/deepseek/section.js:16 lib/vendors/openrouter/section.js:18
 msgid "Balance"
 msgstr "Saldo"
 
 #. Translators: %s are money amounts (granted credit, topped-up credit).
-#: lib/vendors/deepseek-section.js:20
+#: lib/vendors/deepseek/section.js:20
 #, javascript-format
 msgid "granted %s · topped-up %s"
 msgstr "concedido %s · recarga %s"
 
-#: lib/vendors/deepseek-section.js:28
+#: lib/vendors/deepseek/section.js:28
 msgid "API available"
 msgstr "API disponível"
 
-#: lib/vendors/deepseek-section.js:28
+#: lib/vendors/deepseek/section.js:28
 msgid "API unavailable"
 msgstr "API indisponível"
 
-#: lib/vendors/openai-section.js:32
+#: lib/vendors/openai/section.js:32
 msgid "Codex 5h"
 msgstr "Codex 5h"
 
-#: lib/vendors/openai-section.js:33
+#: lib/vendors/openai/section.js:33
 msgid "Codex weekly"
 msgstr "Codex semanal"
 
-#: lib/vendors/openai-section.js:35
+#: lib/vendors/openai/section.js:35
 msgid "Code review (weekly)"
 msgstr "Revisão de código (semanal)"
 
-#: lib/vendors/openai-section.js:39
+#: lib/vendors/openai/section.js:39
 msgid "Credits"
 msgstr "Créditos"
 
-#: lib/vendors/openai-section.js:40
+#: lib/vendors/openai/section.js:40
 #, javascript-format
 msgid "balance: %s"
 msgstr "saldo: %s"
 
-#: lib/vendors/openai-section.js:40
+#: lib/vendors/openai/section.js:40
 msgid "unlimited"
 msgstr "ilimitado"
 
 #. Translators: %s-%s is an approximate count range (e.g. "100-200").
-#: lib/vendors/openai-section.js:43
+#: lib/vendors/openai/section.js:43
 #, javascript-format
 msgid "~ %s-%s local messages"
 msgstr "~ %s-%s mensagens locais"
 
 #. Translators: %s-%s is an approximate count range (e.g. "30-50").
-#: lib/vendors/openai-section.js:46
+#: lib/vendors/openai/section.js:46
 #, javascript-format
 msgid "~ %s-%s cloud messages"
 msgstr "~ %s-%s mensagens na nuvem"
 
 #. Translators: %s are money amounts, %s%% is the consumed percentage.
-#: lib/vendors/openrouter-section.js:22
+#: lib/vendors/openrouter/section.js:22
 #, javascript-format
 msgid "%s of %s used (%s%%)"
 msgstr "%s de %s usado (%s%%)"
 
-#: lib/vendors/openrouter-section.js:27
+#: lib/vendors/openrouter/section.js:27
 msgid "Usage"
 msgstr "Uso"
 
 #. Translators: %s are money amounts for the day, week and month to date.
-#: lib/vendors/openrouter-section.js:31
+#: lib/vendors/openrouter/section.js:31
 #, javascript-format
 msgid "today %s · week %s · month %s"
 msgstr "hoje %s · semana %s · mês %s"
 
-#: lib/vendors/openrouter-section.js:38
+#: lib/vendors/openrouter/section.js:38
 msgid "Per-key limit"
 msgstr "Limite por chave"
 
 #. Translators: %s are money amounts (remaining of limit).
-#: lib/vendors/openrouter-section.js:42
+#: lib/vendors/openrouter/section.js:42
 #, javascript-format
 msgid "%s of %s remaining"
 msgstr "%s de %s restante"
 
-#: lib/vendors/openrouter-section.js:47
+#: lib/vendors/openrouter/section.js:47
 msgid "free tier"
 msgstr "plano gratuito"
 
-#: lib/vendors/openrouter-section.js:47
+#: lib/vendors/openrouter/section.js:47
 msgid "paid tier"
 msgstr "plano pago"
 
@@ -172,15 +172,15 @@ msgstr "HTTP %s"
 msgid "Updated %s"
 msgstr "Atualizado %s"
 
-#: lib/vendors/zai-section.js:32
+#: lib/vendors/zai/section.js:32
 msgid "Session (5h)"
 msgstr "Sessão (5h)"
 
-#: lib/vendors/zai-section.js:36
+#: lib/vendors/zai/section.js:36
 msgid "MCP tools (monthly)"
 msgstr "Ferramentas MCP (mensal)"
 
-#: lib/vendors/zai-section.js:39
+#: lib/vendors/zai/section.js:39
 msgid "no usage windows reported"
 msgstr "nenhuma janela de uso informada"
 
@@ -419,6 +419,6 @@ msgstr "Preferências"
 msgid "No data — use \"Refresh all\""
 msgstr "Sem dados — use \"Atualizar tudo\""
 
-#: ui/indicator.js:248 ui/indicator.js:360
+#: ui/indicator.js:249 ui/indicator.js:365
 msgid "Loading…"
 msgstr "Carregando…"

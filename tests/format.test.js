@@ -4,9 +4,6 @@ import {
     substitute,
     vformat,
     localTimeHm,
-    localTimeHms,
-    updatedAtHm,
-    updatedAtHms,
 } from '../lib/format.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 
@@ -62,28 +59,6 @@ describe('time formatting', () => {
 
     it('localTimeHm at anchor', () => {
         assertEqual(localTimeHm(anchor), '14:07');
-    });
-
-    it('localTimeHms at anchor', () => {
-        assertEqual(localTimeHms(anchor), '14:07:03');
-    });
-
-    it('updatedAtHm(now, null) → —', () => {
-        assertEqual(updatedAtHm(anchor, null), '—');
-    });
-
-    it('updatedAtHms(now, null) → —', () => {
-        assertEqual(updatedAtHms(anchor, null), '—');
-    });
-
-    it('updatedAtHm subtracts cacheAgeMs', () => {
-        // 5 minutes ago → 14:02
-        assertEqual(updatedAtHm(anchor, 5 * 60 * 1000), '14:02');
-    });
-
-    it('updatedAtHms subtracts cacheAgeMs', () => {
-        // 5 minutes + 3 seconds ago → 14:02:00
-        assertEqual(updatedAtHms(anchor, 5 * 60 * 1000 + 3000), '14:02:00');
     });
 });
 

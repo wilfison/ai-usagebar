@@ -37,9 +37,11 @@ make pack      # gnome-extensions pack . --podir=po --force → upload zip (with
 make info      # gnome-extensions info ai-usagebar@wilfison
 ```
 
-Run a **single test file** directly: `gjs -m tests/anthropic-parse.test.js`.
-Each `tests/*.test.js` is self-contained (calls `system.exit(summary())`), and
-`tests/run.js` discovers them and runs each as an isolated `gjs -m` subprocess.
+Run a **single test file** directly: `gjs -m tests/lib/vendors/anthropic/parser.test.js`.
+Each `*.test.js` is self-contained (calls `system.exit(summary())`), and
+`tests/run.js` discovers them **recursively** (so tests may nest in
+subdirectories that mirror the source path) and runs each as an isolated
+`gjs -m` subprocess.
 
 The runner colorizes output with ANSI codes; `tests/run.js` honors the
 [`NO_COLOR`](https://no-color.org) env var, so run `NO_COLOR=1 make test` to get
@@ -64,24 +66,34 @@ owns this discipline in its `destroy()`.
 The indicator never branches per vendor. `lib/vendors/registry.js` maps a vendor
 id → a uniform `Adapter` (`{ id, cacheId, icon, vendorShort, fetchSnapshot,
 severity, placeholders, buildSection }`); the indicator calls `getAdapter(id)`
-and drives it generically. Each vendor is implemented as a **module triple**:
+and drives it generically. Each vendor lives in its own directory
+`lib/vendors/<vendor>/` as a **module quad**:
 
-- `lib/vendors/<vendor>.js` — fetch state machine (`fetchSnapshot`). Reads
+- `lib/vendors/<vendor>/adapter.js` — wires the triple into the uniform `Adapter`
+  object and exports it (e.g. `anthropicAdapter`). Derives the creds path /
+  resolved API key from config, catching resolution errors into the standard
+  error result, and exposes the pure `buildSection` as-is (the indicator injects
+  the real `gettext` at the call site). Imports `main.js` (transitively `Gio`)
+  but **no** `resource://`, so the whole `ADAPTERS` graph loads under `gjs -m` —
+  its shape is checked in `tests/lib/vendors/registry.test.js`.
+- `lib/vendors/<vendor>/main.js` — fetch state machine (`fetchSnapshot`). Reads
   creds/key, maybe-refreshes the OAuth token, GETs the usage endpoint, caches,
   and falls back to stale cache on failure. Transitively imports `Gio` (via
   cache/http), so it is **not** unit-tested directly. Never throws — always
   resolves to a `FetchResult`.
-- `lib/vendors/<vendor>-parse.js` — **pure**: `parseUsage(jsonBytes) → snapshot`,
+- `lib/vendors/<vendor>/parser.js` — **pure**: `parseUsage(jsonBytes) → snapshot`,
   plus `severity`, `placeholders` (Map for `bar-format` substitution), `ICON`,
   `VENDOR_SHORT`. No `gi://`; fully unit-tested.
-- `lib/vendors/<vendor>-section.js` — **pure**: `buildSection(snapshot, meta,
+- `lib/vendors/<vendor>/section.js` — **pure**: `buildSection(snapshot, meta,
 now, theme) → SectionModel` (an ordered list of typed rows). No `gi://`;
   unit-tested.
 
-`registry.js` wires the triple together and derives the creds path / resolved API
-key from config, catching resolution errors into the standard error result. To
-add a vendor: write the triple, register it in `ADAPTERS`, and add its id/label
-to `lib/vendors.js` (`VENDOR_IDS` / `VENDOR_LABELS`) + the gschema keys.
+Shared helpers (`registry.js`, `section-common.js`) stay flat at
+`lib/vendors/`. `registry.js` is now thin: it imports each vendor's
+`adapter.js` and maps id → adapter in `ADAPTERS`. To add a vendor: create
+`lib/vendors/<vendor>/` with the quad (the adapter wires the rest), register its
+adapter in `ADAPTERS`, and add its id/label to `lib/vendors.js`
+(`VENDOR_IDS` / `VENDOR_LABELS`) + the gschema keys.
 
 ### Data flow
 
@@ -134,16 +146,16 @@ user-facing string is wrapped in `_()` (gettext) using a **plain string literal*
 as the argument — never a template literal, which `xgettext` cannot extract.
 
 - **Where `_` comes from.** gi-bound modules import the real translator:
-  `ui/indicator.js` and `lib/vendors/registry.js` from
+  `ui/indicator.js` from
   `resource:///org/gnome/shell/extensions/extension.js`; `prefs.js` from
   `resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js`. **Pure modules
   never import gettext** (it is gi-bound) — see the injected-translator rule below.
 - **Injected translator (pure modules).** `lib/countdown.js`,
-  `lib/vendors/section-common.js`, and every `lib/vendors/*-section.js` take a
+  `lib/vendors/section-common.js`, and every `lib/vendors/*/section.js` take a
   trailing `_ = (s) => s` parameter defaulting to the identity function. The
-  builders call `_('…')` on it; `registry.js` injects the real `gettext` when it
-  wraps each adapter's `buildSection`. Tests call these with no translator (or a
-  fake one) and stay 100% `gi://`-free. `xgettext` extraction is syntactic, so
+  builders call `_('…')` on it; `ui/indicator.js` injects the real `gettext` as
+  the trailing arg when it calls `adapter.buildSection(...)`. Tests call these
+  with no translator (or a fake one) and stay 100% `gi://`-free. `xgettext` extraction is syntactic, so
   `_('Session')` is extracted regardless of where `_` is defined.
 - **Interpolation.** GJS's `String.prototype.format` is absent in the prefs
   process and in bare-`gjs -m` tests, so we use the pure `vformat()` helper in
@@ -223,12 +235,14 @@ spot-check the other catalogs.
 not-testable is the `gi://` import line:
 
 - **Pure JS (testable — write automated tests):** response parsers, quota /
-  percentage math, formatters, severity/pacing/countdown, vendor `*-parse.js` and
-  `*-section.js` adapters, `config.js` / `config-resolve.js`, OAuth/JWT helpers.
+  percentage math, formatters, severity/pacing/countdown, vendor `parser.js` and
+  `section.js` adapters, `config.js` / `config-resolve.js`, OAuth/JWT helpers.
   Keep these free of `gi://` imports so they run under `gjs -m` (and node where
-  possible). Put tests in `tests/*.test.js` mirroring the source path. **A new
-  pure-JS module without a matching test file is incomplete.** Run `make test`
-  and `make lint` before declaring a change done.
+  possible). Put each test in a `*.test.js` mirroring the source path — e.g.
+  `lib/vendors/zai/parser.js` → `tests/lib/vendors/zai/parser.test.js` (a vendor
+  `main.js` fetch state machine maps to `main.test.js`). **A new pure-JS module
+  without a matching test file is incomplete.** Run `make test` and `make lint`
+  before declaring a change done.
 - **GJS / Shell-bound (manual — document the check):** anything touching `St`,
   `PanelMenu`, `Main.panel`, `Soup`, `GLib.timeout_add_seconds`, or
   `GObject.registerClass` (the indicator, renderers, http, vendor orchestrators).
