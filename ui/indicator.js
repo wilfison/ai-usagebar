@@ -492,7 +492,9 @@ class Indicator extends PanelMenu.Button {
     }
 
     _vendorGicon() {
-        const f = Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', 'ai.svg']));
+        // Symbolic name (-symbolic.svg) so St recolors it to the menu foreground;
+        // a plain icon would render its currentColor as black and vanish in dark.
+        const f = Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', 'ai-symbolic.svg']));
         return new Gio.FileIcon({file: f});
     }
 

@@ -171,8 +171,9 @@ nominatively to identify each provider; no affiliation or endorsement is implied
 
 ## Trademarks & logos
 
-This extension bundles **no vendor logos**. It ships a single generic mark
-([`icons/ai.svg`](icons/ai.svg)) and identifies each provider by name only —
+This extension bundles **no vendor logos**. It ships a single generic symbolic
+mark ([`icons/ai-symbolic.svg`](icons/ai-symbolic.svg)) and identifies each
+provider by name only —
 Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek — used nominatively to say which
 service a panel entry refers to. No affiliation with, sponsorship by, or
 endorsement from those companies is implied; this project is not affiliated with
