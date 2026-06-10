@@ -3,8 +3,8 @@
   "description": "Monitor the status of Claude, GPT, GLM, and OpenRouter plans/credits - inspired by akitaonrails/ai-usagebar",
   "uuid": "ai-usagebar@wilfison",
   "url": "https://github.com/wilfison/ai-usagebar",
-  "version": 3,
-  "version-name": "1.1.0",
+  "version": 4,
+  "version-name": "1.2.0",
   "settings-schema": "org.gnome.shell.extensions.ai-usagebar",
   "gettext-domain": "ai-usagebar@wilfison",
   "shell-version": [
