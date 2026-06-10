@@ -31,18 +31,18 @@ const NO_CACHE = {ok: false, kind: 'loading'};
 
 describe('staleResult', () => {
     it('returns the noCache fallback when nothing is cached', () => {
-        const out = staleResult(fakeCache({payload: null}), () => ({}), NO_CACHE);
+        const out = runSync(staleResult(fakeCache({payload: null}), () => ({}), NO_CACHE));
         assertEqual(out, NO_CACHE);
     });
 
     it('returns the noCache fallback when the payload will not parse', () => {
-        const out = staleResult(fakeCache({payload: 'bad'}), () => { throw new Error('nope'); }, NO_CACHE);
+        const out = runSync(staleResult(fakeCache({payload: 'bad'}), () => { throw new Error('nope'); }, NO_CACHE));
         assertEqual(out, NO_CACHE);
     });
 
     it('builds a stale ok-result from a parseable payload', () => {
         const cache = fakeCache({payload: 'x', lastError: {code: 429}, ageMs: 1234});
-        const out = staleResult(cache, () => ({pct: 7}), NO_CACHE);
+        const out = runSync(staleResult(cache, () => ({pct: 7}), NO_CACHE));
         assertDeepEqual(out, {
             ok: true,
             snapshot: {pct: 7},
@@ -53,13 +53,13 @@ describe('staleResult', () => {
     });
 
     it('coerces a null cache age to 0', () => {
-        const out = staleResult(fakeCache({payload: 'x', ageMs: null}), () => ({}), NO_CACHE);
+        const out = runSync(staleResult(fakeCache({payload: 'x', ageMs: null}), () => ({}), NO_CACHE));
         assertEqual(out.cacheAgeMs, 0);
     });
 
     it('passes the raw payload bytes through to the parser', () => {
         let seen = null;
-        staleResult(fakeCache({payload: 'PAYLOAD'}), (b) => { seen = b; return {}; }, NO_CACHE);
+        runSync(staleResult(fakeCache({payload: 'PAYLOAD'}), (b) => { seen = b; return {}; }, NO_CACHE));
         assertEqual(seen, 'PAYLOAD');
     });
 });

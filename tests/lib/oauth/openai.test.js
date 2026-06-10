@@ -134,7 +134,7 @@ describe('readAuth / expiresAtSecs / planType', () => {
         writeText(path, JSON.stringify({tokens: {
             access_token: 'AT', refresh_token: 'RT', id_token: jwt, account_id: 'acc',
         }}));
-        const {tokens} = readAuth(path);
+        const {tokens} = runSync(readAuth(path));
         assertEqual(tokens.accessToken, 'AT');
         assertEqual(tokens.accountId, 'acc');
         assertEqual(expiresAtSecs(tokens), 1234567890);
@@ -143,12 +143,12 @@ describe('readAuth / expiresAtSecs / planType', () => {
 
     it('malformed file throws with the codex-login hint', withTempDir(({path}) => {
         writeText(path, 'not json');
-        assertThrows(() => readAuth(path));
+        assertThrows(() => runSync(readAuth(path)));
     }));
 
     it('expiresAtSecs falls back to 0 for an unparseable id_token', withTempDir(({path}) => {
         writeText(path, JSON.stringify({tokens: {access_token: 'x', refresh_token: 'y', id_token: 'bad'}}));
-        assertEqual(expiresAtSecs(readAuth(path).tokens), 0);
+        assertEqual(expiresAtSecs(runSync(readAuth(path)).tokens), 0);
     }));
 });
 
@@ -159,7 +159,7 @@ describe('writeBack', () => {
             tokens: {access_token: 'AT', refresh_token: 'RT', id_token: jwt, last_refresh_marker: 'keep-tok'},
             some_other_field: 'keep-me',
         }));
-        const auth = readAuth(path);
+        const auth = runSync(readAuth(path));
         auth.tokens.accessToken = 'NEW';
         const r = writeBack(path, auth);
         assertEqual(r.ok, true);

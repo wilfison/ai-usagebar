@@ -5,6 +5,20 @@ import system from 'system';
 import {readCreds, planLabel, defaultCredsPath} from '../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 
+function runSync(promise) {
+    const loop = GLib.MainLoop.new(null, false);
+    let value, err, done = false;
+    Promise.resolve(promise).then(
+        v => { value = v; done = true; loop.quit(); },
+        e => { err = e; done = true; loop.quit(); }
+    );
+    if (!done)
+        loop.run();
+    if (err)
+        throw err;
+    return value;
+}
+
 function rmRf(path) {
     const f = Gio.File.new_for_path(path);
     if (!f.query_exists(null))
@@ -67,7 +81,7 @@ describe('oauth/anthropic readCreds', () => {
             },
         }),
         (path) => {
-            const {oauth} = readCreds(path);
+            const {oauth} = runSync(readCreds(path));
             assertEqual(oauth.accessToken, 'AT');
             assertEqual(oauth.refreshToken, 'RT');
             assertEqual(oauth.expiresAtMs, 1735000000000);
@@ -84,7 +98,7 @@ describe('oauth/anthropic readCreds', () => {
             },
         }),
         (path) => {
-            const {oauth} = readCreds(path);
+            const {oauth} = runSync(readCreds(path));
             assertEqual(oauth.expiresAtMs, 5000);
         }
     ));
@@ -97,7 +111,7 @@ describe('oauth/anthropic readCreds', () => {
             },
         }),
         (path) => {
-            const {oauth} = readCreds(path);
+            const {oauth} = runSync(readCreds(path));
             assertEqual(planLabel(oauth), 'Pro');
         }
     ));
@@ -110,7 +124,7 @@ describe('oauth/anthropic readCreds', () => {
             },
         }),
         (path) => {
-            const {oauth} = readCreds(path);
+            const {oauth} = runSync(readCreds(path));
             assertEqual(planLabel(oauth), 'Max 20x');
         }
     ));
@@ -123,14 +137,14 @@ describe('oauth/anthropic readCreds', () => {
             },
         }),
         (path) => {
-            const {oauth} = readCreds(path);
+            const {oauth} = runSync(readCreds(path));
             assertEqual(planLabel(oauth), 'Unknown');
         }
     ));
 
     it('malformed JSON throws with re-authenticate phrase', withFixture('not json', (path) => {
         try {
-            readCreds(path);
+            runSync(readCreds(path));
             throw new Error('expected throw');
         } catch (e) {
             if (!String(e.message).includes('Run `claude` to re-authenticate.'))
@@ -142,7 +156,7 @@ describe('oauth/anthropic readCreds', () => {
 
     it('missing file throws with code === ENOENT', () => {
         try {
-            readCreds('/nonexistent/ai-usagebar/does-not-exist.json');
+            runSync(readCreds('/nonexistent/ai-usagebar/does-not-exist.json'));
             throw new Error('expected throw');
         } catch (e) {
             assertEqual(e.code, 'ENOENT');
@@ -159,7 +173,7 @@ describe('oauth/anthropic readCreds', () => {
             someOtherField: 'keep me',
         }),
         (path) => {
-            const {raw} = readCreds(path);
+            const {raw} = runSync(readCreds(path));
             assertEqual(raw.mcpOAuth.x, 1);
             assertEqual(raw.someOtherField, 'keep me');
         }
@@ -174,7 +188,7 @@ describe('oauth/anthropic readCreds', () => {
             },
         }),
         (path) => {
-            const {oauth} = readCreds(path);
+            const {oauth} = runSync(readCreds(path));
             assertDeepEqual(oauth.scopes, ['user:inference']);
         }
     ));

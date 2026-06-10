@@ -5,6 +5,20 @@ import system from 'system';
 import {writeBack, readCreds} from '../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 
+function runSync(promise) {
+    const loop = GLib.MainLoop.new(null, false);
+    let value, err, done = false;
+    Promise.resolve(promise).then(
+        v => { value = v; done = true; loop.quit(); },
+        e => { err = e; done = true; loop.quit(); }
+    );
+    if (!done)
+        loop.run();
+    if (err)
+        throw err;
+    return value;
+}
+
 function rmRf(path) {
     const f = Gio.File.new_for_path(path);
     if (!f.query_exists(null))
@@ -76,7 +90,7 @@ describe('writeBack', () => {
             mcpOAuth: {x: 1},
         }));
 
-        const result = writeBack(path, {...baseOauth, expiresAtMs: 999});
+        const result = runSync(writeBack(path, {...baseOauth, expiresAtMs: 999}));
         assertEqual(result.ok, true);
 
         const round = JSON.parse(readText(path));
@@ -88,16 +102,16 @@ describe('writeBack', () => {
 
     it('missing file is OK — creates with just claudeAiOauth', withTempDir(({path}) => {
         // path is in a fresh tmpdir; no file there.
-        const result = writeBack(path, baseOauth);
+        const result = runSync(writeBack(path, baseOauth));
         assertEqual(result.ok, true);
-        const {oauth, raw} = readCreds(path);
+        const {oauth, raw} = runSync(readCreds(path));
         assertEqual(oauth.accessToken, 'NEW');
         assertDeepEqual(Object.keys(raw), ['claudeAiOauth']);
     }));
 
     it('garbage existing file is OK — overwritten with fresh object', withTempDir(({path}) => {
         writeText(path, 'not json');
-        const result = writeBack(path, baseOauth);
+        const result = runSync(writeBack(path, baseOauth));
         assertEqual(result.ok, true);
         const round = JSON.parse(readText(path));
         assertEqual(round.claudeAiOauth.accessToken, 'NEW');
@@ -106,24 +120,24 @@ describe('writeBack', () => {
 
     it('array-shaped existing file is OK — overwritten with fresh object', withTempDir(({path}) => {
         writeText(path, '[1,2,3]');
-        const result = writeBack(path, baseOauth);
+        const result = runSync(writeBack(path, baseOauth));
         assertEqual(result.ok, true);
         const round = JSON.parse(readText(path));
         assertDeepEqual(Object.keys(round), ['claudeAiOauth']);
     }));
 
     it('scopes round-trip: non-null persists, null omits the key', withTempDir(({path}) => {
-        writeBack(path, {...baseOauth, scopes: ['user:inference']});
+        runSync(writeBack(path, {...baseOauth, scopes: ['user:inference']}));
         let round = JSON.parse(readText(path));
         assertDeepEqual(round.claudeAiOauth.scopes, ['user:inference']);
 
-        writeBack(path, {...baseOauth, scopes: null});
+        runSync(writeBack(path, {...baseOauth, scopes: null}));
         round = JSON.parse(readText(path));
         assertEqual('scopes' in round.claudeAiOauth, false);
     }));
 
     it('atomic: no leftover tempfile on success', withTempDir(({dir, path}) => {
-        writeBack(path, baseOauth);
+        runSync(writeBack(path, baseOauth));
         const en = Gio.File.new_for_path(dir).enumerate_children(
             'standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null
         );
@@ -149,7 +163,7 @@ describe('writeBack', () => {
         const dirFile = Gio.File.new_for_path(dir);
         dirFile.set_attribute_uint32('unix::mode', 0o500, Gio.FileQueryInfoFlags.NONE, null);
         try {
-            const result = writeBack(path, baseOauth);
+            const result = runSync(writeBack(path, baseOauth));
             assertEqual(result.ok, false);
             assertEqual(result.kind, 'io');
             if (!result.message || result.message.length === 0)
@@ -161,7 +175,7 @@ describe('writeBack', () => {
     }));
 
     it('output is pretty-printed (2-space indent)', withTempDir(({path}) => {
-        writeBack(path, baseOauth);
+        runSync(writeBack(path, baseOauth));
         const raw = readText(path);
         if (!raw.includes('\n  "claudeAiOauth"'))
             throw new Error(`expected 2-space indent before claudeAiOauth; got:\n${raw}`);

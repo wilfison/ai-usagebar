@@ -333,7 +333,7 @@ class Indicator extends PanelMenu.Button {
     }
 
     // Once-per-crossing notification; the per-vendor cache flag debounces re-fires.
-    _maybeNotify(adapter, cache, res, config) {
+    async _maybeNotify(adapter, cache, res, config) {
         if (!res.ok || !config.notifications.enabled)
             return;
         try {
@@ -343,9 +343,11 @@ class Indicator extends PanelMenu.Button {
                 peak,
                 severity: adapter.severity(res.snapshot),
                 threshold: config.notifications.threshold,
-                last: cache.readNotified(),
+                last: await cache.readNotified(),
                 now: Date.now(),
             });
+            if (this._destroyed)
+                return;
             cache.writeNotified(state);
             if (state.notify) {
                 Main.notify(vendorLabel(adapter.id), notificationText(peak, _));

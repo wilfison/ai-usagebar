@@ -5,6 +5,20 @@ import system from 'system';
 import {Cache, atomicWrite} from '../lib/cache.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
+function runSync(promise) {
+    const loop = GLib.MainLoop.new(null, false);
+    let value, err, done = false;
+    Promise.resolve(promise).then(
+        v => { value = v; done = true; loop.quit(); },
+        e => { err = e; done = true; loop.quit(); }
+    );
+    if (!done)
+        loop.run();
+    if (err)
+        throw err;
+    return value;
+}
+
 function rmRf(path) {
     const f = Gio.File.new_for_path(path);
     if (!f.query_exists(null))
@@ -64,14 +78,14 @@ function bytesEqual(a, b) {
 describe('Cache', () => {
     it('payloadAgeMs returns null on empty dir (no throw)', withTempCache(() => {
         const c = Cache.forVendor('test');
-        assertEqual(c.payloadAgeMs(), null);
+        assertEqual(runSync(c.payloadAgeMs()), null);
     }));
 
     it('writePayload round-trip via maybePayload, path is <xdg>/ai-usagebar/<vendor>/usage.json', withTempCache((dir) => {
         const c = Cache.forVendor('test');
         const data = new TextEncoder().encode('{"x":1}');
         c.writePayload(data);
-        const got = c.maybePayload();
+        const got = runSync(c.maybePayload());
         if (!bytesEqual(got, data))
             throw new Error(`round-trip mismatch: got ${bytesToString(got)}`);
         const expectedPath = GLib.build_filenamev([dir, 'ai-usagebar', 'test', 'usage.json']);
@@ -88,16 +102,16 @@ describe('Cache', () => {
         f.set_attribute_uint64('time::modified', past, Gio.FileQueryInfoFlags.NONE, null);
         f.set_attribute_uint32('time::modified-usec', 0, Gio.FileQueryInfoFlags.NONE, null);
 
-        const fresh = c.freshPayload(120_000);
+        const fresh = runSync(c.freshPayload(120_000));
         if (fresh === null)
             throw new Error('freshPayload(120_000) should return bytes when age ≈ 60s');
 
-        assertEqual(c.freshPayload(30_000), null, 'freshPayload(30_000) when age ≈ 60s');
+        assertEqual(runSync(c.freshPayload(30_000)), null, 'freshPayload(30_000) when age ≈ 60s');
 
         // Self-consistent boundary: age >= ttl returns null.
-        const ageNow = c.payloadAgeMs();
-        assertEqual(c.freshPayload(ageNow), null, 'freshPayload(age) at the boundary');
-        if (c.freshPayload(ageNow + 5_000) === null)
+        const ageNow = runSync(c.payloadAgeMs());
+        assertEqual(runSync(c.freshPayload(ageNow)), null, 'freshPayload(age) at the boundary');
+        if (runSync(c.freshPayload(ageNow + 5_000)) === null)
             throw new Error('freshPayload(age + 5_000) should return bytes');
     }));
 
@@ -113,7 +127,7 @@ describe('Cache', () => {
     it('writeLastError / readLastError; on-disk format is first-line code + body; writePayload clears .last_error', withTempCache((dir) => {
         const c = Cache.forVendor('test');
         c.writeLastError(429, 'rate limited');
-        assertDeepEqual(c.readLastError(), {code: 429, body: 'rate limited'});
+        assertDeepEqual(runSync(c.readLastError()), {code: 429, body: 'rate limited'});
 
         const errPath = GLib.build_filenamev([dir, 'ai-usagebar', 'test', '.last_error']);
         const [ok, contents] = Gio.File.new_for_path(errPath).load_contents(null);
@@ -121,15 +135,15 @@ describe('Cache', () => {
         assertEqual(bytesToString(contents), '429\nrate limited');
 
         c.writePayload('{}');
-        assertEqual(c.readLastError(), null);
+        assertEqual(runSync(c.readLastError()), null);
     }));
 
     it('writeNotified / readNotified round-trip; absent → null; writePayload keeps .notified', withTempCache((dir) => {
         const c = Cache.forVendor('test');
-        assertEqual(c.readNotified(), null);
+        assertEqual(runSync(c.readNotified()), null);
 
         c.writeNotified({percent: 95, at: 1700000000000, windowKey: '2026-06-08T12:00:00.000Z'});
-        assertDeepEqual(c.readNotified(),
+        assertDeepEqual(runSync(c.readNotified()),
             {percent: 95, at: 1700000000000, windowKey: '2026-06-08T12:00:00.000Z'});
 
         const path = GLib.build_filenamev([dir, 'ai-usagebar', 'test', '.notified']);
@@ -139,11 +153,11 @@ describe('Cache', () => {
 
         // No percentage / no window key (e.g. DeepSeek) round-trip as null / ''.
         c.writeNotified({percent: null, at: 1700000000000, windowKey: ''});
-        assertDeepEqual(c.readNotified(), {percent: null, at: 1700000000000, windowKey: ''});
+        assertDeepEqual(runSync(c.readNotified()), {percent: null, at: 1700000000000, windowKey: ''});
 
         // The debounce state must survive a payload write (unlike .stale/.last_error).
         c.writePayload('{}');
-        assertDeepEqual(c.readNotified(), {percent: null, at: 1700000000000, windowKey: ''});
+        assertDeepEqual(runSync(c.readNotified()), {percent: null, at: 1700000000000, windowKey: ''});
     }));
 
     it('atomic write: orphan sibling tempfile leaves usage.json unchanged', withTempCache(() => {
@@ -158,13 +172,13 @@ describe('Cache', () => {
             Gio.FileCreateFlags.PRIVATE,
             null
         );
-        assertEqual(bytesToString(c.maybePayload()), 'sentinel');
+        assertEqual(bytesToString(runSync(c.maybePayload())), 'sentinel');
     }));
 
     it('readLastError + maybePayload return null on missing cache (no throw)', withTempCache(() => {
         const c = Cache.forVendor('test');
-        assertEqual(c.readLastError(), null);
-        assertEqual(c.maybePayload(), null);
+        assertEqual(runSync(c.readLastError()), null);
+        assertEqual(runSync(c.maybePayload()), null);
     }));
 
     it('atomicWrite: round-trip to an arbitrary path', withTempCache((dir) => {

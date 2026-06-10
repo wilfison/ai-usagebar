@@ -127,7 +127,7 @@ describe('fetchSnapshot', () => {
         assertEqual(r.stale, false);
         assertEqual(r.cacheAgeMs, 0);
         assertEqual(r.snapshot.session.utilizationPct, 42);
-        assertEqual(cache.maybePayload() === null, false, 'payload was cached');
+        assertEqual(runSync(cache.maybePayload()) === null, false, 'payload was cached');
     }));
 
     it('refresh runs first when the token is near expiry', withTemp(({cache, credsPath}) => {
@@ -142,7 +142,7 @@ describe('fetchSnapshot', () => {
         assertEqual(http.calls[1].headers.Authorization, 'Bearer new-at');
         assertEqual(r.ok, true);
         // Rotated token was written back to disk.
-        assertEqual(readCreds(credsPath).oauth.accessToken, 'new-at');
+        assertEqual(runSync(readCreds(credsPath)).oauth.accessToken, 'new-at');
     }, {expiresAt: 0}));
 
     it('HTTP 429 falls back to stale cache with lastError.code 429', withTemp(({cache, credsPath}) => {
@@ -186,9 +186,9 @@ describe('fetchSnapshot', () => {
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
         assertEqual(r.ok, false);
         assertEqual(r.kind, 'error');
-        assertEqual(cache.maybePayload(), null, 'unparseable 2xx body is never cached');
+        assertEqual(runSync(cache.maybePayload()), null, 'unparseable 2xx body is never cached');
         assertEqual(cache.isStale(), true);
-        assertEqual(cache.readLastError().code, 0);
+        assertEqual(runSync(cache.readLastError()).code, 0);
     }));
 });
 
