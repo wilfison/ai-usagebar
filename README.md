@@ -35,13 +35,6 @@ GJS / ES modules.
 > [!NOTE]
 > **Not on extensions.gnome.org.** This extension is distributed **only** through
 > GitHub releases, not the official [extensions.gnome.org](https://extensions.gnome.org)
-> (EGO) site. It was built with substantial AI assistance, and since December 2025
-> EGO's [review policy rejects extensions that read as AI-generated](https://gjs.guide/extensions/review-guidelines/review-guidelines.html#extensions-must-not-be-ai-generated).
-> Rather than
-> misrepresent how it was made, it is published here for anyone who wants to
-> install it manually. The full source is available for review and the code is
-> held to the same readability, cleanup-on-disable, and security standards EGO
-> expects.
 
 ### From a packed zip
 
