@@ -199,8 +199,8 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
     }
 
     _registerVendorIcons() {
-        // The bundled vendor SVGs (icons/<id>.svg) live outside any icon theme,
-        // so add the dir to the display's search path; pages then reference them
+        // The bundled generic icon (icons/ai.svg) lives outside any icon theme,
+        // so add the dir to the display's search path; pages then reference it
         // by bare basename via icon_name.
         const iconDir = `${this.path}/icons`;
         const iconTheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
@@ -243,7 +243,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "Anthropic" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('Anthropic'),
-            icon_name: 'anthropic',
+            icon_name: 'ai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('Anthropic'),
@@ -259,7 +259,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "OpenAI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('OpenAI'),
-            icon_name: 'openai',
+            icon_name: 'ai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('OpenAI'),
@@ -275,7 +275,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "Z.AI" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('Z.AI'),
-            icon_name: 'zai',
+            icon_name: 'ai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('Z.AI'),
@@ -293,7 +293,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "OpenRouter" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('OpenRouter'),
-            icon_name: 'openrouter',
+            icon_name: 'ai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('OpenRouter'),
@@ -310,7 +310,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         // Translators: "DeepSeek" is a brand name — usually keep untranslated.
         const page = new Adw.PreferencesPage({
             title: _('DeepSeek'),
-            icon_name: 'deepseek',
+            icon_name: 'ai',
         });
         const group = new Adw.PreferencesGroup({
             title: _('DeepSeek'),

@@ -2,9 +2,9 @@
     spacing: 8px;
 }
 
-.aiusagebar-panel-icon {
-    icon-size: 16px;
-    margin-right: 4px;
+.aiusagebar-panel-tag {
+    font-weight: bold;
+    margin-right: 6px;
 }
 
 .aiusagebar-popup {

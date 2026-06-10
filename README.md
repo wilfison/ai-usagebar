@@ -171,17 +171,13 @@ nominatively to identify each provider; no affiliation or endorsement is implied
 
 ## Trademarks & logos
 
-The vendor logos bundled under [`icons/`](icons/) (Anthropic/Claude, OpenAI,
-Z.AI/GLM, OpenRouter, DeepSeek) are the trademarks and property of their
-respective owners. They are included **solely to identify each provider** within
-the UI — a nominative, descriptive use — and their presence does **not** imply
-any affiliation with, sponsorship by, or endorsement from those companies. This
-project is not affiliated with any of them.
-
-If you are a rights holder and believe a logo is used improperly, open an issue
-or send a DMCA / takedown request to the maintainer and the asset will be
-removed or replaced promptly. The MIT license below covers this project's own
-code and does **not** grant any rights to these third-party marks.
+This extension bundles **no vendor logos**. It ships a single generic mark
+([`icons/ai.svg`](icons/ai.svg)) and identifies each provider by name only —
+Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek — used nominatively to say which
+service a panel entry refers to. No affiliation with, sponsorship by, or
+endorsement from those companies is implied; this project is not affiliated with
+any of them. The short codes shown in the panel (CLD, GPT, ZAI, OPR, DSK) are
+plain abbreviations, not brand marks.
 
 ## License
 

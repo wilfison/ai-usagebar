@@ -26,6 +26,11 @@ const RERENDER_INTERVAL_S = 60;
 const STALE_MARK = ' ⏸';
 const TOOLTIP_DELAY_MS = 400;
 
+// Panel badge for a vendor: its short code, upper-cased (e.g. "CLD", "GPT").
+function vendorTag(id) {
+    return getAdapter(id).vendorShort.toUpperCase();
+}
+
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init(settings, openPreferences, extensionPath) {
@@ -64,17 +69,18 @@ class Indicator extends PanelMenu.Button {
         this._enabledSig = '';
 
         this._box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
-        this._icon = new St.Icon({
-            style_class: 'aiusagebar-panel-icon',
-            gicon: this._vendorGicon(this._activeId),
+        this._tag = new St.Label({
+            style_class: 'aiusagebar-panel-tag',
+            text: vendorTag(this._activeId),
             y_align: Clutter.ActorAlign.CENTER,
+            y_expand: true,
         });
         this._label = new St.Label({
             text: '',
             y_align: Clutter.ActorAlign.CENTER,
             y_expand: true,
         });
-        this._box.add_child(this._icon);
+        this._box.add_child(this._tag);
         this._box.add_child(this._label);
         this.add_child(this._box);
 
@@ -205,7 +211,7 @@ class Indicator extends PanelMenu.Button {
 
         enabledVendors(config).forEach((id, idx) => {
             const sub = new PopupMenu.PopupSubMenuMenuItem('', true);
-            sub.icon.gicon = this._vendorGicon(id);
+            sub.icon.gicon = this._vendorGicon();
             sub.label.text = vendorLabel(id);
             this.menu.addMenuItem(sub, idx);
             this._vendorItems.set(id, sub);
@@ -275,7 +281,7 @@ class Indicator extends PanelMenu.Button {
         if (activeChanged) {
             this._adapter = getAdapter(activeId);
             this._cache = Cache.forVendor(this._adapter.cacheId);
-            this._setVendorIcon(activeId);
+            this._setVendorTag(activeId);
         }
         this._activeId = activeId;
 
@@ -485,13 +491,13 @@ class Indicator extends PanelMenu.Button {
         this._label.set_style(`color: ${color};`);
     }
 
-    _vendorGicon(id) {
-        const f = Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', `${id}.svg`]));
+    _vendorGicon() {
+        const f = Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', 'ai.svg']));
         return new Gio.FileIcon({file: f});
     }
 
-    _setVendorIcon(id) {
-        this._icon.gicon = this._vendorGicon(id);
+    _setVendorTag(id) {
+        this._tag.text = vendorTag(id);
     }
 
     _makeActionButton(iconName, label, onClick) {
