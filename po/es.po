@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-06-08 21:38-0300\n"
+"POT-Creation-Date: 2026-06-10 16:39-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Spanish\n"
@@ -421,6 +421,6 @@ msgstr "Preferencias"
 msgid "No data — use \"Refresh all\""
 msgstr "Sin datos — use \"Actualizar todo\""
 
-#: ui/indicator.js:249 ui/indicator.js:365
+#: ui/indicator.js:249 ui/indicator.js:367
 msgid "Loading…"
 msgstr "Cargando…"
