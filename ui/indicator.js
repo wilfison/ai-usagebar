@@ -21,6 +21,7 @@ import {substitute, tooltipRows} from '../lib/format.js';
 import {evaluateNotification, notificationText} from '../lib/notify.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
+import {parseFakePct, FAKE_PCT_ENV} from '../lib/debug.js';
 
 const RERENDER_INTERVAL_S = 60;
 const STALE_MARK = ' ⏸';
@@ -59,6 +60,12 @@ class Indicator extends PanelMenu.Button {
         this._scrollId = null;
         this._settingsChangedId = null;
         this._destroyed = false;
+
+        // Dev override: AI_USAGEBAR_FAKE_PCT=<0..100> short-circuits the real
+        // fetch with a synthetic snapshot at that percentage (see `make run`).
+        this._fakePct = parseFakePct(GLib.getenv(FAKE_PCT_ENV));
+        if (this._fakePct !== null)
+            log(`ai-usagebar: ${FAKE_PCT_ENV}=${this._fakePct} — overriding usage fetch`);
 
         // Lazy per-vendor data: only the active vendor is polled; other sub-sections
         // render from whatever is already here. `_fetchedAt` pins each vendor's
@@ -289,7 +296,7 @@ class Indicator extends PanelMenu.Button {
         if (activeChanged)
             this._setActiveExpansion(activeId);
 
-        const res = await this._adapter.fetchSnapshot({
+        const res = await this._runFetch(this._adapter, {
             config: this._config,
             cache: this._cache,
             http: request,
@@ -311,7 +318,7 @@ class Indicator extends PanelMenu.Button {
             const cache = Cache.forVendor(adapter.cacheId);
             let res;
             try {
-                res = await adapter.fetchSnapshot({
+                res = await this._runFetch(adapter, {
                     config,
                     cache,
                     http: request,
@@ -330,6 +337,21 @@ class Indicator extends PanelMenu.Button {
         const activeRes = this._results.get(this._activeId);
         if (activeRes)
             this._render(activeRes);
+    }
+
+    // Real fetch, unless AI_USAGEBAR_FAKE_PCT is set and the adapter can build a
+    // synthetic snapshot — then return that instead (dev rendering check).
+    _runFetch(adapter, ctx) {
+        if (this._fakePct !== null && typeof adapter.fakeSnapshot === 'function') {
+            return Promise.resolve({
+                ok: true,
+                snapshot: adapter.fakeSnapshot(this._fakePct),
+                stale: false,
+                lastError: null,
+                cacheAgeMs: 0,
+            });
+        }
+        return adapter.fetchSnapshot(ctx);
     }
 
     _storeResult(id, res) {

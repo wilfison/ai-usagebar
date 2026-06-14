@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseEnvelope, zaiSeverity, zaiPeakUsage, placeholders, SESSION_MS, WEEKLY_MS, MCP_MS,
+    parseEnvelope, zaiSeverity, zaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS, MCP_MS,
 } from '../../../../lib/vendors/zai/parser.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
@@ -123,6 +123,16 @@ describe('placeholders', () => {
         const DEFAULT = '{session_pct}% · {session_reset}';
         const s = parseEnvelope('{"data":{"limits":[{"type":"TOKENS_LIMIT","percentage":42}],"level":"pro"}}', null);
         assertEqual(substitute(DEFAULT, placeholders(s, now)), '42% · —');
+    });
+});
+
+describe('fakeSnapshot', () => {
+    it('sets session/weekly/mcp to the clamped percentage', () => {
+        const s = fakeSnapshot(23);
+        assertEqual(s.session.utilizationPct, 23);
+        assertEqual(s.weekly.utilizationPct, 23);
+        assertEqual(s.mcp.utilizationPct, 23);
+        assertEqual(zaiPeakUsage(s).percent, 23);
     });
 });
 

@@ -3,6 +3,7 @@ import system from 'system';
 import {
     parseCredits, parseKey, combine, balance, consumedPct,
     snapshotToCacheJson, parseCacheJson, openrouterSeverity, openrouterPeakUsage, placeholders,
+    fakeSnapshot,
 } from '../../../../lib/vendors/openrouter/parser.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
@@ -102,6 +103,15 @@ describe('placeholders', () => {
 
     it('renders the shared cross-vendor format', () =>
         assertEqual(substitute('{vendor_short} {session_pct}%', placeholders(snap, new Date())), 'opr 26%'));
+});
+
+describe('fakeSnapshot', () => {
+    it('consumes the given percentage of a nominal $100 pool', () => {
+        const s = fakeSnapshot(23);
+        assertEqual(consumedPct(s), 23);
+        assertEqual(balance(s), 77);
+        assertEqual(openrouterPeakUsage(s).percent, 23);
+    });
 });
 
 system.exit(summary());

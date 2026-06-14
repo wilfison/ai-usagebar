@@ -57,7 +57,13 @@ watch:
 		$(MAKE) --no-print-directory test || true; \
 	done
 
+# Launch a throwaway nested gnome-shell to test live. Set AI_USAGEBAR_FAKE_PCT
+# to override the real usage fetch with a synthetic snapshot at that percentage
+# (handy for eyeballing the bar): AI_USAGEBAR_FAKE_PCT=23 make run
 run:
+	@if [ -n "$$AI_USAGEBAR_FAKE_PCT" ]; then \
+		echo "run: AI_USAGEBAR_FAKE_PCT=$$AI_USAGEBAR_FAKE_PCT — overriding usage fetch"; \
+	fi
 	dbus-run-session -- gnome-shell --wayland --devkit
 
 # Extract every marked string into the tracked .pot template.

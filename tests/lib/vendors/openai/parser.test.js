@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseUsage, openaiSeverity, openaiPeakUsage, placeholders, SESSION_MS, WEEKLY_MS,
+    parseUsage, openaiSeverity, openaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS,
 } from '../../../../lib/vendors/openai/parser.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
@@ -118,6 +118,17 @@ describe('placeholders', () => {
         assertEqual(m.get('oai_code_review_pct'), '0');
         assertEqual(m.get('oai_credit_balance'), 'n/a');
         assertEqual(m.get('oai_local_msgs'), '');
+    });
+});
+
+describe('fakeSnapshot', () => {
+    it('sets session/weekly/code-review to the clamped percentage', () => {
+        const s = fakeSnapshot(23);
+        assertEqual(s.session.utilizationPct, 23);
+        assertEqual(s.weekly.utilizationPct, 23);
+        assertEqual(s.codeReview.utilizationPct, 23);
+        assertEqual(openaiPeakUsage(s).percent, 23);
+        assertEqual(s.credits, null);
     });
 });
 

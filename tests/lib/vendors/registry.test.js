@@ -16,6 +16,11 @@ const SHAPE = {
     buildSection: 'function',
 };
 
+// Optional, dev-only hooks an adapter may expose (e.g. AI_USAGEBAR_FAKE_PCT).
+const OPTIONAL_SHAPE = {
+    fakeSnapshot: 'function',
+};
+
 describe('ADAPTERS structure', () => {
     it('registers exactly the known vendor ids', () => {
         assertDeepEqual(Object.keys(ADAPTERS).sort(), [...VENDOR_IDS].sort());
@@ -30,9 +35,17 @@ describe('ADAPTERS structure', () => {
             }
 
             it('carries no properties beyond the contract', () => {
-                const extra = Object.keys(adapter).filter(k => !(k in SHAPE));
+                const extra = Object.keys(adapter)
+                    .filter(k => !(k in SHAPE) && !(k in OPTIONAL_SHAPE));
                 assertEqual(extra.length, 0, `${key} extra keys: ${extra.join(',')}`);
             });
+
+            for (const [prop, type] of Object.entries(OPTIONAL_SHAPE)) {
+                it(`if present, ${prop} is ${type}`, () => {
+                    if (prop in adapter)
+                        assertEqual(typeof adapter[prop], type, `${key}.${prop}`);
+                });
+            }
 
             it('id matches its registry key', () => {
                 assertEqual(adapter.id, key);

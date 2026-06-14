@@ -6,6 +6,7 @@ import {
     anthropicPeakUsage,
     fmtDollars,
     placeholders,
+    fakeSnapshot,
     SchemaError,
 } from '../../../../lib/vendors/anthropic/parser.js';
 import {Severity} from '../../../../lib/severity.js';
@@ -205,6 +206,17 @@ describe('placeholders', () => {
         assertEqual(m.get('extra_spent'), '$2.50');
         assertEqual(m.get('extra_limit'), '$50.00');
         assertEqual(m.get('extra_pct'), '5'); // 250*100/5000
+    });
+});
+
+describe('fakeSnapshot', () => {
+    it('sets every window to the clamped percentage', () => {
+        const s = fakeSnapshot(23);
+        assertEqual(s.session.utilizationPct, 23);
+        assertEqual(s.weekly.utilizationPct, 23);
+        assertEqual(s.sonnet.utilizationPct, 23);
+        assertEqual(anthropicPeakUsage(s).percent, 23);
+        assertEqual(s.extra, null);
     });
 });
 

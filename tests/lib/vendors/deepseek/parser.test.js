@@ -2,7 +2,7 @@ import system from 'system';
 
 import {
     parseBalance, deepseekSeverity, deepseekPeakUsage, formatMoney, placeholders,
-    snapshotToCacheJson, parseCacheJson,
+    snapshotToCacheJson, parseCacheJson, fakeSnapshot,
 } from '../../../../lib/vendors/deepseek/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
@@ -91,6 +91,20 @@ describe('placeholders', () => {
         assertEqual(m.get('plan'), 'DeepSeek');
         assertEqual(m.get('session_pct'), '0');
         assertEqual(m.get('session_reset'), '—');
+    });
+});
+
+describe('fakeSnapshot', () => {
+    it('reads pct as the consumed share of a nominal $100 balance', () => {
+        const s = fakeSnapshot(23);
+        assertEqual(s.isAvailable, true);
+        assertEqual(s.balance, 77);
+        assertEqual(s.currency, 'USD');
+        assertEqual(deepseekSeverity(s), Severity.LOW);
+    });
+
+    it('leaves a critical balance at high pct', () => {
+        assertEqual(deepseekSeverity(fakeSnapshot(100)), Severity.CRITICAL);
     });
 });
 
