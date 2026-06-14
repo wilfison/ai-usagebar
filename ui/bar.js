@@ -1,4 +1,5 @@
 import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 function clamp(n, lo, hi) {
@@ -7,43 +8,65 @@ function clamp(n, lo, hi) {
 
 const MARKER_W = 2;
 
-export function makeBar(pct, color = null, elapsedPct = null) {
-    const fraction = clamp(pct, 0, 100) / 100;
+// A fill (usage) bar whose children are sized from the *allocated* width every
+// layout pass. Reading `.width` on a notify signal is unreliable here: the
+// track is x_expand, so its allocation grows past the preferred width without
+// emitting notify::width, which would leave the fill sized to the smaller
+// preferred width.
+const Bar = GObject.registerClass(
+class AiUsageBar extends St.Widget {
+    _init(fraction, markerFraction) {
+        super._init({
+            style_class: 'aiusagebar-bar aiusagebar-bar-track',
+            x_expand: true,
+            layout_manager: new Clutter.FixedLayout(),
+        });
+        this._fraction = fraction;
+        this._markerFraction = markerFraction;
 
-    const bar = new St.Widget({
-        style_class: 'aiusagebar-bar aiusagebar-bar-track',
-        x_expand: true,
-        layout_manager: new Clutter.FixedLayout(),
-    });
+        this._fill = new St.Widget({style_class: 'aiusagebar-bar-fill'});
+        this.add_child(this._fill);
 
-    const fill = new St.Widget({style_class: 'aiusagebar-bar-fill'});
-    if (color)
-        fill.set_style(`background-color: ${color};`);
-    bar.add_child(fill);
-
-    // Optional pace marker: a thin rule at the fraction of the window that has
-    // elapsed, so the fill (usage) can be read against pace at a glance. A
-    // numeric 0 is a valid position (window just reset); only null/undefined
-    // means "no marker".
-    const markerFraction = typeof elapsedPct === 'number' ? clamp(elapsedPct, 0, 100) / 100 : null;
-    let marker = null;
-    if (markerFraction !== null) {
-        marker = new St.Widget({style_class: 'aiusagebar-bar-marker'});
-        bar.add_child(marker);
+        this._marker = null;
+        // A numeric 0 is a valid marker position (window just reset); only
+        // null/undefined means "no marker".
+        if (markerFraction !== null) {
+            this._marker = new St.Widget({style_class: 'aiusagebar-bar-marker'});
+            this.add_child(this._marker);
+        }
     }
 
-    const apply = () => {
-        fill.set_position(0, 0);
-        fill.set_size(Math.round(fraction * bar.width), bar.height);
-        if (marker) {
-            marker.set_size(MARKER_W, bar.height);
-            const x = Math.round(markerFraction * bar.width);
-            marker.set_position(clamp(x, 0, Math.max(0, bar.width - MARKER_W)), 0);
-        }
-    };
-    bar.connect('notify::width', apply);
-    bar.connect('notify::height', apply);
-    apply();
+    setFillColor(color) {
+        if (color)
+            this._fill.set_style(`background-color: ${color};`);
+    }
 
+    vfunc_allocate(box) {
+        this.set_allocation(box);
+
+        const w = box.get_width();
+        const h = box.get_height();
+
+        const fillBox = new Clutter.ActorBox();
+        fillBox.set_origin(0, 0);
+        fillBox.set_size(Math.round(this._fraction * w), h);
+        this._fill.allocate(fillBox);
+
+        if (this._marker) {
+            const x = clamp(Math.round(this._markerFraction * w), 0, Math.max(0, w - MARKER_W));
+            const markerBox = new Clutter.ActorBox();
+            markerBox.set_origin(x, 0);
+            markerBox.set_size(MARKER_W, h);
+            this._marker.allocate(markerBox);
+        }
+    }
+});
+
+export function makeBar(pct, color = null, elapsedPct = null) {
+    const fraction = clamp(pct, 0, 100) / 100;
+    const markerFraction = typeof elapsedPct === 'number' ? clamp(elapsedPct, 0, 100) / 100 : null;
+
+    const bar = new Bar(fraction, markerFraction);
+    bar.setFillColor(color);
     return bar;
 }
