@@ -3,7 +3,7 @@ import Gio from 'gi://Gio';
 import system from 'system';
 
 import {Cache} from '../../../../lib/cache.js';
-import {fetchSnapshot, USAGE_URL, USAGE_BETA_HEADER} from '../../../../lib/vendors/anthropic/main.js';
+import {fetchSnapshot, USAGE_URL, USAGE_BETA_HEADER, USAGE_USER_AGENT} from '../../../../lib/vendors/anthropic/main.js';
 import {readCreds, TOKEN_URL} from '../../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
 
@@ -123,6 +123,8 @@ describe('fetchSnapshot', () => {
         assertEqual(http.calls[0].url, USAGE_URL);
         assertEqual(http.calls[0].headers.Authorization, 'Bearer at');
         assertEqual(http.calls[0].headers['anthropic-beta'], USAGE_BETA_HEADER);
+        assertEqual(http.calls[0].headers['User-Agent'], USAGE_USER_AGENT);
+        assertEqual(http.calls[0].headers['Content-Type'], 'application/json');
         assertEqual(r.ok, true);
         assertEqual(r.stale, false);
         assertEqual(r.cacheAgeMs, 0);
