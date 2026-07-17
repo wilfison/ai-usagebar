@@ -25,6 +25,10 @@ function fullSnapshot() {
     };
 }
 
+function scopedWin(label, utilizationPct, mins) {
+    return {label, utilizationPct, resetsAt: new Date(NOW.getTime() + mins * MIN)};
+}
+
 const PACE_GLYPHS = ['↑', '→', '↓'];
 
 describe('buildSection — full snapshot', () => {
@@ -102,6 +106,49 @@ describe('buildSection — omissions', () => {
         const m = {stale: true, lastError: {code: 0, body: 'parse failed'}, fetchedAt: NOW};
         const kinds = buildSection(fullSnapshot(), m, NOW, theme).rows.map(r => r.kind);
         assertEqual(kinds.includes('http-error'), false);
+    });
+});
+
+describe('buildSection — scoped windows', () => {
+    const meta = {stale: false, lastError: null, fetchedAt: NOW};
+
+    it('inserts a window row per scoped entry, after sonnet and before the gauge', () => {
+        const s = fullSnapshot();
+        s.scoped = [scopedWin('Fable', 84, 2 * 24 * 60)];
+        const kinds = buildSection(s, meta, NOW, theme).rows.map(r => r.kind);
+        assertDeepEqual(kinds, ['window', 'window', 'window', 'window', 'gauge', 'footer']);
+    });
+
+    it('renders every scoped entry in order (no cap), labelled by the API display name', () => {
+        const s = fullSnapshot();
+        s.scoped = [scopedWin('Fable', 84, 10), scopedWin('Opus', 20, 20)];
+        const titles = buildSection(s, meta, NOW, theme).rows
+            .filter(r => r.kind === 'window').map(r => r.title);
+        assertDeepEqual(titles, ['Session', 'Weekly', 'Sonnet only', 'Fable', 'Opus']);
+    });
+
+    it('scoped row: pct, high→orange, and a weekly pace marker (elapsedPct)', () => {
+        const s = fullSnapshot();
+        s.scoped = [scopedWin('Fable', 84, 2 * 24 * 60)];
+        const r = buildSection(s, meta, NOW, theme).rows[3];
+        assertEqual(r.icon, 'x-office-calendar-symbolic');
+        assertEqual(r.pct, 84);
+        assertEqual(r.color, theme.orange);
+        const expected = calc({usagePct: 84, reset: s.scoped[0].resetsAt, now: NOW, windowMs: WEEKLY_MS}).elapsedPct;
+        assertEqual(r.elapsedPct, expected);
+    });
+
+    it('label is kept verbatim while the reset subtitle routes through _()', () => {
+        const s = fullSnapshot();
+        s.scoped = [scopedWin('Fable', 84, 90)];
+        const r = buildSection(s, meta, NOW, theme, t => `«${t}»`).rows[3];
+        assertEqual(r.title, 'Fable'); // brand/model label — not translated
+        assertEqual(r.subtitle, '«Resets in «1h 30m»»'); // prose + countdown routed
+    });
+
+    it('absent scoped → unchanged layout (no extra rows)', () => {
+        const kinds = buildSection(fullSnapshot(), meta, NOW, theme).rows.map(r => r.kind);
+        assertDeepEqual(kinds, ['window', 'window', 'window', 'gauge', 'footer']);
     });
 });
 
