@@ -1,8 +1,8 @@
 # AI Usage Bar
 
-A GNOME Shell extension that shows your AI plan usage in the top panel for five
+A GNOME Shell extension that shows your AI plan usage in the top panel for six
 vendors — **Anthropic (Claude)**, **OpenAI (Codex)**, **Z.AI / GLM**,
-**OpenRouter**, and **DeepSeek**.
+**OpenRouter**, **DeepSeek**, and **Kimi**.
 
 ## Overview
 
@@ -22,6 +22,7 @@ button to cycle between them.
 | **Z.AI / GLM**         | Plan usage and reset windows                     | API key (env var or prefs entry)                                     |
 | **OpenRouter**         | Credit balance and usage                         | API key (env var or prefs entry)                                     |
 | **DeepSeek**           | Balance / credits                                | API key (env var or prefs entry)                                     |
+| **Kimi**               | Weekly quota + 5h window usage %, reset countdowns, plan | API key (env var or prefs entry)                             |
 
 Only the **active** vendor is polled on the refresh timer; other enabled vendors
 render from the last fetched result and are refreshed lazily on scroll-cycle or
@@ -70,10 +71,10 @@ sent anywhere except the vendor's own usage endpoint.
 - **OpenAI (Codex).** Reads OAuth credentials from `~/.codex/auth.json`. An
   optional admin API key (default env var `OPENAI_ADMIN_KEY`) can be set for
   organization-level usage. The auth path is configurable in preferences.
-- **Z.AI / GLM, OpenRouter, DeepSeek.** Use an API key. The key is resolved in
-  this order:
+- **Z.AI / GLM, OpenRouter, DeepSeek, Kimi.** Use an API key. The key is resolved
+  in this order:
   1. the named **environment variable** (defaults `ZAI_API_KEY`,
-     `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`) if it is set;
+     `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`, `KIMI_API_KEY`) if it is set;
   2. otherwise the **inline key** entered in preferences;
   3. otherwise the vendor reports a configuration error in its popup section.
 
@@ -85,7 +86,7 @@ gear button in the popup footer). The prefs window exposes:
 - **Primary vendor** — the default active vendor on startup.
 - **Refresh interval** — seconds between polls (minimum 300; the vendor
   endpoints rate-limit below that).
-- **Per-vendor enable** — toggle each of the five vendors on or off; only enabled
+- **Per-vendor enable** — toggle each of the six vendors on or off; only enabled
   vendors appear in the popup and the scroll cycle.
 - **Panel label format** (`bar-format`) — a template with `{token}` placeholders,
   e.g. the default `{session_pct}% · {session_reset}`. The active vendor's
@@ -97,7 +98,7 @@ gear button in the popup footer). The prefs window exposes:
 - **Pace marker** — show an on-/off-pace indicator comparing usage against
   elapsed time in the window.
 - **Per-vendor auth** — credentials path (Anthropic/OpenAI), API-key env-var name
-  and inline key (Z.AI/OpenRouter/DeepSeek), and Z.AI plan tier.
+  and inline key (Z.AI/OpenRouter/DeepSeek/Kimi), and Z.AI plan tier.
 
 ## Privacy & security
 
@@ -159,19 +160,20 @@ Contributions and bug reports are welcome at the project repository:
 
 This extension is an independent GNOME Shell port inspired by the
 [`akitaonrails/ai-usagebar`](https://github.com/akitaonrails/ai-usagebar) Waybar
-widget. Vendor names (Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek) are used
-nominatively to identify each provider; no affiliation or endorsement is implied.
+widget. Vendor names (Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek, Kimi) are
+used nominatively to identify each provider; no affiliation or endorsement is
+implied.
 
 ## Trademarks & logos
 
 This extension bundles **no vendor logos**. It ships a single generic symbolic
 mark ([`icons/ai-symbolic.svg`](icons/ai-symbolic.svg)) and identifies each
 provider by name only —
-Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek — used nominatively to say which
-service a panel entry refers to. No affiliation with, sponsorship by, or
+Claude, OpenAI, Z.AI/GLM, OpenRouter, DeepSeek, Kimi — used nominatively to say
+which service a panel entry refers to. No affiliation with, sponsorship by, or
 endorsement from those companies is implied; this project is not affiliated with
-any of them. The short codes shown in the panel (CLD, GPT, ZAI, OPR, DSK) are
-plain abbreviations, not brand marks.
+any of them. The short codes shown in the panel (CLD, GPT, ZAI, OPR, DSK, KMI)
+are plain abbreviations, not brand marks.
 
 ## License
 
