@@ -112,6 +112,48 @@ describe('parseUsage', () => {
         assertThrows(() => parseUsage('42', 'Pro'));
         assertThrows(() => parseUsage('null', 'Pro'));
     });
+
+    it('lifts weekly_scoped limits into scoped; unscoped entries never duplicate', () => {
+        const s = parseUsage(JSON.stringify({
+            five_hour: {utilization: 10, resets_at: '2026-07-08T22:59:59Z'},
+            seven_day: {utilization: 55, resets_at: '2026-07-10T10:59:59Z'},
+            limits: [
+                {kind: 'session', percent: 10, resets_at: '2026-07-08T22:59:59Z', scope: null},
+                {kind: 'weekly_all', percent: 55, resets_at: '2026-07-10T10:59:59Z', scope: null},
+                {
+                    kind: 'weekly_scoped', percent: 84, resets_at: '2026-07-10T10:59:59Z',
+                    scope: {model: {id: null, display_name: 'Fable'}, surface: null},
+                },
+            ],
+        }), 'Pro');
+        assertEqual(s.scoped.length, 1);
+        assertEqual(s.scoped[0].label, 'Fable');
+        assertEqual(s.scoped[0].utilizationPct, 84);
+        assertEqual(s.scoped[0].resetsAt instanceof Date, true);
+        assertEqual(s.weekly.utilizationPct, 55); // unscoped weekly stays put
+    });
+
+    it('missing limits[] → scoped empty (no throw)', () => {
+        const s = parseUsage(JSON.stringify({
+            five_hour: {utilization: 0, resets_at: '2026-05-23T17:30:00Z'},
+            seven_day: {utilization: 0, resets_at: '2026-05-30T12:00:00Z'},
+        }), 'Pro');
+        assertEqual(Array.isArray(s.scoped), true);
+        assertEqual(s.scoped.length, 0);
+    });
+
+    it('weekly_scoped without a model display_name is ignored', () => {
+        const s = parseUsage(JSON.stringify({
+            five_hour: {utilization: 0},
+            seven_day: {utilization: 0},
+            limits: [
+                {kind: 'weekly_scoped', percent: 90, resets_at: '2026-07-10T10:59:59Z', scope: {model: {id: 'x', display_name: null}}},
+                {kind: 'weekly_scoped', percent: 70, resets_at: '2026-07-10T10:59:59Z', scope: {model: {}}},
+                {kind: 'weekly_scoped', percent: 60, resets_at: '2026-07-10T10:59:59Z', scope: null},
+            ],
+        }), 'Pro');
+        assertEqual(s.scoped.length, 0);
+    });
 });
 
 describe('anthropicSeverity', () => {
@@ -215,6 +257,8 @@ describe('fakeSnapshot', () => {
         assertEqual(s.session.utilizationPct, 23);
         assertEqual(s.weekly.utilizationPct, 23);
         assertEqual(s.sonnet.utilizationPct, 23);
+        assertEqual(s.scoped[0].label, 'Fable');
+        assertEqual(s.scoped[0].utilizationPct, 23);
         assertEqual(anthropicPeakUsage(s).percent, 23);
         assertEqual(s.extra, null);
     });
