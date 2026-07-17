@@ -61,7 +61,9 @@ function buildWindowRow(row, showPace) {
         trailing: pctText,
         trailingColor: row.color,
     }));
-    r.add_child(makeBar(row.pct, row.color, showPace ? row.elapsedPct ?? null : null));
+    const marker = showPace ? row.elapsedPct ?? null : null;
+    const overColor = marker !== null ? row.paceColor ?? null : null;
+    r.add_child(makeBar(row.pct, row.color, marker, overColor));
     return r;
 }
 

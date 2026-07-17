@@ -218,6 +218,18 @@ describe('buildSection — elapsedPct marker data', () => {
         assertEqual(r.title, 'Sonnet only');
         assertEqual(Object.hasOwn(r, 'elapsedPct'), false);
     });
+
+    it('windowed row carries paceColor: base from pct, over from the delta', () => {
+        // weekly pct 80 (high→orange base); usage runs ahead of pace so the
+        // delta is critical → red overshoot colour.
+        const r = model.rows[1];
+        assertEqual(r.color, theme.orange);
+        assertEqual(r.paceColor, theme.red);
+    });
+
+    it('markerless row (sonnet) has no paceColor → single-colour bar preserved', () => {
+        assertEqual(Object.hasOwn(model.rows[2], 'paceColor'), false);
+    });
 });
 
 describe('buildSection — injected translator', () => {
