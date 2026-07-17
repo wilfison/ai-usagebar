@@ -6,6 +6,7 @@
     <value nick="zai" value="2"/>
     <value nick="openrouter" value="3"/>
     <value nick="deepseek" value="4"/>
+    <value nick="kimi" value="5"/>
   </enum>
 
   <schema id="org.gnome.shell.extensions.ai-usagebar"
@@ -173,6 +174,24 @@
       <default>''</default>
       <summary>DeepSeek inline API key</summary>
       <description>Inline DeepSeek API key used when the environment variable is unset. Empty means none.</description>
+    </key>
+
+    <key name="kimi-enabled" type="b">
+      <default>false</default>
+      <summary>Enable Kimi</summary>
+      <description>Whether the Kimi vendor is polled and shown. Off by default; requires an API key.</description>
+    </key>
+
+    <key name="kimi-api-key-env" type="s">
+      <default>'KIMI_API_KEY'</default>
+      <summary>Kimi API key environment variable</summary>
+      <description>Name of the environment variable holding the Kimi API key (takes precedence over the inline key).</description>
+    </key>
+
+    <key name="kimi-api-key" type="s">
+      <default>''</default>
+      <summary>Kimi inline API key</summary>
+      <description>Inline Kimi API key used when the environment variable is unset. Empty means none.</description>
     </key>
 
   </schema>
