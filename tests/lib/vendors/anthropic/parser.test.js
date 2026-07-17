@@ -24,12 +24,13 @@ function win(pct) {
     return {utilizationPct: pct, resetsAt: null};
 }
 
-function snap(session, weekly, sonnetPct, extra) {
+function snap(session, weekly, sonnetPct, extra, scopedPcts = []) {
     return {
         plan: 'Max 5x',
         session: win(session),
         weekly: win(weekly),
         sonnet: sonnetPct === null ? null : win(sonnetPct),
+        scoped: scopedPcts.map((pct) => ({label: 'Fable', utilizationPct: pct, resetsAt: null})),
         extra: extra === null ? null : {limitCents: extra[0], spentCents: extra[1]},
     };
 }
@@ -171,6 +172,18 @@ describe('anthropicSeverity', () => {
 
     it('falls through to extra when extra higher than capped window', () => {
         assertEqual(anthropicSeverity(snap(100, 50, null, [10000, 10000])), Severity.CRITICAL);
+    });
+
+    it('counts scoped windows in the max (weekly 55 mid + Fable 84 → high)', () => {
+        assertEqual(anthropicSeverity(snap(10, 55, null, null, [84])), Severity.HIGH);
+    });
+
+    it('a scoped window at 100 is a cap hit that promotes extra into the peak', () => {
+        // No unscoped window at cap; only the scoped 100 triggers the cap-hit
+        // path, promoting extra (spent 150% of limit) into the peak.
+        const s = snap(10, 50, null, [10000, 15000], [100]);
+        assertEqual(anthropicPeakUsage(s).percent, 150);
+        assertEqual(anthropicSeverity(s), Severity.CRITICAL);
     });
 });
 
