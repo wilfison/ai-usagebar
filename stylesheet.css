@@ -11,6 +11,10 @@
     margin-right: 6px;
 }
 
+.aiusagebar-panel-vendors {
+    spacing: 14px;
+}
+
 .aiusagebar-popup {
     min-width: 320px;
     max-width: 440px;

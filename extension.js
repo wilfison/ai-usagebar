@@ -4,7 +4,7 @@ import Shell from 'gi://Shell';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import {readConfig} from './lib/config.js';
+import {readConfig, initializePanelVendors} from './lib/config.js';
 import {Indicator} from './ui/indicator.js';
 
 const TOGGLE_MENU_KEY = 'toggle-menu';
@@ -12,6 +12,7 @@ const TOGGLE_MENU_KEY = 'toggle-menu';
 export default class AiUsagebarExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
+        initializePanelVendors(this._settings);
         this._placeIds = ['changed::panel-box', 'changed::panel-index']
             .map(signal => this._settings.connect(signal, () => this._place()));
         this._place();

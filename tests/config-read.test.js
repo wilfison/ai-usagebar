@@ -6,8 +6,9 @@ import system from 'system';
 // any Gio.Settings is constructed.
 GLib.setenv('GSETTINGS_BACKEND', 'memory', true);
 
-import {readConfig, anthropicCredsPath, codexAuthPath} from '../lib/config.js';
-import {describe, it, assertEqual, summary} from './_assert.js';
+import {readConfig, initializePanelVendors, anthropicCredsPath, codexAuthPath} from '../lib/config.js';
+import {VENDOR_IDS} from '../lib/vendors.js';
+import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
 
@@ -38,6 +39,10 @@ describe('readConfig: schema defaults', () => {
     });
     it('default bar format', () =>
         assertEqual(cfg.barFormat, '{session_pct}% · {session_reset}'));
+    it('panel defaults to the default active vendor', () =>
+        assertDeepEqual(cfg.panelVendorIds, ['anthropic']));
+    it('vendor labels use the default when empty', () =>
+        assertEqual(cfg.vendorBarFormats.openai, ''));
     it('primary vendor defaults to anthropic', () => assertEqual(cfg.primaryVendor, 'anthropic'));
     it('anthropic enabled by default', () => assertEqual(cfg.vendors.anthropic.enabled, true));
     it('anthropic creds path unset → null', () => assertEqual(cfg.vendors.anthropic.credentialsPath, null));
@@ -87,6 +92,8 @@ describe('readConfig: overrides', () => {
     settings.set_string('deepseek-api-key', 'dsk');
     settings.set_string('active-vendor', 'zai');
     settings.set_boolean('show-pace-marker', true);
+    settings.set_strv('panel-vendors', ['anthropic', 'openai']);
+    settings.set_string('bar-format-openai', '{weekly_pct}%');
     settings.set_int('refresh-interval', 600);
     settings.set_boolean('deepseek-enabled', true);
     settings.set_boolean('notify-enabled', true);
@@ -109,6 +116,9 @@ describe('readConfig: overrides', () => {
         assertEqual(cfg.vendors.deepseek.apiKey, 'dsk'));
     it('honors the active-vendor override', () => assertEqual(cfg.activeVendor, 'zai'));
     it('honors the pace-marker toggle', () => assertEqual(cfg.showPaceMarker, true));
+    it('honors the selected panel vendors', () =>
+        assertEqual(JSON.stringify(cfg.panelVendorIds), '["anthropic","openai"]'));
+    it('honors a vendor-specific label', () => assertEqual(cfg.vendorBarFormats.openai, '{weekly_pct}%'));
     it('honors the refresh-interval override', () => assertEqual(cfg.refreshIntervalSecs, 600));
     it('honors a vendor enable toggle', () => assertEqual(cfg.vendors.deepseek.enabled, true));
     it('honors the notify-enabled toggle', () => assertEqual(cfg.notifications.enabled, true));
@@ -173,6 +183,51 @@ describe('readConfig: context monitor', () => {
         assertEqual(c.windowTokens, 200000);
         assertEqual(JSON.stringify(c.modelWindows), '{"claude-opus-5":1000000}');
     });
+});
+
+describe('initializePanelVendors', () => {
+    const settings = makeSettings();
+    const reset = () => {
+        for (const key of ['panel-vendors', 'primary-vendor', 'active-vendor',
+            ...VENDOR_IDS.map(id => `${id}-enabled`)])
+            settings.reset(key);
+    };
+
+    it('preserves the active panel vendor on upgrade', () => {
+        reset();
+        settings.set_string('active-vendor', 'openai');
+        initializePanelVendors(settings);
+        assertDeepEqual(settings.get_strv('panel-vendors'), ['openai']);
+    });
+    it('uses the enabled primary when the active vendor is disabled', () => {
+        reset();
+        settings.set_string('active-vendor', 'deepseek');
+        settings.set_string('primary-vendor', 'zai');
+        initializePanelVendors(settings);
+        assertDeepEqual(settings.get_strv('panel-vendors'), ['zai']);
+    });
+    it('selects no panel vendor when every vendor is disabled', () => {
+        reset();
+        for (const id of VENDOR_IDS)
+            settings.set_boolean(`${id}-enabled`, false);
+        initializePanelVendors(settings);
+        assertDeepEqual(settings.get_strv('panel-vendors'), []);
+    });
+    it('retains an explicitly saved empty selection', () => {
+        reset();
+        settings.set_strv('panel-vendors', []);
+        initializePanelVendors(settings);
+        assertDeepEqual(settings.get_strv('panel-vendors'), []);
+    });
+    it('retains a saved multi-vendor selection across repeated initialization', () => {
+        reset();
+        settings.set_strv('panel-vendors', ['anthropic', 'openai']);
+        initializePanelVendors(settings);
+        settings.set_string('active-vendor', 'zai');
+        initializePanelVendors(settings);
+        assertDeepEqual(settings.get_strv('panel-vendors'), ['anthropic', 'openai']);
+    });
+    reset();
 });
 
 system.exit(summary());

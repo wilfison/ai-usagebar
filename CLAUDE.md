@@ -125,12 +125,14 @@ single message row.
 
 Only the **active** vendor is polled on the timer; other enabled vendors render
 from an in-memory results map, populated lazily on scroll-cycle or "Refresh all".
-`lib/fetch-guard.js` keeps one active fetch in flight, coalesces requests made
-meanwhile, and lets a vendor switch supersede a slow fetch (its late result is
-stored, never painted or notified).
-Scrolling the panel button cycles `active-vendor` among enabled vendors. While
-the popup is open a 60s timer re-renders the active section so countdowns tick
-without hitting the network.
+`panel-vendors` selects the displayed and polled vendors; `panelVendors(config)`
+filters them by enabled state in canonical order. Empty `bar-format-<id>` values
+inherit `bar-format`. `initializePanelVendors(settings)` preserves the previously
+active vendor on first use and retains explicit selections, including an empty list.
+`lib/fetch-guard.js` supplies one fetch slot per vendor, coalescing overlapping
+requests without blocking another vendor. Clicking a panel label selects its popup
+section; scrolling cycles `active-vendor` among enabled vendors. A 60s timer updates
+panel countdowns and repaints popup sections while the popup is open.
 
 **Pace** (`lib/pacing.js` `calc()`) reports a `state`: `estimating` in the first
 1% of a window (clamped to 60 s–1 h) while usage is above zero, `limit` at

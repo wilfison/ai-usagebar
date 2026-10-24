@@ -5,9 +5,10 @@ A GNOME Shell extension that shows your AI plan usage in the top panel for
 **DeepSeek**, **Kimi** and **Ollama Cloud**, plus one **custom provider** you
 map yourself.
 
-The panel shows a compact label for the active vendor (e.g. `42% · 3h12m`),
-colored by severity. Click it for a popup with a section per enabled vendor;
-scroll over it to cycle between them.
+In **Panel** preferences, select the vendors whose usage should appear together
+in the top panel. Each selected and enabled vendor gets its own logo, label and
+severity color (e.g. Claude `42% · 3h12m` beside Codex `18% · 2h05m`). Click a
+vendor to open its popup section; scroll to change the selected section.
 
 ![AI Usage Bar: the popup under the panel label, showing plan usage, pace and reset countdowns](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshots/popup.png)
 
@@ -54,22 +55,32 @@ extensions.gnome.org.
 Open preferences with the gear button in the popup footer, or
 `gnome-extensions prefs ai-usagebar@wilfison`. The sidebar has two sections:
 
-- **General**: *Panel* (position and label format), *Popup* (extra rows, pace
+- **General**: *Panel* (position, vendor selection and label formats), *Popup* (extra rows, pace
   marker, the `Super+U` shortcut), *Display* (primary vendor, vendor logos,
   severity colors) and *Behavior* (refresh interval, notifications, update check, reset all).
 - **Vendors**: one page per vendor: enable it and set its credentials.
 
 ![The preferences window with its sidebar](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshots/preferences.png)
 
-Only the active vendor is polled, every 300 s at the least (the endpoints
-rate-limit below that); the others refresh when you scroll to them or press
-"Refresh all".
+On upgrade, the panel selection starts with the previously active vendor.
+Select or deselect vendors in **Panel** preferences to control what appears.
+Selecting a disabled vendor also enables it on its Vendors page. Selected and
+enabled vendors are polled at the configured interval, at least 300 seconds.
+Requests have independent fetch slots, so a slow or failed vendor does not block
+another. Other enabled vendors refresh when you scroll to them or press
+**Refresh all**. Panel countdowns update once a minute without making HTTP requests.
+
+Under **Panel label**, the **Default label** applies to every displayed vendor.
+Each selected vendor has a label field below it; leave that field empty to use
+the default, or enter a custom template for that vendor. For example, use
+`{session_pct}%` for Claude and `{weekly_pct}% · {weekly_reset}` for Codex.
 
 ### Label placeholders
 
-The panel label (`bar-format`, default `{session_pct}% · {session_reset}`) and
+The default panel label (`bar-format`, initially `{session_pct}% · {session_reset}`),
+per-vendor label overrides (`bar-format-<vendor>`) and
 the optional popup rows (`tooltip-format`) substitute `{token}` placeholders
-from the active vendor. An unknown token is left as is; a window the vendor did
+from each label's vendor. An unknown token is left as is; a window the vendor did
 not report resolves to an empty string.
 
 Every vendor provides `{icon}`, `{vendor_short}`, `{plan}`, `{session_pct}`,

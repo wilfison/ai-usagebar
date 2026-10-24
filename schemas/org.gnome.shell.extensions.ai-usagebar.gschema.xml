@@ -16,8 +16,8 @@
 
     <key name="primary-vendor" enum="org.gnome.shell.extensions.ai-usagebar.vendor">
       <default>'anthropic'</default>
-      <summary>Primary vendor shown on the panel</summary>
-      <description>Which vendor's usage the top-panel label displays.</description>
+      <summary>Primary vendor selected in the popup</summary>
+      <description>The default vendor selected in the popup. Panel vendors are configured separately.</description>
     </key>
 
     <key name="active-vendor" enum="org.gnome.shell.extensions.ai-usagebar.vendor">
@@ -35,8 +35,55 @@
 
     <key name="bar-format" type="s">
       <default>'{session_pct}% · {session_reset}'</default>
-      <summary>Panel label format template</summary>
-      <description>Template for the top-panel label. Supports {placeholder} substitution from the active vendor's value set.</description>
+      <summary>Default panel label format</summary>
+      <description>Used for a vendor's top-panel label when its custom label is empty. Supports placeholders from that vendor's value set.</description>
+    </key>
+
+    <key name="panel-vendors" type="as">
+      <default>['anthropic']</default>
+      <summary>Vendors selected for the panel</summary>
+      <description>Only selected and enabled vendors are displayed and automatically refreshed on the top panel. Order follows the vendor list.</description>
+    </key>
+
+    <key name="bar-format-anthropic" type="s">
+      <default>''</default>
+      <summary>Anthropic panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-openai" type="s">
+      <default>''</default>
+      <summary>OpenAI panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-zai" type="s">
+      <default>''</default>
+      <summary>Z.AI panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-openrouter" type="s">
+      <default>''</default>
+      <summary>OpenRouter panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-deepseek" type="s">
+      <default>''</default>
+      <summary>DeepSeek panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-kimi" type="s">
+      <default>''</default>
+      <summary>Kimi panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-ollama" type="s">
+      <default>''</default>
+      <summary>Ollama panel label</summary>
+      <description>Empty uses the default panel label.</description>
+    </key>
+    <key name="bar-format-custom" type="s">
+      <default>''</default>
+      <summary>Custom provider panel label</summary>
+      <description>Empty uses the default panel label.</description>
     </key>
 
     <key name="tooltip-format" type="s">

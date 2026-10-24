@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Selectable panel vendors with independent usage labels, severity colors,
+  error states and polling. Clicking a label selects its popup section.
+- A default panel label and optional per-vendor label templates. Empty vendor
+  templates inherit the default.
+- Panel preferences that enable a disabled vendor when selected and preserve
+  the previously active vendor on upgrade.
+
+### Fixed
+
+- Panel countdowns update while the popup is closed.
+- Empty panel selections and all-disabled configurations have no panel fetch targets.
+
 ## [1.5.0] - 2026-10-02
 
 ### Added

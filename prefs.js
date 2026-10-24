@@ -6,10 +6,12 @@ import Gtk from 'gi://Gtk';
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import {rgbToHex} from './lib/color.js';
+import {initializePanelVendors} from './lib/config.js';
 import {vformat} from './lib/format.js';
 import {defaultTheme} from './lib/theme.js';
 import {prefsNav, prefsNavItems} from './lib/prefs-nav.js';
-import {VENDOR_LABELS} from './lib/vendors.js';
+import {bindPanelVendor, bindPanelLabelVisibility} from './lib/panel-prefs.js';
+import {VENDOR_IDS, VENDOR_LABELS} from './lib/vendors.js';
 import {parseExtraHeaders, validateMapping} from './lib/vendors/custom/parser.js';
 
 const INTERVAL_MIN = 300;
@@ -29,6 +31,7 @@ const COLOR_KEY_PALETTE = {
 export default class AiUsagebarPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        initializePanelVendors(settings);
         const cleanups = [];
 
         this._registerIconPath();
@@ -182,15 +185,29 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         positionGroup.add(indexRow);
         page.add(positionGroup);
 
+        const vendorsGroup = new Adw.PreferencesGroup({
+            title: _('Panel vendors'),
+            description: _('Select the vendors to show and refresh on the panel.'),
+        });
+        VENDOR_IDS.forEach((id, index) => {
+            const row = new Adw.SwitchRow({title: VENDOR_LABELS[index]});
+            bindPanelVendor(settings, id, row, cleanups);
+            vendorsGroup.add(row);
+        });
+        page.add(vendorsGroup);
+
         const labelGroup = new Adw.PreferencesGroup({
             title: _('Panel label'),
             // Translators: the {token} names are literal placeholders the user
             // types: keep them verbatim, only translate the surrounding prose.
-            description: _('Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} {weekly_pct} {weekly_reset}'),
+            description: _('Leave a vendor label empty to use the default label. Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} {weekly_pct} {weekly_reset}'),
         });
-        const barFormat = new Adw.EntryRow({title: _('Bar format')});
-        settings.bind('bar-format', barFormat, 'text', Gio.SettingsBindFlags.DEFAULT);
-        labelGroup.add(barFormat);
+        labelGroup.add(this._entryRow(settings, 'bar-format', _('Default label')));
+        for (const [index, id] of VENDOR_IDS.entries()) {
+            const row = this._entryRow(settings, `bar-format-${id}`, VENDOR_LABELS[index]);
+            bindPanelLabelVisibility(settings, id, row, cleanups);
+            labelGroup.add(row);
+        }
         page.add(labelGroup);
 
         return page;
@@ -224,7 +241,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             model.append(label);
         const combo = new Adw.ComboRow({
             title: _('Primary vendor'),
-            subtitle: _('Shown by default and used as the scroll-cycle reset target'),
+            subtitle: _('Selected by default in the popup'),
             model,
         });
         // The schema enum nicks are ordered identically to VENDOR_IDS / VENDOR_LABELS,

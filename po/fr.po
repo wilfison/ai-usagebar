@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-10-02 15:37-0300\n"
+"POT-Creation-Date: 2026-10-24 00:14+0000\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: French\n"
@@ -107,11 +107,11 @@ msgstr "Général"
 msgid "Panel"
 msgstr "Panneau"
 
-#: lib/prefs-nav.js:11 prefs.js:203
+#: lib/prefs-nav.js:11 prefs.js:220
 msgid "Popup"
 msgstr "Fenêtre contextuelle"
 
-#: lib/prefs-nav.js:12 prefs.js:220
+#: lib/prefs-nav.js:12 prefs.js:237
 msgid "Display"
 msgstr "Affichage"
 
@@ -220,12 +220,12 @@ msgid "Limit: %s"
 msgstr "Limite : %s"
 
 #. Translators: %s is the Anthropic plan name (e.g. "Max 5x"), kept verbatim.
-#: lib/vendors/anthropic/section.js:145 ui/indicator.js:312
+#: lib/vendors/anthropic/section.js:145 ui/indicator.js:353
 #, javascript-format
 msgid "Claude %s"
 msgstr "Claude %s"
 
-#: lib/vendors/custom/section.js:34 prefs.js:508
+#: lib/vendors/custom/section.js:34 prefs.js:525
 msgid "Custom provider"
 msgstr "Fournisseur personnalisé"
 
@@ -459,60 +459,71 @@ msgstr "Session (5h)"
 msgid "MCP tools (monthly)"
 msgstr "Outils MCP (mensuel)"
 
-#: prefs.js:151
+#: prefs.js:154
 msgid "Panel position"
 msgstr "Position dans le panneau"
 
-#: prefs.js:152
+#: prefs.js:155
 msgid "Changes apply immediately."
 msgstr "Les changements s’appliquent immédiatement."
 
-#: prefs.js:156
+#: prefs.js:159
 msgid "Left"
 msgstr "Gauche"
 
-#: prefs.js:156
+#: prefs.js:159
 msgid "Center (beside the clock)"
 msgstr "Centre (à côté de l’horloge)"
 
-#: prefs.js:156
+#: prefs.js:159
 msgid "Right (beside the system menu)"
 msgstr "Droite (à côté du menu système)"
 
-#: prefs.js:158
+#: prefs.js:161
 msgid "Area"
 msgstr "Zone"
 
-#: prefs.js:176
+#: prefs.js:179
 msgid "Position within the area"
 msgstr "Position dans la zone"
 
-#: prefs.js:177
+#: prefs.js:180
 msgid "0 is leftmost; in the center, 0 is left of the clock and 1 right of it"
 msgstr ""
 "0 est la plus à gauche ; au centre, 0 est à gauche de l’horloge et 1 à droite"
 
-#: prefs.js:186
+#: prefs.js:189
+msgid "Panel vendors"
+msgstr "Fournisseurs du panneau"
+
+#: prefs.js:190
+msgid "Select the vendors to show and refresh on the panel."
+msgstr ""
+"Sélectionnez les fournisseurs à afficher et à actualiser dans le panneau."
+
+#: prefs.js:200
 msgid "Panel label"
 msgstr "Étiquette du panneau"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types: keep them verbatim, only translate the surrounding prose.
-#: prefs.js:189
+#: prefs.js:203
 msgid ""
-"Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
-"{weekly_pct} {weekly_reset}"
+"Leave a vendor label empty to use the default label. Placeholders: "
+"{vendor_short} {session_pct}% {session_reset} {plan} {weekly_pct} "
+"{weekly_reset}"
 msgstr ""
-"Espaces réservés : {vendor_short} {session_pct}% {session_reset} {plan} "
+"Laissez le libellé d’un fournisseur vide pour utiliser le libellé par "
+"défaut. Variables : {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:191
-msgid "Bar format"
-msgstr "Format de la barre"
+#: prefs.js:205
+msgid "Default label"
+msgstr "Libellé par défaut"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types: keep them verbatim, only translate the surrounding prose.
-#: prefs.js:206
+#: prefs.js:223
 msgid ""
 "Optional extra lines shown above the popup. Empty uses the built-in layout. "
 "Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} "
@@ -522,15 +533,15 @@ msgstr ""
 "contextuelle. Vide utilise la disposition intégrée. Espaces réservés : "
 "{plan} {session_pct} {session_reset} {weekly_pct} {weekly_reset}"
 
-#: prefs.js:208
+#: prefs.js:225
 msgid "Popup format"
 msgstr "Format de la fenêtre contextuelle"
 
-#: prefs.js:209
+#: prefs.js:226
 msgid "Show pace marker"
 msgstr "Afficher le repère de rythme"
 
-#: prefs.js:210
+#: prefs.js:227
 msgid ""
 "A tick at how much of the window has passed. Usage past it turns orange or "
 "red when it would run out before the reset."
@@ -538,29 +549,27 @@ msgstr ""
 "Un repère indiquant la part écoulée de la fenêtre. L’usage au-delà devient "
 "orange ou rouge s’il serait épuisé avant la réinitialisation."
 
-#: prefs.js:211
+#: prefs.js:228
 msgid "Shortcut to open"
 msgstr "Raccourci d’ouverture"
 
-#: prefs.js:226
+#: prefs.js:243
 msgid "Primary vendor"
 msgstr "Fournisseur principal"
 
-#: prefs.js:227
-msgid "Shown by default and used as the scroll-cycle reset target"
-msgstr ""
-"Affiché par défaut et utilisé comme cible de réinitialisation lors du "
-"défilement"
+#: prefs.js:244
+msgid "Selected by default in the popup"
+msgstr "Sélectionné par défaut dans le menu"
 
-#: prefs.js:248
+#: prefs.js:265
 msgid "Show vendor logos"
 msgstr "Afficher les logos des fournisseurs"
 
-#: prefs.js:252
+#: prefs.js:269
 msgid "Severity colors"
 msgstr "Couleurs de gravité"
 
-#: prefs.js:253
+#: prefs.js:270
 msgid ""
 "Pick a color per severity tier. Reset returns a tier to its built-in default."
 msgstr ""
@@ -568,43 +577,43 @@ msgstr ""
 "la valeur par défaut du niveau."
 
 #. Translators: Low/Mid/High/Critical are usage-severity tier names.
-#: prefs.js:257
+#: prefs.js:274
 msgid "Low"
 msgstr "Faible"
 
-#: prefs.js:258
+#: prefs.js:275
 msgid "Mid"
 msgstr "Moyen"
 
-#: prefs.js:259
+#: prefs.js:276
 msgid "High"
 msgstr "Élevé"
 
-#: prefs.js:260
+#: prefs.js:277
 msgid "Critical"
 msgstr "Critique"
 
-#: prefs.js:270
+#: prefs.js:287
 msgid "Refresh"
 msgstr "Actualisation"
 
 #. Translators: %d is the minimum refresh interval in seconds.
-#: prefs.js:272
+#: prefs.js:289
 #, javascript-format
 msgid "Minimum %d s: the upstream endpoints rate-limit below that."
 msgstr ""
 "Minimum %d s : les points de terminaison en amont limitent le débit en "
 "dessous."
 
-#: prefs.js:281
+#: prefs.js:298
 msgid "Refresh interval (seconds)"
 msgstr "Intervalle d’actualisation (secondes)"
 
-#: prefs.js:304
+#: prefs.js:321
 msgid "Notifications"
 msgstr "Notifications"
 
-#: prefs.js:305
+#: prefs.js:322
 msgid ""
 "Show a desktop notification the first time a usage window reaches the "
 "threshold. It re-arms when usage drops 7 points below it or the window "
@@ -615,31 +624,31 @@ msgstr ""
 "en dessous ou que la fenêtre se réinitialise, et prévient 48 heures avant "
 "l’expiration d’un crédit de réinitialisation."
 
-#: prefs.js:307
+#: prefs.js:324
 msgid "Notify on high usage"
 msgstr "Notifier en cas d'utilisation élevée"
 
-#: prefs.js:315
+#: prefs.js:332
 msgid "Notification threshold (%)"
 msgstr "Seuil de notification (%)"
 
-#: prefs.js:337
+#: prefs.js:354
 msgid "Updates"
 msgstr "Mises à jour"
 
-#: prefs.js:338
+#: prefs.js:355
 msgid "Check for updates"
 msgstr "Rechercher les mises à jour"
 
-#: prefs.js:339
+#: prefs.js:356
 msgid "Once a day, ask GitHub whether a newer release exists"
 msgstr "Une fois par jour, demande à GitHub si une version plus récente existe"
 
-#: prefs.js:343 prefs.js:372
+#: prefs.js:360 prefs.js:389
 msgid "Reset"
 msgstr "Réinitialiser"
 
-#: prefs.js:344
+#: prefs.js:361
 msgid ""
 "Restore every setting (vendor toggles, paths, keys, formats, and colors) to "
 "its built-in default."
@@ -647,48 +656,48 @@ msgstr ""
 "Restaure chaque paramètre (interrupteurs de fournisseurs, chemins, clés, "
 "formats et couleurs) à sa valeur par défaut."
 
-#: prefs.js:346
+#: prefs.js:363
 msgid "Reset all settings"
 msgstr "Réinitialiser tous les paramètres"
 
-#: prefs.js:368
+#: prefs.js:385
 msgid "Reset all settings?"
 msgstr "Réinitialiser tous les paramètres ?"
 
-#: prefs.js:369
+#: prefs.js:386
 msgid ""
 "This restores every setting to its built-in default and cannot be undone."
 msgstr ""
 "Cela restaure chaque paramètre à sa valeur par défaut et ne peut pas être "
 "annulé."
 
-#: prefs.js:371 prefs.js:706
+#: prefs.js:388 prefs.js:723
 msgid "Cancel"
 msgstr "Annuler"
 
 #. Translators: "Anthropic" is a brand name, usually keep untranslated.
-#: prefs.js:392
+#: prefs.js:409
 msgid "Anthropic"
 msgstr "Anthropic"
 
-#: prefs.js:393
+#: prefs.js:410
 msgid "Credentials path: empty uses ~/.claude/.credentials.json."
 msgstr "Chemin des identifiants : vide utilise ~/.claude/.credentials.json."
 
-#: prefs.js:395 prefs.js:426 prefs.js:439 prefs.js:454 prefs.js:468
-#: prefs.js:482 prefs.js:496 prefs.js:511
+#: prefs.js:412 prefs.js:443 prefs.js:456 prefs.js:471 prefs.js:485
+#: prefs.js:499 prefs.js:513 prefs.js:528
 msgid "Enabled"
 msgstr "Activé"
 
-#: prefs.js:396
+#: prefs.js:413
 msgid "Credentials path"
 msgstr "Chemin des identifiants"
 
-#: prefs.js:400
+#: prefs.js:417
 msgid "Context monitor"
 msgstr "Moniteur de contexte"
 
-#: prefs.js:401
+#: prefs.js:418
 msgid ""
 "Lists recent Claude Code sessions in the Claude section, with how much of "
 "the context window each one used. Transcripts are read only while this is on."
@@ -697,94 +706,94 @@ msgstr ""
 "de la fenêtre de contexte utilisée par chacune. Les transcriptions ne sont "
 "lues que lorsque cette option est activée."
 
-#: prefs.js:403
+#: prefs.js:420
 msgid "Show session context"
 msgstr "Afficher le contexte des sessions"
 
-#: prefs.js:404
+#: prefs.js:421
 msgid "Projects directory (empty: ~/.claude/projects)"
 msgstr "Dossier des projets (vide : ~/.claude/projects)"
 
-#: prefs.js:407
+#: prefs.js:424
 msgid "Default context window (tokens)"
 msgstr "Fenêtre de contexte par défaut (jetons)"
 
-#: prefs.js:408
+#: prefs.js:425
 msgid "0 shows raw token counts instead of a percentage"
 msgstr "0 affiche le nombre brut de jetons au lieu d’un pourcentage"
 
-#: prefs.js:414
+#: prefs.js:431
 msgid "Window per model (JSON, e.g. {\"claude-opus-5\": 1000000})"
 msgstr "Fenêtre par modèle (JSON, p. ex. {\"claude-opus-5\": 1000000})"
 
 #. Translators: "OpenAI" is a brand name, usually keep untranslated.
-#: prefs.js:423
+#: prefs.js:440
 msgid "OpenAI"
 msgstr "OpenAI"
 
-#: prefs.js:424
+#: prefs.js:441
 msgid "Codex auth path: empty uses ~/.codex/auth.json."
 msgstr "Chemin d’authentification Codex : vide utilise ~/.codex/auth.json."
 
-#: prefs.js:427
+#: prefs.js:444
 msgid "Codex auth path"
 msgstr "Chemin d’authentification Codex"
 
 #. Translators: "Z.AI" is a brand name, usually keep untranslated.
-#: prefs.js:436
+#: prefs.js:453
 msgid "Z.AI"
 msgstr "Z.AI"
 
-#: prefs.js:437 prefs.js:452
+#: prefs.js:454 prefs.js:469
 msgid "Set the API key inline or via the environment variable (env wins)."
 msgstr ""
 "Définissez la clé d’API en ligne ou via la variable d’environnement "
 "(l’environnement l’emporte)."
 
-#: prefs.js:440 prefs.js:455 prefs.js:469 prefs.js:483 prefs.js:497
+#: prefs.js:457 prefs.js:472 prefs.js:486 prefs.js:500 prefs.js:514
 msgid "API key env var"
 msgstr "Variable d’environnement de la clé d’API"
 
-#: prefs.js:441 prefs.js:456 prefs.js:470 prefs.js:484 prefs.js:498
-#: prefs.js:522
+#: prefs.js:458 prefs.js:473 prefs.js:487 prefs.js:501 prefs.js:515
+#: prefs.js:539
 msgid "API key (inline)"
 msgstr "Clé d’API (en ligne)"
 
-#: prefs.js:442
+#: prefs.js:459
 msgid "Plan tier (lite/pro/max)"
 msgstr "Niveau du forfait (lite/pro/max)"
 
 #. Translators: "OpenRouter" is a brand name, usually keep untranslated.
-#: prefs.js:451
+#: prefs.js:468
 msgid "OpenRouter"
 msgstr "OpenRouter"
 
 #. Translators: "DeepSeek" is a brand name, usually keep untranslated.
-#: prefs.js:465
+#: prefs.js:482
 msgid "DeepSeek"
 msgstr "DeepSeek"
 
-#: prefs.js:466 prefs.js:480 prefs.js:494
+#: prefs.js:483 prefs.js:497 prefs.js:511
 msgid "Disabled by default; requires an API key (env var or inline)."
 msgstr ""
 "Désactivé par défaut ; nécessite une clé d’API (variable d’environnement ou "
 "en ligne)."
 
 #. Translators: "Kimi" is a brand name, usually keep untranslated.
-#: prefs.js:479
+#: prefs.js:496
 msgid "Kimi"
 msgstr "Kimi"
 
 #. Translators: "Ollama" is a brand name, usually keep untranslated.
-#: prefs.js:493
+#: prefs.js:510
 msgid "Ollama Cloud"
 msgstr "Ollama Cloud"
 
-#: prefs.js:499
+#: prefs.js:516
 msgid "Plan name (optional)"
 msgstr "Nom de l’offre (facultatif)"
 
-#: prefs.js:509
+#: prefs.js:526
 msgid ""
 "Any HTTPS endpoint that answers a GET with JSON, mapped to usage rows by "
 "JSON Pointer. See the README for an example."
@@ -792,46 +801,46 @@ msgstr ""
 "Tout point d’accès HTTPS qui répond à un GET en JSON, associé à des lignes "
 "d’utilisation par JSON Pointer. Voir un exemple dans le README."
 
-#: prefs.js:512
+#: prefs.js:529
 msgid "Name"
 msgstr "Nom"
 
-#: prefs.js:513
+#: prefs.js:530
 msgid "URL"
 msgstr "URL"
 
-#: prefs.js:514
+#: prefs.js:531
 msgid "Allow plain HTTP"
 msgstr "Autoriser le HTTP non chiffré"
 
-#: prefs.js:518
+#: prefs.js:535
 msgid "Authentication"
 msgstr "Authentification"
 
-#: prefs.js:519
+#: prefs.js:536
 msgid ""
 "Without a key no auth header is sent. An empty scheme sends the key bare."
 msgstr ""
 "Sans clé, aucun en-tête d’authentification n’est envoyé. Un schéma vide "
 "envoie la clé seule."
 
-#: prefs.js:521
+#: prefs.js:538
 msgid "API key env var (optional)"
 msgstr "Variable d’environnement de la clé d’API (facultatif)"
 
-#: prefs.js:523
+#: prefs.js:540
 msgid "Auth header"
 msgstr "En-tête d’authentification"
 
-#: prefs.js:524
+#: prefs.js:541
 msgid "Auth scheme"
 msgstr "Schéma d’authentification"
 
-#: prefs.js:528
+#: prefs.js:545
 msgid "Extra headers"
 msgstr "En-têtes supplémentaires"
 
-#: prefs.js:529
+#: prefs.js:546
 msgid ""
 "A JSON object of header names to string values; it must not repeat the auth "
 "header."
@@ -839,18 +848,18 @@ msgstr ""
 "Un objet JSON associant des noms d’en-tête à des valeurs texte ; il ne doit "
 "pas répéter l’en-tête d’authentification."
 
-#: prefs.js:534
+#: prefs.js:551
 msgid ""
 "Not a JSON object of string header values, or it repeats the auth header."
 msgstr ""
 "Ce n’est pas un objet JSON de valeurs d’en-tête texte, ou il répète l’en-"
 "tête d’authentification."
 
-#: prefs.js:540
+#: prefs.js:557
 msgid "Mapping"
 msgstr "Mappage"
 
-#: prefs.js:541
+#: prefs.js:558
 msgid ""
 "Metrics (used + limit, or percent) and texts, each read from the response by "
 "JSON Pointer. Saved when the editor loses focus and the mapping is valid."
@@ -859,58 +868,77 @@ msgstr ""
 "réponse par JSON Pointer. Enregistré quand l’éditeur perd le focus et que le "
 "mappage est valide."
 
-#: prefs.js:548
+#: prefs.js:565
 #, javascript-format
 msgid "Not valid JSON: %s"
 msgstr "JSON non valide : %s"
 
-#: prefs.js:627 prefs.js:675
+#: prefs.js:644 prefs.js:692
 msgid "Reset to default"
 msgstr "Réinitialiser par défaut"
 
-#: prefs.js:668
+#: prefs.js:685
 msgid "Disabled"
 msgstr "Désactivé"
 
-#: prefs.js:703
+#: prefs.js:720
 msgid "Set shortcut"
 msgstr "Définir le raccourci"
 
-#: prefs.js:704
+#: prefs.js:721
 msgid "Press the new shortcut for opening the popup, or Esc to cancel."
 msgstr ""
 "Appuyez sur le nouveau raccourci pour ouvrir la fenêtre contextuelle, ou sur "
 "Échap pour annuler."
 
-#: prefs.js:707
+#: prefs.js:724
 msgid "Disable"
 msgstr "Désactiver"
 
-#: ui/indicator.js:134
+#: ui/indicator.js:97
+msgid "No panel vendors selected"
+msgstr "Aucun fournisseur sélectionné pour le panneau"
+
+#: ui/indicator.js:118
 msgid "Refresh now"
 msgstr "Actualiser maintenant"
 
-#: ui/indicator.js:136
+#: ui/indicator.js:120
 msgid "Refresh all"
 msgstr "Tout actualiser"
 
-#: ui/indicator.js:138
+#: ui/indicator.js:122
 msgid "Preferences"
 msgstr "Préférences"
 
-#: ui/indicator.js:281
+#: ui/indicator.js:322
 msgid "No data: use \"Refresh all\""
 msgstr "Aucune donnée : utilisez « Tout actualiser »"
 
-#: ui/indicator.js:305 ui/indicator.js:572
+#: ui/indicator.js:346 ui/indicator.js:591
 msgid "Loading…"
 msgstr "Chargement…"
 
 #. Translators: %s is the version number of the newer release (e.g. "1.6.0").
-#: ui/indicator.js:554
+#: ui/indicator.js:564
 #, javascript-format
 msgid "Update available: %s"
 msgstr "Mise à jour disponible : %s"
+
+#~ msgid ""
+#~ "Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
+#~ "{weekly_pct} {weekly_reset}"
+#~ msgstr ""
+#~ "Espaces réservés : {vendor_short} {session_pct}% {session_reset} {plan} "
+#~ "{weekly_pct} {weekly_reset}"
+
+#~ msgid "Bar format"
+#~ msgstr "Format de la barre"
+
+#~ msgid "Shown by default and used as the scroll-cycle reset target"
+#~ msgstr ""
+#~ "Affiché par défaut et utilisé comme cible de réinitialisation lors du "
+#~ "défilement"
 
 #~ msgid "Usage is critical"
 #~ msgstr "Utilisation critique"

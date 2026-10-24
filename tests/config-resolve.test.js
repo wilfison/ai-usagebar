@@ -7,6 +7,7 @@ import {
     enabledVendors,
     normalizePrimary,
     normalizeActive,
+    panelVendors,
     cycleVendor,
 } from '../lib/config-resolve.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
@@ -23,6 +24,7 @@ function snapshot(overrides = {}) {
     return {
         primaryVendor: overrides.primaryVendor ?? 'anthropic',
         activeVendor: overrides.activeVendor ?? '',
+        panelVendorIds: overrides.panelVendorIds ?? ['anthropic', 'openai', 'zai', 'openrouter'],
         vendors: {
             anthropic: {enabled: enabled.anthropic},
             openai: {enabled: enabled.openai},
@@ -154,6 +156,32 @@ describe('cycleVendor', () => {
         assertEqual(cycleVendor(['zai'], 'zai', +1), 'zai'));
     it('empty list returns current unchanged', () =>
         assertEqual(cycleVendor([], 'zai', +1), 'zai'));
+});
+
+describe('panelVendors', () => {
+    it('shows the selected enabled vendors in canonical order', () => {
+        assertDeepEqual(panelVendors(snapshot({activeVendor: 'zai'})),
+            ['anthropic', 'openai', 'zai', 'openrouter']);
+    });
+    it('selection can show one vendor independently of the active vendor', () => {
+        assertDeepEqual(panelVendors(snapshot({panelVendorIds: ['openai'], activeVendor: 'zai'})), ['openai']);
+    });
+    it('selection order does not alter the canonical panel order', () => {
+        assertDeepEqual(panelVendors(snapshot({panelVendorIds: ['openrouter', 'anthropic']})),
+            ['anthropic', 'openrouter']);
+    });
+    it('disabled selections do not appear or poll', () => {
+        assertDeepEqual(panelVendors(snapshot({panelVendorIds: ['anthropic', 'zai'], enabled: {zai: false}})),
+            ['anthropic']);
+    });
+    it('empty and all-disabled selections have no panel fetch targets', () => {
+        const enabled = {anthropic: false, openai: false, zai: false, openrouter: false, deepseek: false};
+        assertDeepEqual(panelVendors(snapshot({panelVendorIds: []})), []);
+        assertDeepEqual(panelVendors(snapshot({enabled})), []);
+    });
+    it('unknown and duplicate ids are ignored', () => {
+        assertDeepEqual(panelVendors(snapshot({panelVendorIds: ['openai', 'openai', 'unknown']})), ['openai']);
+    });
 });
 
 system.exit(summary());
