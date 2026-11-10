@@ -72,20 +72,24 @@ describe('buildSection (openai)', () => {
         assertEqual(m.rows[3].text, 'balance: unlimited');
     });
 
-    it('omits an absent session window (weekly-only response)', () => {
+    it('names an absent session window as not reported (weekly-only response)', () => {
         const s = base();
         s.session = null;
         const m = buildSection(s, META, NOW, theme);
-        assertDeepEqual(m.rows.map(r => r.kind), ['window', 'footer']);
-        assertEqual(m.rows[0].title, 'Codex weekly');
+        assertDeepEqual(m.rows.map(r => r.kind), ['text', 'window', 'footer']);
+        assertEqual(m.rows[0].text, 'Codex 5h: not reported');
+        assertEqual(m.rows[0].tone, 'dim');
+        assertEqual(m.rows[1].title, 'Codex weekly');
     });
 
-    it('omits an absent weekly window', () => {
+    it('names an absent weekly window as not reported', () => {
         const s = base();
         s.weekly = null;
         const m = buildSection(s, META, NOW, theme);
-        assertDeepEqual(m.rows.map(r => r.kind), ['window', 'footer']);
+        assertDeepEqual(m.rows.map(r => r.kind), ['window', 'text', 'footer']);
         assertEqual(m.rows[0].title, 'Codex 5h');
+        assertEqual(m.rows[1].text, 'Codex weekly: not reported');
+        assertEqual(buildSection(s, META, NOW, theme, t => `«${t}»`).rows[1].text, '«Codex weekly: not reported»');
     });
 
     it('says no usage windows were reported when both are absent', () => {
