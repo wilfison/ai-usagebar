@@ -290,4 +290,45 @@ describe('fetchSnapshot', () => {
     }));
 });
 
+
+function retryArmed(cache) {
+    return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.retry_after'])).query_exists(null);
+}
+
+function blankCreds(dir, {accessToken = '  ', refreshToken = 'rt', expiresAt = 9_999_999_999_000} = {}) {
+    const path = GLib.build_filenamev([dir, 'blank.json']);
+    const doc = {claudeAiOauth: {accessToken, refreshToken, expiresAt, subscriptionType: 'pro', rateLimitTier: ''}};
+    Gio.File.new_for_path(path).replace_contents(
+        new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
+    return path;
+}
+
+describe('fetchSnapshot: a signed-out credentials file', () => {
+    it('a blank access token makes no request and asks to log in', withTemp(({cache, dir}) => {
+        const http = httpStub(res(429, 'slow down'));
+        const r = runSync(fetchSnapshot({cache, http, credsPath: blankCreds(dir)}));
+        assertEqual(http.calls.length, 0);
+        assertEqual(r.ok, false);
+        assertEqual(r.kind, 'error');
+        assertEqual(r.message, 'no access token; run `claude` to log in');
+        assertEqual(retryArmed(cache), false, 'no 429 backoff is armed');
+    }));
+
+    it('a blank access token serves the cached snapshot as stale', withTemp(({cache, dir}) => {
+        cache.writePayload(cached(USAGE));
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, USAGE)), credsPath: blankCreds(dir), cacheTtlMs: 0}));
+        assertEqual(r.ok, true);
+        assertEqual(r.stale, true);
+    }));
+
+    it('an expired blank token is refreshed first, then used', withTemp(({cache, dir}) => {
+        const token = res(200, JSON.stringify({access_token: 'new-at', refresh_token: 'new-rt', expires_in: 3600}));
+        const http = httpStub([token, res(200, USAGE)]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath: blankCreds(dir, {accessToken: '', expiresAt: 0})}));
+        assertEqual(http.calls.length, 2);
+        assertEqual(http.calls[1].headers.Authorization, 'Bearer new-at');
+        assertEqual(r.ok, true);
+    }));
+});
+
 system.exit(summary());
