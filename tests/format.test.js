@@ -9,6 +9,8 @@ import {
     sanitizeUntrusted,
     checkedResetTitle,
     resetsAvailableText,
+    redactSecret,
+    PARTIAL_ECHO_NOTE,
 } from '../lib/format.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 
@@ -181,6 +183,32 @@ describe('resetsAvailableText', () => {
         const ngettext = (one, many, n) => (n === 1 ? `[${one}]` : `[${many}]`);
         assertEqual(resetsAvailableText(1, ngettext), '[1 reset available]');
     });
+});
+
+
+describe('redactSecret', () => {
+    const KEY = 'sk-abcdefgh12345678';
+
+    it('replaces each exact copy with [key]', () =>
+        assertEqual(redactSecret(`bad key ${KEY}, again ${KEY}`, KEY), 'bad key [key], again [key]'));
+    it('a partial echo of 8+ characters replaces the whole text', () =>
+        assertEqual(redactSecret('key sk-abcdefgh… is invalid', KEY), PARTIAL_ECHO_NOTE));
+    it('a partial echo from the middle of the key counts too', () =>
+        assertEqual(redactSecret('fragment efgh1234 seen', KEY), PARTIAL_ECHO_NOTE));
+    it('seven characters are not an echo', () =>
+        assertEqual(redactSecret('prefix sk-abcd only', KEY), 'prefix sk-abcd only'));
+    it('an empty or missing secret leaves the text alone', () => {
+        assertEqual(redactSecret('anything', ''), 'anything');
+        assertEqual(redactSecret('anything', null), 'anything');
+    });
+    it('a short secret is only removed when exact', () =>
+        assertEqual(redactSecret('pin 1234 and 123', '1234'), 'pin [key] and 123'));
+    it('counts code points, not UTF-16 units', () => {
+        const emojiKey = '😀😀😀😀😀😀😀😀x';
+        assertEqual(redactSecret('says 😀😀😀😀😀😀😀😀', emojiKey), PARTIAL_ECHO_NOTE);
+        assertEqual(redactSecret('says 😀😀😀😀😀😀😀', emojiKey), 'says 😀😀😀😀😀😀😀');
+    });
+    it('non-string text passes through', () => assertEqual(redactSecret(null, KEY), null));
 });
 
 system.exit(summary());

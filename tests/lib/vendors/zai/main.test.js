@@ -167,4 +167,29 @@ describe('fetchSnapshot (zai)', () => {
     }));
 });
 
+
+describe('fetchSnapshot (zai): a failure that quotes the key', () => {
+    const KEY = 'sk-abcdefgh12345678';
+    const ECHO = JSON.stringify({success: false, code: 1000, msg: `bad key ${KEY}`});
+
+    it('neither the result nor .last_error carries the key', withTemp(({cache}) => {
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, ECHO)), apiKey: KEY}));
+        assertEqual(r.ok, false);
+        assertEqual(r.message.includes(KEY), false);
+        assertEqual(r.message.includes('[key]'), true);
+        const onDisk = runSync(cache.readLastError());
+        assertEqual(onDisk.body.includes(KEY), false);
+        assertEqual(onDisk.body.includes('1000'), true);
+    }));
+
+    it('a stale fallback shows the redacted error too', withTemp(({cache}) => {
+        cache.writePayload(cached(SEED));
+        backdate(cache, 120);
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, ECHO)), apiKey: KEY}));
+        assertEqual(r.ok, true);
+        assertEqual(r.stale, true);
+        assertEqual(JSON.stringify(r).includes(KEY), false);
+    }));
+});
+
 system.exit(summary());

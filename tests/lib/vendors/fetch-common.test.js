@@ -1,7 +1,8 @@
 import GLib from 'gi://GLib';
 import system from 'system';
 
-import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError} from '../../../lib/vendors/fetch-common.js';
+import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
+    redactingCache, redactResult, redactedFetch} from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 
 // The `it` harness is synchronous, so resolve promises against a main loop.
@@ -195,6 +196,51 @@ describe('withMutex', () => {
             )
         );
         assertEqual(recovered, 'recovered');
+    });
+});
+
+
+describe('redaction of the request secret', () => {
+    const KEY = 'sk-abcdefgh12345678';
+
+    it('redactingCache scrubs every .last_error write and delegates the rest', () => {
+        const writes = [];
+        const cache = {dir: '/c', writeLastError: (status, body) => writes.push([status, body]), readLastError: () => 'x'};
+        const wrapped = redactingCache(cache, [KEY]);
+        wrapped.writeLastError(0, `zai: API reported failure: bad key ${KEY}`);
+        assertDeepEqual(writes, [[0, 'zai: API reported failure: bad key [key]']]);
+        assertEqual(wrapped.dir, '/c');
+        assertEqual(wrapped.readLastError(), 'x');
+    });
+
+    it('redactResult scrubs the message and the stale lastError body', () => {
+        assertEqual(redactResult({ok: false, kind: 'error', message: `no ${KEY}`}, [KEY]).message, 'no [key]');
+        const stale = redactResult({ok: true, stale: true, lastError: {code: 0, body: KEY}}, [KEY]);
+        assertEqual(stale.lastError.body, '[key]');
+        assertEqual(redactResult({ok: false, kind: 'loading'}, [KEY]).kind, 'loading');
+    });
+
+    it('redactedFetch hands the wrapped cache in and redacts what comes out', () => {
+        const writes = [];
+        const cache = {writeLastError: (s, b) => writes.push(b)};
+        const r = runSync(redactedFetch([KEY, null], {cache}, async (deps) => {
+            deps.cache.writeLastError(0, `echo ${KEY}`);
+            return {ok: false, kind: 'error', message: `echo ${KEY}`};
+        }));
+        assertEqual(r.message, 'echo [key]');
+        assertDeepEqual(writes, ['echo [key]']);
+    });
+
+    it('several secrets are all removed', () => {
+        const r = runSync(redactedFetch(['inference-key-123', 'management-key-456'], {cache: {}},
+            async () => ({ok: false, kind: 'error', message: 'inference-key-123 / management-key-456'})));
+        assertEqual(r.message, '[key] / [key]');
+    });
+
+    it('with no secret the fetch runs untouched', () => {
+        const cache = {};
+        const r = runSync(redactedFetch([null, ''], {cache}, async (deps) => ({same: deps.cache === cache})));
+        assertEqual(r.same, true);
     });
 });
 
