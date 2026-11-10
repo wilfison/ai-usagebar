@@ -137,7 +137,8 @@ without hitting the network.
 100%, `neutral` with no reset, `ok` otherwise. Only `ok` shows a pace glyph; the
 marker is drawn for `ok`/`estimating`. An `ok` window also gets a `verdict` from
 its unrounded projection at the reset: `critical` over 100% with under 10% left,
-or over 130% and 5 pts past the marker; `over` over 110% and 3 pts past; else
+or over 130% and 5 pts past the marker (but `over` while under 15% of the window
+has passed and at least 50% is left); `over` over 110% and 3 pts past; else
 `calm`. The bar past the marker is orange for `over`, red for `critical`, plain
 for `calm` (`lib/pace-fill.js`), and the footnote reads "42% elapsed · 3pts
 ahead" (calm), "~20% over pace", "Limit in 1h 04m" (critical, from

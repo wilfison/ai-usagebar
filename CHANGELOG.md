@@ -5,6 +5,70 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Ported from the upstream widget, v1.31.0 to v1.50.0.
+
+### Added
+
+- **Claude: cloud session credits and usage credits.** The credit Claude
+  Code's cloud sessions draw from shows as a gauge (remaining, share spent,
+  expiry, locked), and a prepaid usage-credit balance as a block with its
+  auto-reload state. A balance the response does not report is never shown as
+  `$0`.
+- **Claude: extra usage switched off by Anthropic stays visible** with the
+  reason (out of credits, monthly limit reached, currently unavailable).
+- **OpenRouter: recent models.** With an optional management key
+  (`OPENROUTER_MANAGEMENT_API_KEY`, or the new *Recent models* rows in
+  preferences) the popup lists the two most recently used models with their
+  spend and requests. That key is sent only to the activity endpoint.
+- **Pace arrows** under *Panel* end the label with the session pace arrow,
+  without editing the bar format.
+- **Custom provider: `currency`** on a metric or a numeric text formats it as
+  money.
+- **Codex** names a window the response left out ("Codex 5h: not reported")
+  and says "None available" when the account has no banked resets.
+- Kimi and Ollama Cloud now give `{session_pace}` and `{weekly_pace}`.
+
+### Changed
+
+- **Claude plans read Ultra and Max**, Anthropic's names since October 2026
+  (formerly Max 20x and Max 5x).
+- **Ollama Cloud reads `/api/balance`.** `/api/usage` now returns request
+  history instead of quota. Windows get real resets, a countdown and pace; a
+  credits plan shows its monthly included credits and purchased credits.
+- **Codex credits are a count, not dollars**: `62,500` instead of
+  `$62500.00`.
+- Early in a long window, a burst of use with at least half of the window
+  left now reads as over pace instead of a run-out alarm.
+
+### Removed
+
+- **Ollama Cloud**: the per-model *Breakdown* and the *Cost* rows; the balance
+  route has no such data.
+- **Codex**: the estimated local and cloud message lines in the popup.
+
+### Fixed
+
+- The Claude usage request presents a current `claude-cli` version; Anthropic
+  refuses older ones.
+- A verified Claude Ultra account no longer shows an empty `0% · -` session:
+  it has no five-hour limit.
+- A signed-out Claude or Codex credentials file asks you to log in instead of
+  showing a rate limit, and no longer arms the five-minute backoff. Codex no
+  longer sends an empty refresh token.
+- Kimi no longer invents a `5h 0%` window for accounts without one.
+- An API key that a provider quotes back in its answer is removed before it
+  reaches the cache or the popup.
+
+### Bar format changes
+
+- `{oai_credit_balance}` is the bare count, without `$`.
+- `{oll_cost}` is always `-`.
+- On a verified Ultra account and on a Kimi account without a 5h window, the
+  `{session_*}` tokens are empty, so the default format reads `% · `; pick a
+  weekly token in *Bar format* instead.
+
 ## [1.5.0] - 2026-10-02
 
 ### Added

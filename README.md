@@ -15,13 +15,13 @@ scroll over it to cycle between them.
 
 | Vendor | What is shown | Credentials |
 | --- | --- | --- |
-| **Anthropic (Claude)** | Session + weekly usage, model-scoped caps, extra usage, banked resets, plan; optionally your Claude Code sessions' context | `~/.claude/.credentials.json` (OAuth, auto-refreshed) |
-| **OpenAI (Codex)** | 5h + weekly usage, code review, credits, banked resets | `~/.codex/auth.json` (OAuth) |
+| **Anthropic (Claude)** | Session + weekly usage (no session row on a verified Ultra plan), model-scoped caps, extra usage, cloud session credits, usage credits, banked resets, plan; optionally your Claude Code sessions' context | `~/.claude/.credentials.json` (OAuth, auto-refreshed) |
+| **OpenAI (Codex)** | 5h + weekly usage, code review, credits (a count, not dollars), banked resets | `~/.codex/auth.json` (OAuth) |
 | **Z.AI / GLM** | Plan usage and reset windows | API key: `ZAI_API_KEY` |
-| **OpenRouter** | Credit balance and usage | API key: `OPENROUTER_API_KEY` |
+| **OpenRouter** | Credit balance and usage; the two most recently used models with a management key | API key: `OPENROUTER_API_KEY`; optional management key: `OPENROUTER_MANAGEMENT_API_KEY` |
 | **DeepSeek** | Balance / credits | API key: `DEEPSEEK_API_KEY` |
 | **Kimi** | Weekly quota + 5h window, plan | API key: `KIMI_API_KEY` |
-| **Ollama Cloud** | Session + weekly (or monthly) usage, top models, cost | API key: `OLLAMA_API_KEY` ([create one](https://ollama.com/settings/keys)) |
+| **Ollama Cloud** | Session + weekly usage, or the monthly included credits with purchased credits | API key: `OLLAMA_API_KEY` ([create one](https://ollama.com/settings/keys)) |
 | **Custom** | Metrics and texts you map from a JSON endpoint | Optional key in a header you choose |
 
 An API key is taken from the environment variable if it is set, otherwise from
@@ -54,7 +54,7 @@ extensions.gnome.org.
 Open preferences with the gear button in the popup footer, or
 `gnome-extensions prefs ai-usagebar@wilfison`. The sidebar has two sections:
 
-- **General**: *Panel* (position and label format), *Popup* (extra rows, pace
+- **General**: *Panel* (position, label format and pace arrows), *Popup* (extra rows, pace
   marker, the `Super+U` shortcut), *Display* (primary vendor, vendor logos,
   severity colors) and *Behavior* (refresh interval, notifications, update check, reset all).
 - **Vendors**: one page per vendor: enable it and set its credentials.
@@ -77,7 +77,8 @@ Every vendor provides `{icon}`, `{vendor_short}`, `{plan}`, `{session_pct}`,
 `{weekly_elapsed}`. Reset tokens are countdowns such as `4h 05m`; `*_elapsed` is
 the share of the window that has passed. Vendors with a reset instant also give
 `{session_pace}` and `{weekly_pace}` (`↑` ahead of pace, `→` on track, `↓`
-under). OpenRouter and DeepSeek have no usage windows, so there the `session_` /
+under); **Pace arrows** under *Panel* appends the session arrow to the label
+without editing the format. OpenRouter and DeepSeek have no usage windows, so there the `session_` /
 `weekly_` tokens hold the consumed share (OpenRouter) or `0`.
 
 <details>
