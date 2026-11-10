@@ -152,8 +152,14 @@ describe('buildSection (openai): reset credits', () => {
         return start < 0 ? [] : [model.rows[start], ...model.rows.slice(start + 1).filter(r => r.kind === 'text')];
     }
 
-    it('no credits → no Resets heading', () => {
-        const model = buildSection(withResets({available: 0, credits: []}), META, NOW, theme);
+    it('a stated zero says None available', () => {
+        const rows = resetRows(buildSection(withResets({available: 0, credits: []}), META, NOW, theme));
+        assertEqual(rows[0].label, 'Resets');
+        assertEqual(rows[1].text, 'None available');
+    });
+
+    it('a block that was not reported renders no heading', () => {
+        const model = buildSection(withResets(null), META, NOW, theme);
         assertEqual(model.rows.some(r => r.kind === 'group-heading'), false);
     });
 

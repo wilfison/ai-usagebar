@@ -316,8 +316,21 @@ describe('reset credits', () => {
         assertDeepEqual(s.resetCredits, {available: 3, credits: []});
     });
 
-    it('no block → nothing available', () => {
-        assertDeepEqual(parseUsage('{"plan_type":"plus"}', null).resetCredits, {available: 0, credits: []});
+    it('no block → null, not a stated zero', () => {
+        assertEqual(parseUsage('{"plan_type":"plus"}', null).resetCredits, null);
+        assertEqual(parseUsage(withResetBlock(null), null).resetCredits, null);
+    });
+
+    it('a stated zero stays distinct from an absent block', () => {
+        assertDeepEqual(parseUsage(withResetBlock({available_count: 0, credits: []}), null).resetCredits, {available: 0, credits: []});
+    });
+
+    it('a null block survives the cache round-trip and feeds every reader', () => {
+        const s = parseCacheJson(snapshotToCacheJson(parseUsage('{"plan_type":"plus"}', null)));
+        assertEqual(s.resetCredits, null);
+        assertEqual(resetCredits(s).length, 0);
+        assertEqual(placeholders(s, new Date()).get('oai_resets_available'), '0');
+        assertEqual(notifyRows(s).length, 0);
     });
 
     it('a 90-character title is dropped, the credit kept', () => {
