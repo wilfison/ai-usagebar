@@ -11,7 +11,7 @@ import {
     placeholders,
     fakeSnapshot,
     resetsAvailable,
-    SchemaError, notifyRows, resetCredits, ULTRA,
+    SchemaError, notifyRows, resetCredits, ULTRA, ExtraStatus,
 } from '../../../../lib/vendors/anthropic/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
@@ -618,6 +618,45 @@ describe('parseUsage: Ultra without a five-hour limit', () => {
         const back = parseCacheJson(snapshotToCacheJson(parseUsage(ULTRA_VERIFIED, ULTRA)));
         assertEqual(back.session, null);
         assertEqual(back.weekly.utilizationPct, 41);
+    });
+});
+
+const extraOf = (eu) => parseUsage(JSON.stringify({extra_usage: eu}), 'Max').extra;
+
+describe('parseUsage: extra usage status', () => {
+    it('enabled → active', () =>
+        assertEqual(extraOf({is_enabled: true, monthly_limit: 5000, used_credits: 250}).status, ExtraStatus.ACTIVE));
+
+    it('provider-disabled for credits keeps the spend and the reason visible', () => {
+        const e = extraOf({is_enabled: false, monthly_limit: 5000, used_credits: 5000, disabled_reason: 'out_of_credits'});
+        assertEqual(e.status, ExtraStatus.OUT_OF_CREDITS);
+        assertEqual(e.spentCents, 5000);
+        assertEqual(e.limitCents, 5000);
+    });
+
+    it('a reached monthly limit, by reason or by flag', () => {
+        for (const eu of [
+            {disabled_reason: 'monthly_limit_reached'},
+            {disabled_reason: 'spend_limit_reached'},
+            {spend_limit_reached: true},
+        ])
+            assertEqual(extraOf({is_enabled: false, used_credits: 900, ...eu}).status, ExtraStatus.MONTHLY_LIMIT_REACHED);
+    });
+
+    it('credits once enabled with spend, no reason → unavailable', () =>
+        assertEqual(extraOf({is_enabled: false, used_credits: 10, credits_ever_enabled: true}).status, ExtraStatus.UNAVAILABLE));
+
+    it('user-disabled stays hidden, even with a reason', () =>
+        assertEqual(extraOf({is_enabled: false, user_disabled: true, used_credits: 10, disabled_reason: 'out_of_credits'}), null));
+
+    it('disabled with no reason and nothing spent stays hidden', () => {
+        assertEqual(extraOf({is_enabled: false, used_credits: 0, credits_ever_enabled: true}), null);
+        assertEqual(extraOf({is_enabled: false, used_credits: 10}), null);
+    });
+
+    it('no usable spend hides the block in any state', () => {
+        assertEqual(extraOf({is_enabled: true, monthly_limit: 5000}), null);
+        assertEqual(extraOf({is_enabled: false, disabled_reason: 'out_of_credits', used_credits: null}), null);
     });
 });
 

@@ -489,4 +489,26 @@ describe('buildSection: Ultra without a five-hour limit', () => {
     it('titles the plan Claude Ultra', () => assertEqual(model.title, 'Claude Ultra'));
 });
 
+describe('buildSection: extra usage status and credits', () => {
+    const meta = {stale: false, lastError: null, fetchedAt: NOW};
+    const gauge = (model, title) => model.rows.find(r => r.kind === 'gauge' && r.title === title);
+
+    it('an active extra usage has no note', () => {
+        const m = buildSection({...fullSnapshot(), extra: {limitCents: 5000, spentCents: 2500, status: 'active'}}, meta, NOW, theme);
+        assertEqual(gauge(m, 'Extra usage').subLine, 'Limit: $50.00');
+    });
+
+    it('each provider-disabled state appends its reason', () => {
+        for (const [status, note] of [['out-of-credits', 'out of credits'], ['monthly-limit-reached', 'monthly limit reached'], ['unavailable', 'currently unavailable']]) {
+            const m = buildSection({...fullSnapshot(), extra: {limitCents: 5000, spentCents: 5000, status}}, meta, NOW, theme);
+            assertEqual(gauge(m, 'Extra usage').subLine, `Limit: $50.00 · ${note}`, status);
+        }
+    });
+
+    it('the reason also follows an uncapped spend', () => {
+        const m = buildSection({...fullSnapshot(), extra: {limitCents: null, spentCents: 900, status: 'out-of-credits'}}, meta, NOW, theme);
+        assertEqual(gauge(m, 'Extra usage').subLine, 'Limit: none reported · out of credits');
+    });
+});
+
 system.exit(summary());
