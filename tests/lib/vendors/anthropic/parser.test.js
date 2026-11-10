@@ -11,7 +11,7 @@ import {
     placeholders,
     fakeSnapshot,
     resetsAvailable,
-    SchemaError, notifyRows, resetCredits, ULTRA, ExtraStatus,
+    SchemaError, notifyRows, resetCredits, ULTRA, ExtraStatus, dollarsToCents,
 } from '../../../../lib/vendors/anthropic/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
@@ -658,6 +658,167 @@ describe('parseUsage: extra usage status', () => {
         assertEqual(extraOf({is_enabled: true, monthly_limit: 5000}), null);
         assertEqual(extraOf({is_enabled: false, disabled_reason: 'out_of_credits', used_credits: null}), null);
     });
+});
+
+// The real payload upstream pinned: cloud credits present, `spend.balance` null.
+const CREDITS_PAYLOAD = JSON.stringify({
+    five_hour: {utilization: 12, resets_at: '2026-10-26T15:00:00Z'},
+    seven_day: {utilization: 34, resets_at: '2026-11-02T07:00:00Z'},
+    iguana_necktie: {utilization: 0.0, resets_at: '2026-11-05T07:59:00+00:00', limit_dollars: 250, used_dollars: 0.0, remaining_dollars: 250.0, locked_reason: null},
+    spend: {used: {amount_minor: 0, currency: 'USD', exponent: 2}, limit: {amount_minor: 0, currency: 'USD', exponent: 2},
+        percent: 0, severity: 'normal', enabled: false, disabled_reason: 'org_level_disabled_until', balance: null},
+});
+
+const withBlocks = (blocks) => parseUsage(JSON.stringify({five_hour: {utilization: 5}, ...blocks}), 'Max');
+
+describe('parseUsage: cloud session credits', () => {
+    it('the real payload lifts the cloud credits and no usage balance', () => {
+        const s = parseUsage(CREDITS_PAYLOAD, 'Max');
+        assertEqual(s.cloudCredits.limitCents, 25000);
+        assertEqual(s.cloudCredits.remainingCents, 25000);
+        assertEqual(s.cloudCredits.expiresAt.toISOString(), '2026-11-05T07:59:00.000Z');
+        assertEqual(s.cloudCredits.locked, false);
+        assertEqual(s.usageCredits, null);
+        assertEqual(s.session.utilizationPct, 12);
+        assertEqual(s.weekly.utilizationPct, 34);
+    });
+
+    it('carries the remaining after spend', () => {
+        const c = withBlocks({iguana_necktie: {limit_dollars: 250, used_dollars: 100, remaining_dollars: 150}}).cloudCredits;
+        assertEqual(c.limitCents, 25000);
+        assertEqual(c.remainingCents, 15000);
+    });
+
+    it('drift degrades the block to null, never the response', () => {
+        for (const block of [
+            undefined, null,
+            {limit_dollars: 0, remaining_dollars: 250},
+            {limit_dollars: 250, remaining_dollars: -5},
+            {limit_dollars: 'a lot', remaining_dollars: 250},
+            {limit_dollars: 250, remaining_dollars: null},
+            [1, 2], 'hostile',
+            {limit_dollars: 1e300, remaining_dollars: 1},
+            {limit_dollars: 0.004, remaining_dollars: 0.001},
+        ]) {
+            const s = withBlocks(block === undefined ? {} : {iguana_necktie: block});
+            assertEqual(s.cloudCredits, null, JSON.stringify(block));
+            assertEqual(s.session.utilizationPct, 5);
+        }
+    });
+
+    it('an unparseable reset is no expiry, the credits stay', () => {
+        const c = withBlocks({iguana_necktie: {limit_dollars: 250, remaining_dollars: 250, resets_at: 'soon'}}).cloudCredits;
+        assertEqual(c.expiresAt, null);
+        assertEqual(c.limitCents, 25000);
+    });
+
+    it('a non-empty locked_reason locks the credits; its text is not kept', () => {
+        const s = withBlocks({iguana_necktie: {limit_dollars: 250, remaining_dollars: 250, locked_reason: '<b>org_migrating</b>'}});
+        assertEqual(s.cloudCredits.locked, true);
+        assertEqual(snapshotToCacheJson(s).includes('org_migrating'), false);
+        for (const reason of ['', 42, [1]])
+            assertEqual(withBlocks({iguana_necktie: {limit_dollars: 250, remaining_dollars: 250, locked_reason: reason}}).cloudCredits.locked, false);
+    });
+});
+
+describe('dollarsToCents', () => {
+    it('rounds monetary ties up in exact arithmetic', () => {
+        for (const [v, want] of [[1.005, 101], [0.004, 0], [149.995, 15000], [250, 25000], [0.005, 1], [19.99, 1999], [250.1, 25010]])
+            assertEqual(dollarsToCents(v), want, String(v));
+    });
+    it('reads negative zero as an exhausted zero', () => assertEqual(dollarsToCents(-0), 0));
+    it('rejects what cents cannot hold', () => {
+        assertEqual(dollarsToCents(-5), null);
+        assertEqual(dollarsToCents(Infinity), null);
+        assertEqual(dollarsToCents(1e13), 1e15);
+        assertEqual(dollarsToCents(1e14), null);
+        assertEqual(dollarsToCents('250'), null);
+    });
+});
+
+describe('parseUsage: usage credits (spend.balance)', () => {
+    it('shape (a): minor units with their own scale; spend.auto_reload first', () => {
+        const u = withBlocks({spend: {balance: {amount_minor: 1500, currency: 'USD', exponent: 2}, auto_reload: {enabled: true}}}).usageCredits;
+        assertEqual(u.amountMinor, 1500);
+        assertEqual(u.decimalPlaces, 2);
+        assertEqual(u.currency, 'USD');
+        assertEqual(u.autoReload, true);
+    });
+
+    it('shape (a): a zero-exponent currency is not divided by 100', () => {
+        const u = withBlocks({spend: {balance: {amount_minor: 500.0, currency: 'KRW', exponent: 0.0}, auto_reload: null}}).usageCredits;
+        assertEqual(u.amountMinor, 500);
+        assertEqual(u.decimalPlaces, 0);
+        assertEqual(u.autoReload, null);
+    });
+
+    it('shape (b): USD cents with the auto-reload flag nested in the balance', () => {
+        const u = withBlocks({spend: {balance: {amount: 750, currency: 'USD', auto_reload_settings: {enabled: false}}, auto_reload: null}}).usageCredits;
+        assertEqual(u.amountMinor, 750);
+        assertEqual(u.decimalPlaces, 2);
+        assertEqual(u.autoReload, false);
+    });
+
+    it('spend.auto_reload wins over the nested flag', () => {
+        const u = withBlocks({spend: {balance: {amount: 750, currency: 'USD', auto_reload_settings: {enabled: false}}, auto_reload: {enabled: true}}}).usageCredits;
+        assertEqual(u.autoReload, true);
+    });
+
+    it('an incomplete shape (a) falls back to a complete shape (b)', () => {
+        const u = withBlocks({spend: {balance: {amount_minor: 5, amount: 100, currency: 'USD'}}}).usageCredits;
+        assertEqual(u.amountMinor, 100);
+        assertEqual(u.decimalPlaces, 2);
+    });
+
+    it('an untyped auto-reload flag is dropped, the balance kept', () => {
+        const u = withBlocks({spend: {balance: {amount: 750, currency: 'USD', auto_reload_settings: {enabled: 'on'}}, auto_reload: 7}}).usageCredits;
+        assertEqual(u.amountMinor, 750);
+        assertEqual(u.autoReload, null);
+    });
+
+    it('balances we cannot express are absent, not zero', () => {
+        for (const spend of [
+            {balance: null},
+            {balance: {amount: 500, currency: 'BRL'}},
+            {balance: {amount_minor: 5, currency: 'USD', exponent: 5}},
+            {balance: 42},
+            {balance: {dollars: 4}},
+            {balance: {amount_minor: 5, exponent: 2}},
+            null, [1], 'hostile',
+            {balance: 'not a balance', auto_reload: {enabled: 'on'}},
+        ]) {
+            const s = withBlocks({spend});
+            assertEqual(s.usageCredits, null, JSON.stringify(spend));
+            assertEqual(s.session.utilizationPct, 5);
+        }
+    });
+});
+
+describe('parseUsage: a number JSON cannot hold', () => {
+    it('loses only its own block, never the response', () => {
+        const s = parseUsage('{"five_hour":{"utilization":5},'
+            + '"iguana_necktie":{"limit_dollars":1e400,"remaining_dollars":1},'
+            + '"spend":{"balance":{"amount_minor":1e400,"currency":"USD","exponent":2}}}', 'Max');
+        assertEqual(s.session.utilizationPct, 5);
+        assertEqual(s.cloudCredits, null);
+        assertEqual(s.usageCredits, null);
+    });
+});
+
+describe('cache: new Anthropic fields', () => {
+    it('round-trips status, cloud credits and usage credits', () => {
+        const s = parseUsage(JSON.stringify({
+            ...JSON.parse(CREDITS_PAYLOAD),
+            extra_usage: {is_enabled: false, used_credits: 10, disabled_reason: 'out_of_credits'},
+            spend: {balance: {amount: 750, currency: 'USD'}},
+        }), 'Max');
+        const back = parseCacheJson(snapshotToCacheJson(s));
+        assertEqual(back.extra.status, ExtraStatus.OUT_OF_CREDITS);
+        assertEqual(back.cloudCredits.expiresAt instanceof Date, true);
+        assertEqual(back.usageCredits.amountMinor, 750);
+    });
+    it('a version 2 cache is refused', () =>
+        assertThrows(() => parseCacheJson(JSON.stringify({cacheVersion: 2, snapshot: {}})), SchemaError));
 });
 
 system.exit(summary());

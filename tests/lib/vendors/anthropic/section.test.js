@@ -492,6 +492,7 @@ describe('buildSection: Ultra without a five-hour limit', () => {
 describe('buildSection: extra usage status and credits', () => {
     const meta = {stale: false, lastError: null, fetchedAt: NOW};
     const gauge = (model, title) => model.rows.find(r => r.kind === 'gauge' && r.title === title);
+    const texts = model => model.rows.filter(r => r.kind === 'text').map(r => r.text);
 
     it('an active extra usage has no note', () => {
         const m = buildSection({...fullSnapshot(), extra: {limitCents: 5000, spentCents: 2500, status: 'active'}}, meta, NOW, theme);
@@ -508,6 +509,48 @@ describe('buildSection: extra usage status and credits', () => {
     it('the reason also follows an uncapped spend', () => {
         const m = buildSection({...fullSnapshot(), extra: {limitCents: null, spentCents: 900, status: 'out-of-credits'}}, meta, NOW, theme);
         assertEqual(gauge(m, 'Extra usage').subLine, 'Limit: none reported · out of credits');
+    });
+
+    it('cloud session credits: remaining as the value, the spent share as the bar', () => {
+        const expiresAt = new Date(NOW.getTime() + 3 * 24 * 60 * MIN);
+        const m = buildSection({...fullSnapshot(), cloudCredits: {limitCents: 25000, remainingCents: 15000, expiresAt, locked: false}}, meta, NOW, theme);
+        const row = gauge(m, 'Cloud session credits');
+        assertEqual(row.value, '$150.00');
+        assertEqual(row.pct, 40);
+        assertEqual(row.subLine, `$100.00 of $250.00 used (40%) · expires ${localDateHm(expiresAt)} (${formatCountdown(expiresAt, NOW)})`);
+    });
+
+    it('locked credits say so; no expiry says so too', () => {
+        const m = buildSection({...fullSnapshot(), cloudCredits: {limitCents: 25000, remainingCents: 25000, expiresAt: null, locked: true}}, meta, NOW, theme);
+        assertEqual(gauge(m, 'Cloud session credits').subLine, '$0.00 of $250.00 used (0%) · no expiry reported · locked');
+    });
+
+    it('a remaining above the limit is the headline as sent, the bar empty', () => {
+        const m = buildSection({...fullSnapshot(), cloudCredits: {limitCents: 25000, remainingCents: 30000, expiresAt: null, locked: false}}, meta, NOW, theme);
+        assertEqual(gauge(m, 'Cloud session credits').value, '$300.00');
+        assertEqual(gauge(m, 'Cloud session credits').pct, 0);
+    });
+
+    it('usage credits list the balance and auto-reload only when reported', () => {
+        const on = buildSection({...fullSnapshot(), usageCredits: {amountMinor: 750, decimalPlaces: 2, currency: 'USD', autoReload: true}}, meta, NOW, theme);
+        assertEqual(texts(on).join('|').includes('Usage credits|balance: $7.50|auto-reload: on'), true);
+        const unknown = buildSection({...fullSnapshot(), usageCredits: {amountMinor: 500, decimalPlaces: 0, currency: 'KRW', autoReload: null}}, meta, NOW, theme);
+        assertEqual(texts(unknown).some(t => t.startsWith('auto-reload')), false);
+        assertEqual(texts(unknown).includes('balance: 500 KRW'), true);
+    });
+
+    it('order: windows, extra usage, cloud credits, usage credits', () => {
+        const m = buildSection({...fullSnapshot(), extra: {limitCents: 5000, spentCents: 2500, status: 'active'},
+            cloudCredits: {limitCents: 25000, remainingCents: 25000, expiresAt: null, locked: false},
+            usageCredits: {amountMinor: 750, decimalPlaces: 2, currency: 'USD', autoReload: null}}, meta, NOW, theme);
+        const order = m.rows.map(r => r.title ?? r.text).filter(t => ['Extra usage', 'Cloud session credits', 'Usage credits'].includes(t));
+        assertEqual(order.join(','), 'Extra usage,Cloud session credits,Usage credits');
+    });
+
+    it('no credits blocks, no credit rows', () => {
+        const m = buildSection(fullSnapshot(), meta, NOW, theme);
+        assertEqual(gauge(m, 'Cloud session credits'), undefined);
+        assertEqual(texts(m).includes('Usage credits'), false);
     });
 });
 
