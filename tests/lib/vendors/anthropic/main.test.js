@@ -142,7 +142,9 @@ describe('fetchSnapshot', () => {
         assertEqual(http.calls[0].headers['User-Agent'], USAGE_USER_AGENT);
         assertEqual(http.calls[0].headers['Content-Type'], 'application/json');
         assertEqual(http.calls[0].url.endsWith('?cedar_ember=1'), true);
-        assertEqual(http.calls[0].headers['User-Agent'], 'claude-cli/2.1.281 (external, cli)');
+        assertEqual(USAGE_USER_AGENT.startsWith('claude-cli/'), true, 'the endpoint gates on the CLI surface');
+        assertEqual(USAGE_USER_AGENT.endsWith(' (external, cli)'), true, 'the grants block needs the external cli surface');
+        assertEqual(USAGE_USER_AGENT, 'claude-cli/2.1.319 (external, cli)');
         assertEqual(r.ok, true);
         assertEqual(r.stale, false);
         assertEqual(r.cacheAgeMs, 0);
