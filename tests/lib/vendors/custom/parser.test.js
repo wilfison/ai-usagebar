@@ -304,4 +304,40 @@ describe('notifyRows / resetCredits / cache / vendor_short', () => {
     });
 });
 
+describe('currency', () => {
+    const body = JSON.stringify({spend: {used: 12.5, limit: '60'}, wallet: 7, name: 'x'});
+    const now = new Date('2026-10-01T00:00:00Z');
+    const metric = extra => ({label: 'Spend', used: '/spend/used', limit: '/spend/limit', ...extra});
+
+    it('formats used and limit as money', () =>
+        assertEqual(parseUsage(body, {metrics: [metric({currency: 'USD'})]}, now).metrics[0].footnote, '$12.50 of $60.00'));
+    it('uses the currency\'s own symbol, or the code after an unknown one', () => {
+        assertEqual(parseUsage(body, {metrics: [metric({currency: 'EUR'})]}, now).metrics[0].footnote, '€12.50 of €60.00');
+        assertEqual(parseUsage(body, {metrics: [metric({currency: 'CHF'})]}, now).metrics[0].footnote, '12.50 CHF of 60.00 CHF');
+    });
+    it('without currency the bare numbers stay', () =>
+        assertEqual(parseUsage(body, {metrics: [metric()]}, now).metrics[0].footnote, '12.5 of 60'));
+    it('a text with currency is money', () =>
+        assertEqual(parseUsage(body, {texts: [{label: 'Wallet', value: '/wallet', currency: 'USD'}]}, now).texts[0].value, '$7.00'));
+    it('a text with currency must be numeric', () => {
+        let threw = false;
+        try {
+            parseUsage(body, {texts: [{label: 'Name', value: '/name', currency: 'USD'}]}, now);
+        } catch (e) {
+            threw = e.name === 'SchemaError';
+        }
+        assertEqual(threw, true);
+    });
+    it('validateMapping rejects a malformed code, naming the item', () => {
+        for (const bad of ['usd', 'US', 'USDT', 5, ''])
+            assertEqual(validateMapping({metrics: [metric({currency: bad})]}).some(e => e.startsWith('metrics[0].currency')), true, String(bad));
+        assertEqual(validateMapping({texts: [{label: 'W', value: '/w', currency: 'eur'}]}).some(e => e.startsWith('texts[0].currency')), true);
+    });
+    it('validateMapping rejects currency on a percent metric', () =>
+        assertEqual(validateMapping({metrics: [{label: 'P', percent: '/p', currency: 'USD'}]}).some(e => e.includes('currency cannot be combined with percent')), true));
+    it('a valid currency passes validation', () => {
+        assertDeepEqual(validateMapping({metrics: [metric({currency: 'USD'})], texts: [{label: 'W', value: '/w', currency: 'BRL'}]}), []);
+    });
+});
+
 system.exit(summary());

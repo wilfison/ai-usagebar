@@ -546,7 +546,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
 
         const mapping = new Adw.PreferencesGroup({
             title: _('Mapping'),
-            description: _('Metrics (used + limit, or percent) and texts, each read from the response by JSON Pointer. Saved when the editor loses focus and the mapping is valid.'),
+            description: _('Metrics (used + limit, or percent) and texts, each read from the response by JSON Pointer; an optional currency (e.g. "USD") shows used + limit or a text as money. Saved when the editor loses focus and the mapping is valid.'),
         });
         mapping.add(this._jsonEditor(settings, 'custom-mapping', text => {
             let obj;

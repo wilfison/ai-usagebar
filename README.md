@@ -135,6 +135,10 @@ this mapping shows two usage rows and a text row:
 - `resetsAt` takes an RFC 3339 timestamp or a Unix epoch (seconds or
   milliseconds); `resetsAfterSeconds` takes the seconds left. With `windowSecs`
   (at least 60) and a reset, the row gets the pace marker.
+- An optional `currency` (a three-letter code such as `"USD"` or `"EUR"`)
+  formats a metric's `used` and `limit`, or a numeric text, as money:
+  `$12.50 of $60.00` instead of `12.5 of 60`. It cannot be set on a
+  `percent` metric.
 - A **text** shows a string, number or boolean. `plan` sets a fixed title;
   `planPath` reads it from the response.
 - Labels are 1–64 characters and unique. The mapping is checked when the editor
