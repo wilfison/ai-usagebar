@@ -328,4 +328,49 @@ describe('fetchSnapshot (openai): reset credit details', () => {
     }));
 });
 
+
+function retryArmed(cache) {
+    return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.retry_after'])).query_exists(null);
+}
+
+function signedOutCreds(dir, {accessToken, refreshToken, exp}) {
+    const path = GLib.build_filenamev([dir, 'signed-out.json']);
+    const doc = {tokens: {access_token: accessToken, refresh_token: refreshToken, id_token: fakeJwt({exp}), account_id: 'acc'}};
+    Gio.File.new_for_path(path).replace_contents(
+        new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
+    return path;
+}
+
+describe('fetchSnapshot (openai): a signed-out credentials file', () => {
+    const future = Math.trunc(Date.now() / 1000) + 3600;
+
+    it('a blank access token makes no request and asks to log in', withTemp(({cache, dir}) => {
+        const http = httpStub(res(429, 'slow down'));
+        const credsPath = signedOutCreds(dir, {accessToken: '', refreshToken: 'RT', exp: future});
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 0);
+        assertEqual(r.ok, false);
+        assertEqual(r.message, 'no access token; run `codex login` to log in');
+        assertEqual(retryArmed(cache), false, 'no 429 backoff is armed');
+    }));
+
+    it('an expired token with an empty refresh token is never POSTed', withTemp(({cache, dir}) => {
+        const http = httpStub(res(200, USAGE));
+        const credsPath = signedOutCreds(dir, {accessToken: 'AT', refreshToken: '  ', exp: 1});
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 1);
+        assertEqual(http.calls[0].url, USAGE_URL);
+        assertEqual(r.ok, true);
+    }));
+
+    it('both tokens blank: no POST, no GET, the login hint', withTemp(({cache, dir}) => {
+        const http = httpStub(res(200, USAGE));
+        const credsPath = signedOutCreds(dir, {accessToken: '', refreshToken: '', exp: 1});
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 0);
+        assertEqual(r.message, 'no access token; run `codex login` to log in');
+        assertEqual(retryArmed(cache), false);
+    }));
+});
+
 system.exit(summary());
