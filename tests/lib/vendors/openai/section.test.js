@@ -1,6 +1,6 @@
 import system from 'system';
 
-import {buildSection} from '../../../../lib/vendors/openai/section.js';
+import {buildSection, groupThousands} from '../../../../lib/vendors/openai/section.js';
 import {SESSION_MS, WEEKLY_MS} from '../../../../lib/vendors/openai/parser.js';
 import {calc} from '../../../../lib/pacing.js';
 import {localDateHm, format as formatCountdown} from '../../../../lib/countdown.js';
@@ -44,17 +44,23 @@ describe('buildSection (openai)', () => {
         assertEqual(m.rows[2].title, 'Code review (weekly)');
     });
 
-    it('renders a credits block (text rows, no bar) with message ranges', () => {
+    it('renders a credits block as a grouped count, without message estimates', () => {
         const s = base();
-        s.credits = {balance: '$5.00', hasCredits: true, unlimited: false,
+        s.credits = {balance: '62500', hasCredits: true, unlimited: false,
             approxLocalMessages: [100, 200], approxCloudMessages: [30, 50]};
         const m = buildSection(s, META, NOW, theme);
-        assertDeepEqual(m.rows.map(r => r.kind),
-            ['window', 'window', 'text', 'text', 'text', 'text', 'footer']);
+        assertDeepEqual(m.rows.map(r => r.kind), ['window', 'window', 'text', 'text', 'footer']);
         assertEqual(m.rows[2].text, 'Credits');
-        assertEqual(m.rows[3].text, 'balance: $5.00');
-        assertEqual(m.rows[4].text, '~ 100-200 local messages');
-        assertEqual(m.rows[5].text, '~ 30-50 cloud messages');
+        assertEqual(m.rows[3].text, 'balance: 62,500');
+    });
+
+    it('groups thousands only on plain numbers', () => {
+        assertEqual(groupThousands('62500'), '62,500');
+        assertEqual(groupThousands('1234567.25'), '1,234,567.25');
+        assertEqual(groupThousands('-1234'), '-1,234');
+        assertEqual(groupThousands('999'), '999');
+        assertEqual(groupThousands(''), '');
+        assertEqual(groupThousands('lots'), 'lots');
     });
 
     it('shows unlimited credits without message lines', () => {
@@ -111,14 +117,12 @@ describe('buildSection (openai): injected translator', () => {
 
     it('routes the Codex window titles and the credits block', () => {
         const s = base();
-        s.credits = {balance: '$5.00', hasCredits: true, unlimited: false,
+        s.credits = {balance: '5', hasCredits: true, unlimited: false,
             approxLocalMessages: [100, 200], approxCloudMessages: [30, 50]};
         const m = buildSection(s, META, NOW, theme, T);
         assertEqual(m.rows[0].title, '«Codex 5h»');
         assertEqual(m.rows[2].text, '«Credits»');
-        assertEqual(m.rows[3].text, '«balance: $5.00»');
-        assertEqual(m.rows[4].text, '«~ 100-200 local messages»');
-        assertEqual(m.rows[5].text, '«~ 30-50 cloud messages»');
+        assertEqual(m.rows[3].text, '«balance: 5»');
     });
 
     it('routes the "unlimited" credits label', () => {

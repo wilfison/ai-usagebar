@@ -2,7 +2,7 @@ import system from 'system';
 
 import {
     parseUsage, snapshotToCacheJson, parseCacheJson, openaiSeverity, openaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS,
-    parseResetCredits, mergeResetCredits, notifyRows, resetCredits,
+    parseResetCredits, mergeResetCredits, notifyRows, resetCredits, creditCount,
 } from '../../../../lib/vendors/openai/parser.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
@@ -41,27 +41,33 @@ describe('parseUsage', () => {
     it('parses a credits block with message ranges', () => {
         const s = parseUsage(JSON.stringify({
             plan_type: 'plus',
-            credits: {balance: '$2.50', has_credits: true, unlimited: false,
+            credits: {balance: '2.50', has_credits: true, unlimited: false,
                 approx_local_messages: [100, 200], approx_cloud_messages: [40, 60]},
         }), null);
         const c = s.credits;
-        assertEqual(c.balance, '$2.50');
+        assertEqual(c.balance, '2.5');
         assertEqual(c.hasCredits, true);
         assertDeepEqual(c.approxLocalMessages, [100, 200]);
         assertDeepEqual(c.approxCloudMessages, [40, 60]);
     });
 
-    it('formats a numeric balance to $x.xx', () => {
+    it('a numeric balance is a count of credits, not dollars', () => {
         const s = parseUsage('{"credits":{"balance":1.5,"has_credits":true,"unlimited":false}}', null);
-        assertEqual(s.credits.balance, '$1.50');
+        assertEqual(s.credits.balance, '1.5');
+    });
+
+    it('credit counts: at most two decimals, no trailing zeros, no symbol', () => {
+        for (const [raw, want] of [['62500', '62500'], [62500, '62500'], ['62500.0', '62500'], [12.5, '12.5'],
+            ['0.25', '0.25'], [1.239, '1.24'], [-3, '-3'], ['0', '0'], [-0.001, '0']])
+            assertEqual(creditCount(raw), want, String(raw));
     });
 
     const balanceOf = (b) => parseUsage(JSON.stringify({credits: {balance: b}}), null).credits.balance;
 
-    it('formats a numeric-string balance like the number', () => {
-        assertEqual(balanceOf('0'), '$0.00');
-        assertEqual(balanceOf(' 12.5 '), '$12.50');
-        assertEqual(balanceOf('-1.5'), '-$1.50');
+    it('a numeric-string balance is a bare count too', () => {
+        assertEqual(balanceOf('0'), '0');
+        assertEqual(balanceOf(' 2.5 '), '2.5');
+        assertEqual(balanceOf('-1'), '-1');
     });
 
     it('passes a non-numeric balance string through unchanged', () => {
@@ -259,7 +265,7 @@ describe('cache round-trip', () => {
         assertEqual(back.plan, 'ChatGPT Plus');
         assertEqual(back.session.resetsAt.getTime(), snap.session.resetsAt.getTime());
         assertEqual(back.weekly.windowMs, WEEKLY_MS);
-        assertEqual(back.credits.balance, '$0.00');
+        assertEqual(back.credits.balance, '0');
         assertDeepEqual(back.credits.approxLocalMessages, [1, 2]);
         assertThrows(() => parseCacheJson(REAL));
     });
@@ -433,6 +439,19 @@ describe('notifyRows / resetCredits', () => {
         const credits = [{title: 'T', expiresAt: null}];
         assertEqual(resetCredits({resetCredits: {available: 1, credits}}), credits);
         assertEqual(resetCredits({}).length, 0);
+    });
+});
+
+describe('placeholders: credit balance', () => {
+    it('oai_credit_balance carries the bare count', () => {
+        const s = parseUsage('{"credits":{"balance":"62500","has_credits":true,"unlimited":false}}', null);
+        assertEqual(placeholders(s, new Date()).get('oai_credit_balance'), '62500');
+    });
+    it('the message estimates stay available as placeholders', () => {
+        const s = parseUsage('{"credits":{"balance":1,"approx_local_messages":[100,200],"approx_cloud_messages":[30,50]}}', null);
+        const m = placeholders(s, new Date());
+        assertEqual(m.get('oai_local_msgs'), '100-200');
+        assertEqual(m.get('oai_cloud_msgs'), '30-50');
     });
 });
 
