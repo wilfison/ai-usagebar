@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-10 17:16-0300\n"
+"POT-Creation-Date: 2026-11-10 17:26-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Spanish\n"
@@ -59,7 +59,7 @@ msgstr "Reinicio pendiente"
 msgid "Resets in %s · %s"
 msgstr "Se reinicia en %s · %s"
 
-#: lib/format.js:136
+#: lib/format.js:147
 #, javascript-format
 msgid "%d reset available"
 msgid_plural "%d resets available"
@@ -262,7 +262,7 @@ msgid "auto-reload: off"
 msgstr "recarga automática: desactivada"
 
 #. Translators: %s is the Anthropic plan name (e.g. "Max"), kept verbatim.
-#: lib/vendors/anthropic/section.js:205 ui/indicator.js:312
+#: lib/vendors/anthropic/section.js:205 ui/indicator.js:311
 #, javascript-format
 msgid "Claude %s"
 msgstr "Claude %s"
@@ -272,7 +272,7 @@ msgid "Custom provider"
 msgstr "Proveedor personalizado"
 
 #: lib/vendors/deepseek/section.js:16 lib/vendors/openrouter/parser.js:265
-#: lib/vendors/openrouter/section.js:33
+#: lib/vendors/openrouter/section.js:37
 msgid "Balance"
 msgstr "Saldo"
 
@@ -368,50 +368,57 @@ msgstr "ilimitado"
 msgid "Recent models"
 msgstr "Modelos recientes"
 
-#: lib/vendors/openrouter/section.js:18
+#. Translators: "42 reqs": requests, abbreviated to fit beside the model name.
+#: lib/vendors/openrouter/section.js:19
 #, javascript-format
-msgid "%d request"
-msgid_plural "%d requests"
-msgstr[0] "%d solicitud"
-msgstr[1] "%d solicitudes"
+msgid "%d req"
+msgid_plural "%d reqs"
+msgstr[0] "%d sol."
+msgstr[1] "%d sols."
 
-#. Translators: "$1.25 · 42 requests": a model's recent spend, then its request count.
-#: lib/vendors/openrouter/section.js:20
+#. Translators: "gpt-5-codex ($1.25 · 42 reqs)": a model, its recent spend and requests.
+#: lib/vendors/openrouter/section.js:22
 #, javascript-format
-msgid "%s · %s"
-msgstr "%s · %s"
+msgid "%s (%s · %s)"
+msgstr "%s (%s · %s)"
+
+#. Translators: "gpt-5-codex (42 reqs)": a model with no spend, and its requests.
+#: lib/vendors/openrouter/section.js:24
+#, javascript-format
+msgid "%s (%s)"
+msgstr "%s (%s)"
 
 #. Translators: %s are money amounts, %s%% is the consumed percentage.
-#: lib/vendors/openrouter/section.js:37
+#: lib/vendors/openrouter/section.js:41
 #, javascript-format
 msgid "%s of %s used (%s%%)"
 msgstr "%s de %s usado (%s%%)"
 
-#: lib/vendors/openrouter/section.js:42
+#: lib/vendors/openrouter/section.js:46
 msgid "Usage"
 msgstr "Uso"
 
 #. Translators: %s are money amounts for the day, week and month to date.
-#: lib/vendors/openrouter/section.js:46
+#: lib/vendors/openrouter/section.js:50
 #, javascript-format
 msgid "today %s · week %s · month %s"
 msgstr "hoy %s · semana %s · mes %s"
 
-#: lib/vendors/openrouter/section.js:53
+#: lib/vendors/openrouter/section.js:57
 msgid "Per-key limit"
 msgstr "Límite por clave"
 
 #. Translators: %s are money amounts (remaining of limit).
-#: lib/vendors/openrouter/section.js:57
+#: lib/vendors/openrouter/section.js:61
 #, javascript-format
 msgid "%s of %s remaining"
 msgstr "%s de %s restante"
 
-#: lib/vendors/openrouter/section.js:62
+#: lib/vendors/openrouter/section.js:66
 msgid "free tier"
 msgstr "plan gratuito"
 
-#: lib/vendors/openrouter/section.js:62
+#: lib/vendors/openrouter/section.js:66
 msgid "paid tier"
 msgstr "plan de pago"
 
@@ -935,8 +942,8 @@ msgid ""
 msgstr ""
 "Métricas (usado + límite, o porcentaje) y textos, cada uno leído de la "
 "respuesta por JSON Pointer; una moneda opcional (p. ej. \"USD\") muestra "
-"usado + límite o un texto como importe. Se guarda cuando el editor pierde "
-"el foco y el mapeo es válido."
+"usado + límite o un texto como importe. Se guarda cuando el editor pierde el "
+"foco y el mapeo es válido."
 
 #: prefs.js:558
 #, javascript-format
@@ -964,28 +971,28 @@ msgstr ""
 msgid "Disable"
 msgstr "Desactivar"
 
-#: ui/indicator.js:134
+#: ui/indicator.js:133
 msgid "Refresh now"
 msgstr "Actualizar ahora"
 
-#: ui/indicator.js:136
+#: ui/indicator.js:135
 msgid "Refresh all"
 msgstr "Actualizar todo"
 
-#: ui/indicator.js:138
+#: ui/indicator.js:137
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: ui/indicator.js:281
+#: ui/indicator.js:280
 msgid "No data: use \"Refresh all\""
 msgstr "Sin datos: use \"Actualizar todo\""
 
-#: ui/indicator.js:305 ui/indicator.js:572
+#: ui/indicator.js:304 ui/indicator.js:571
 msgid "Loading…"
 msgstr "Cargando…"
 
 #. Translators: %s is the version number of the newer release (e.g. "1.6.0").
-#: ui/indicator.js:554
+#: ui/indicator.js:553
 #, javascript-format
 msgid "Update available: %s"
 msgstr "Actualización disponible: %s"
