@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.0] - 2026-11-10
 
 Ported from the upstream widget, v1.31.0 to v1.50.0.
 
@@ -58,6 +58,9 @@ Ported from the upstream widget, v1.31.0 to v1.50.0.
   showing a rate limit, and no longer arms the five-minute backoff. Codex no
   longer sends an empty refresh token.
 - Kimi no longer invents a `5h 0%` window for accounts without one.
+
+### Security
+
 - An API key that a provider quotes back in its answer is removed before it
   reaches the cache or the popup.
 
