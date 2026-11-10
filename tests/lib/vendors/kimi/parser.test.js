@@ -369,4 +369,22 @@ describe('kimiPeakUsage: no 5h window', () => {
     });
 });
 
+describe('placeholders: pace', () => {
+    // 2h into the 5h window with 80% used: far ahead of pace.
+    const now = new Date('2026-06-05T12:00:00Z');
+    const reset = new Date(now.getTime() + 3 * 3600 * 1000).toISOString();
+    const weeklyReset = new Date(now.getTime() + 6 * 86400 * 1000).toISOString();
+    const body = JSON.stringify({
+        usage: {limit: 100, used: 1, remaining: 99, resetTime: weeklyReset},
+        limits: [{window: {duration: 300, timeUnit: 'MINUTE'}, detail: {limit: 100, used: 80, remaining: 20, resetTime: reset}}],
+    });
+
+    it('session_pace follows the 5h window', () => assertEqual(placeholders(parseUsage(body), now).get('session_pace'), '↑'));
+    it('weekly_pace follows the weekly block', () => assertEqual(placeholders(parseUsage(body), now).get('weekly_pace'), '↓'));
+    it('no 5h window → empty session_pace', () =>
+        assertEqual(placeholders(parseUsage(JSON.stringify({usage: {limit: 100, used: 1, remaining: 99}})), now).get('session_pace'), ''));
+    it('the monthly shape has no weekly pace', () =>
+        assertEqual(placeholders(parseUsage(MONTHLY), now).get('weekly_pace'), ''));
+});
+
 system.exit(summary());

@@ -91,7 +91,7 @@ under). OpenRouter and DeepSeek have no usage windows, so there the `session_` /
 | OpenRouter | `{or_label}`, `{or_balance}`, `{or_total}`, `{or_used}`, `{or_used_today}`, `{or_used_week}`, `{or_used_month}`, `{or_consumed_pct}`, `{or_free_tier}`, `{or_limit}`, `{or_limit_remaining}` |
 | DeepSeek | `{ds_balance}`, `{ds_granted}`, `{ds_topped_up}`, `{ds_available}`, `{currency}` |
 | Kimi | `{kimi_plan}`, `{kimi_window_pct}`, `{kimi_window_reset}`, `{kimi_weekly_pct}`, `{kimi_weekly_reset}`, `{kimi_monthly_pct}`, `{kimi_monthly_reset}` |
-| Ollama Cloud | `{oll_plan}`, `{oll_cost}`; `{oll_session_*}`, `{oll_weekly_*}`, `{oll_monthly_*}` with `_pct`, `_reset`, `_elapsed` (never paced: the API reports no reset) |
+| Ollama Cloud | `{oll_plan}`; `{oll_session_*}`, `{oll_weekly_*}`, `{oll_monthly_*}` with `_pct`, `_reset`, `_elapsed`, `_pace`, `_pace_indicator`; on a credits plan `{oll_balance}`, `{oll_allowance}`, `{oll_purchased}`; `{oll_cost}` is always `-` (kept so older formats render) |
 | Custom provider | `{custom_plan}`, `{custom_<i>_pct}`, `{custom_<i>_reset}` for each metric from 0 |
 
 </details>
