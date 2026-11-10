@@ -225,6 +225,35 @@ describe('calc: verdict', () => {
         assertEqual(p.verdict, PaceVerdict.CALM);
     });
 
+    it('10% at 8 h of a week: ~210% projected, early with 90% left → over, not critical', () => {
+        const p = paced(10, 8 * HOUR, WEEK);
+        assertEqual(Math.round(p.projectedPct), 210);
+        assertEqual(p.verdict, PaceVerdict.OVER);
+        assertEqual(p.runsOutAt, null);
+    });
+
+    it('55% at 8 h of a week: a heavy early burn is still critical', () => {
+        const p = paced(55, 8 * HOUR, WEEK);
+        assertEqual(p.verdict, PaceVerdict.CRITICAL);
+        assertEqual(p.runsOutAt instanceof Date, true);
+    });
+
+    it('the early tolerance ends at 15% of the window', () => {
+        // 30% at 16% of a week: past the opening stretch, 187% projected → critical.
+        assertEqual(paced(30, 0.16 * WEEK, WEEK).verdict, PaceVerdict.CRITICAL);
+        // Same burn at 14%: still the opening stretch → over.
+        assertEqual(paced(30, 0.14 * WEEK, WEEK).verdict, PaceVerdict.OVER);
+    });
+
+    it('exactly 50% left still counts as healthy early on', () => {
+        assertEqual(paced(50, 0.1 * WEEK, WEEK).verdict, PaceVerdict.OVER);
+        assertEqual(paced(51, 0.1 * WEEK, WEEK).verdict, PaceVerdict.CRITICAL);
+    });
+
+    it('nearly spent is critical even early in the window', () => {
+        assertEqual(paced(95, 0.1 * WEEK, WEEK).verdict, PaceVerdict.CRITICAL);
+    });
+
     it('limit, estimating and neutral states have no verdict', () => {
         assertEqual(paced(100, 2 * HOUR, FIVE_H).verdict, null);
         assertEqual(paced(5, 30 * MINUTE, WEEK).state, 'estimating');

@@ -15,6 +15,7 @@ import {
     ICON_FOOTER,
 } from '../lib/vendors/section-common.js';
 import {localTimeHm} from '../lib/format.js';
+import {calc} from '../lib/pacing.js';
 import {localDateHm, format as formatCountdown} from '../lib/countdown.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
@@ -357,6 +358,15 @@ describe('errorText: invalid mapping', () => {
     it('translates the invalid-mapping code', () => {
         const text = errorText({ok: false, kind: 'error', code: 'invalid-mapping', message: 'x'}, bracket);
         assertEqual(text.startsWith('[The custom provider mapping'), true);
+    });
+});
+
+describe('paceFootnote: an early burst in a long window', () => {
+    it('10% eight hours into a week reads as over pace, never a run-out time', () => {
+        const now = new Date('2026-06-01T08:00:00Z');
+        const week = 7 * 86400 * 1000;
+        const pace = calc({usagePct: 10, reset: new Date(now.getTime() + week - 8 * 3600 * 1000), now, windowMs: week});
+        assertEqual(paceFootnote(pace), '~110% over pace');
     });
 });
 
