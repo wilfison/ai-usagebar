@@ -21,7 +21,7 @@ import {vendorLabel, vendorIconName, GENERIC_ICON} from '../lib/vendors.js';
 import {renderSection} from './vendorSection.js';
 import {errorText} from '../lib/vendors/section-common.js';
 import {scanSessions} from '../lib/context/scan.js';
-import {substitute, tooltipRows, vformat, withPaceArrow} from '../lib/format.js';
+import {tooltipRows, vformat, panelLabel} from '../lib/format.js';
 import {decide, Urgency} from '../lib/notify.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
@@ -34,7 +34,6 @@ import {readUpdateState, writeUpdateState} from '../lib/update-store.js';
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
 const CONTEXT_VENDOR = 'anthropic';
-const STALE_MARK = ' ⏸';
 const TOOLTIP_DELAY_MS = 400;
 
 // Panel badge for a vendor: its short code, upper-cased (e.g. "CLD", "GPT");
@@ -641,11 +640,7 @@ class Indicator extends PanelMenu.Button {
 
     _paintLabelOk(snapshot, stale, now) {
         const values = this._adapter.placeholders(snapshot, now, ngettext);
-        let text = substitute(this._barFormat, values);
-        if (this._config.showPaceArrows)
-            text = withPaceArrow(text, this._barFormat, values);
-        if (stale)
-            text += STALE_MARK;
+        const text = panelLabel(this._barFormat, values, {paceArrows: this._config.showPaceArrows, stale});
         this._setLabel(text, severityColor(this._adapter.severity(snapshot), this._theme));
     }
 

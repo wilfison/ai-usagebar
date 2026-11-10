@@ -11,6 +11,7 @@ import {
     resetsAvailableText,
     redactSecret,
     withPaceArrow,
+    panelLabel,
     PARTIAL_ECHO_NOTE,
 } from '../lib/format.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
@@ -226,6 +227,23 @@ describe('withPaceArrow', () => {
     });
     it('other tokens ending in pace-like words do not count', () =>
         assertEqual(withPaceArrow('t', '{session_pace_pct}', values), 't ↑'));
+});
+
+describe('panelLabel', () => {
+    const FMT = '{session_pct}% · {session_reset}';
+    const values = new Map([['session_pct', '86'], ['session_reset', '1h 12m'], ['session_pace', '↑']]);
+
+    it('the bar format alone when the switch is off', () => assertEqual(panelLabel(FMT, values), '86% · 1h 12m'));
+    it('the switch on ends the label with the session arrow', () =>
+        assertEqual(panelLabel(FMT, values, {paceArrows: true}), '86% · 1h 12m ↑'));
+    it('the stale mark comes after the arrow', () =>
+        assertEqual(panelLabel(FMT, values, {paceArrows: true, stale: true}), '86% · 1h 12m ↑ ⏸'));
+    it('no arrow while estimating (empty session_pace)', () =>
+        assertEqual(panelLabel(FMT, new Map([['session_pct', '5'], ['session_reset', '4h'], ['session_pace', '']]), {paceArrows: true}), '5% · 4h'));
+    it('no arrow for a vendor without session_pace', () =>
+        assertEqual(panelLabel('{or_balance}', new Map([['or_balance', '$5.00']]), {paceArrows: true}), '$5.00'));
+    it('no second arrow when the format already has one', () =>
+        assertEqual(panelLabel('{session_pct}% {session_pace}', values, {paceArrows: true}), '86% ↑'));
 });
 
 system.exit(summary());
