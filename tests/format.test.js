@@ -10,6 +10,7 @@ import {
     checkedResetTitle,
     resetsAvailableText,
     redactSecret,
+    withPaceArrow,
     PARTIAL_ECHO_NOTE,
 } from '../lib/format.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
@@ -209,6 +210,22 @@ describe('redactSecret', () => {
         assertEqual(redactSecret('says 😀😀😀😀😀😀😀', emojiKey), 'says 😀😀😀😀😀😀😀');
     });
     it('non-string text passes through', () => assertEqual(redactSecret(null, KEY), null));
+});
+
+describe('withPaceArrow', () => {
+    const values = new Map([['session_pace', '↑'], ['weekly_pace', '↓']]);
+
+    it('appends the session arrow', () => assertEqual(withPaceArrow('42% · 1h', '{session_pct}% · {session_reset}', values), '42% · 1h ↑'));
+    it('a plain object of values works too', () => assertEqual(withPaceArrow('x', '{plan}', {session_pace: '→'}), 'x →'));
+    it('no session_pace, no arrow', () => assertEqual(withPaceArrow('$5', '{or_balance}', new Map()), '$5'));
+    it('an empty session_pace (estimating, no window), no arrow', () =>
+        assertEqual(withPaceArrow('% · ', '{session_pct}% · {session_reset}', new Map([['session_pace', '']])), '% · '));
+    it('a format that already has a pace token is left alone', () => {
+        for (const fmt of ['{session_pct}% {session_pace}', '{weekly_pace}', '{oai_session_pace_indicator}', '{zai_weekly_pace}'])
+            assertEqual(withPaceArrow('t', fmt, values), 't', fmt);
+    });
+    it('other tokens ending in pace-like words do not count', () =>
+        assertEqual(withPaceArrow('t', '{session_pace_pct}', values), 't ↑'));
 });
 
 system.exit(summary());

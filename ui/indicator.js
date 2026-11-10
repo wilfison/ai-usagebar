@@ -21,7 +21,7 @@ import {vendorLabel, vendorIconName, GENERIC_ICON} from '../lib/vendors.js';
 import {renderSection} from './vendorSection.js';
 import {errorText} from '../lib/vendors/section-common.js';
 import {scanSessions} from '../lib/context/scan.js';
-import {substitute, tooltipRows, vformat} from '../lib/format.js';
+import {substitute, tooltipRows, vformat, withPaceArrow} from '../lib/format.js';
 import {decide, Urgency} from '../lib/notify.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
@@ -640,7 +640,10 @@ class Indicator extends PanelMenu.Button {
     }
 
     _paintLabelOk(snapshot, stale, now) {
-        let text = substitute(this._barFormat, this._adapter.placeholders(snapshot, now, ngettext));
+        const values = this._adapter.placeholders(snapshot, now, ngettext);
+        let text = substitute(this._barFormat, values);
+        if (this._config.showPaceArrows)
+            text = withPaceArrow(text, this._barFormat, values);
         if (stale)
             text += STALE_MARK;
         this._setLabel(text, severityColor(this._adapter.severity(snapshot), this._theme));

@@ -99,6 +99,12 @@
       <description>Show each vendor's logo as the panel badge and in the popup headers. Off shows the vendor's short code on the panel and a generic icon in the popup.</description>
     </key>
 
+    <key name="show-pace-arrows" type="b">
+      <default>false</default>
+      <summary>Append the pace arrow to the panel label</summary>
+      <description>When enabled, the panel label ends with the session window's pace arrow (↑ ahead, → on track, ↓ under) unless the bar format already shows a pace placeholder.</description>
+    </key>
+
     <key name="show-pace-marker" type="b">
       <default>false</default>
       <summary>Show the elapsed-position marker on popup bars</summary>

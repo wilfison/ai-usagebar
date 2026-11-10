@@ -191,6 +191,8 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         const barFormat = new Adw.EntryRow({title: _('Bar format')});
         settings.bind('bar-format', barFormat, 'text', Gio.SettingsBindFlags.DEFAULT);
         labelGroup.add(barFormat);
+        labelGroup.add(this._switchRow(settings, 'show-pace-arrows', _('Pace arrows'),
+            _('Ends the label with the session pace: ↑ ahead of pace, → on track, ↓ under. Skipped when the format already has a pace placeholder.')));
         page.add(labelGroup);
 
         return page;
