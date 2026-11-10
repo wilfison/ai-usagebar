@@ -282,11 +282,32 @@ describe('placeholders', () => {
         assertEqual(m.get('kimi_monthly_reset'), '');
     });
 
-    it('absent window → session_reset is -', () => {
+    const NO_WINDOW_KEYS = ['session_pct', 'session_reset', 'session_elapsed', 'kimi_window_pct', 'kimi_window_reset'];
+    const legacyNoWindow = (limits) => JSON.stringify({usage: {limit: 100, used: 26, remaining: 74}, ...limits});
+    const monthlyNoWindow = (limits) => JSON.stringify({usages: {limit_month_total: {used_ratio: 0.3}}, ...limits});
+
+    for (const [shape, body] of [['legacy', legacyNoWindow], ['monthly', monthlyNoWindow]]) {
+        for (const [what, limits] of [['absent', {}], ['null', {limits: null}], ['empty', {limits: []}]]) {
+            it(`${shape} shape, ${what} limits: every 5h placeholder is empty`, () => {
+                const m = placeholders(parseUsage(body(limits)), now);
+                for (const key of NO_WINDOW_KEYS)
+                    assertEqual(m.get(key), '', key);
+            });
+        }
+    }
+
+    it('without a 5h window the default format renders no invented 0%', () => {
         const m = placeholders(parseUsage('{"usage":{"limit":100,"used":0,"remaining":100}}'), now);
-        assertEqual(m.get('session_pct'), '0');
-        assertEqual(m.get('session_reset'), '-');
+        assertEqual(substitute('{session_pct}% · {session_reset}', m), '% · ');
+        assertEqual(m.get('weekly_pct'), '0');
         assertEqual(m.get('plan'), '');
+    });
+
+    it('a real 5h window keeps its placeholders', () => {
+        const m = placeholders(parseUsage(STRING_NUMS), now);
+        assertEqual(m.get('session_pct'), '15');
+        assertEqual(m.get('kimi_window_reset') !== '', true);
+        assertEqual(m.get('session_elapsed') !== '', true);
     });
 });
 
@@ -331,6 +352,20 @@ describe('notifyRows / resetCredits', () => {
     it('a zero-limit window is skipped', () => {
         const rows = notifyRows({plan: 'x', window: {limit: 0, used: 0, remaining: 0, resetAt: null}, weekly: null, monthly: null});
         assertEqual(rows.length, 0);
+    });
+});
+
+describe('kimiPeakUsage: no 5h window', () => {
+    it('only the windows the account reports compete', () => {
+        const peak = kimiPeakUsage(parseUsage(JSON.stringify({usages: {limit_month_total: {used_ratio: 0.3, reset_time: '2026-10-15T00:00:00Z'}}})));
+        assertEqual(peak.percent, 30);
+        assertEqual(peak.resetsAt instanceof Date, true);
+    });
+
+    it('a zero weekly does not lose to an absent window', () => {
+        const peak = kimiPeakUsage(parseUsage('{"usage":{"limit":100,"used":0,"remaining":100,"resetTime":"2026-02-11T17:32:50Z"}}'));
+        assertEqual(peak.percent, 0);
+        assertEqual(peak.resetsAt instanceof Date, true, 'the weekly reset, not the empty window one');
     });
 });
 
