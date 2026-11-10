@@ -11,7 +11,7 @@ import {
     placeholders,
     fakeSnapshot,
     resetsAvailable,
-    SchemaError, notifyRows, resetCredits,
+    SchemaError, notifyRows, resetCredits, ULTRA,
 } from '../../../../lib/vendors/anthropic/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
@@ -529,6 +529,95 @@ describe('notifyRows / resetCredits', () => {
         assertEqual(c.title, 'Launch');
         assertEqual(c.expiresAt, R);
         assertEqual(resetCredits({...s, resets: undefined}).length, 0);
+    });
+});
+
+// The shape a verified Ultra account returns, from the upstream fixture
+// tests/fixtures/anthropic_usage_ultra_verified.json.
+const ULTRA_VERIFIED = JSON.stringify({
+    five_hour: null,
+    seven_day: {
+        utilization: 41.0, resets_at: '2026-05-27T13:00:00.297956+00:00',
+        limit_dollars: null, used_dollars: null, remaining_dollars: null, locked_reason: null,
+    },
+    seven_day_oauth_apps: null,
+    seven_day_opus: null,
+    seven_day_sonnet: null,
+    limits: [
+        {kind: 'weekly_all', group: 'weekly', percent: 41, severity: 'normal',
+            resets_at: '2026-05-27T13:00:00.297956+00:00', scope: null, is_active: true},
+        {kind: 'weekly_scoped', group: 'weekly', percent: 33, severity: 'normal',
+            resets_at: '2026-05-27T13:00:00.298122+00:00',
+            scope: {model: {id: null, display_name: 'Fable'}, surface: null}, is_active: false},
+    ],
+});
+
+describe('parseUsage: Ultra without a five-hour limit', () => {
+    const now = new Date('2026-05-25T12:00:00Z');
+
+    it('a verified Ultra account has no session window', () => {
+        const s = parseUsage(ULTRA_VERIFIED, ULTRA);
+        assertEqual(s.session, null);
+        assertEqual(s.weekly.utilizationPct, 41);
+        assertEqual(s.scoped.length, 1);
+        assertEqual(s.scoped[0].label, 'Fable');
+        assertEqual(s.scoped[0].utilizationPct, 33);
+    });
+
+    it('an absent five_hour on Ultra is also no session window', () => {
+        assertEqual(parseUsage(JSON.stringify({seven_day: {utilization: 5}}), ULTRA).session, null);
+    });
+
+    it('an unverified Ultra account keeps its temporary five-hour window', () => {
+        const s = parseUsage(JSON.stringify({five_hour: {utilization: 12, resets_at: '2026-05-25T15:00:00Z'}, seven_day: {utilization: 5}}), ULTRA);
+        assertEqual(s.session.utilizationPct, 12);
+    });
+
+    it('every other plan still reads a missing five_hour as idle at 0%', () => {
+        for (const plan of ['Max', 'Pro', 'Unknown']) {
+            const s = parseUsage(ULTRA_VERIFIED, plan);
+            assertEqual(s.session.utilizationPct, 0, plan);
+            assertEqual(s.session.resetsAt, null, plan);
+        }
+    });
+
+    it('peak usage and severity ignore the absent session', () => {
+        const s = parseUsage(ULTRA_VERIFIED, ULTRA);
+        const peak = anthropicPeakUsage(s);
+        assertEqual(peak.percent, 41);
+        assertEqual(peak.resetsAt instanceof Date, true);
+        assertEqual(anthropicSeverity(s), Severity.LOW);
+    });
+
+    it('the extra-usage fallback still works without a session', () => {
+        const s = {...parseUsage(ULTRA_VERIFIED, ULTRA), weekly: win(100), extra: {limitCents: 1000, spentCents: 900}};
+        assertEqual(anthropicPeakUsage(s).percent, 100);
+    });
+
+    it('every session_* placeholder is empty', () => {
+        const m = placeholders(parseUsage(ULTRA_VERIFIED, ULTRA), now);
+        for (const suffix of ['pct', 'reset', 'elapsed', 'pace', 'pace_indicator', 'pace_pct', 'pace_pts', 'pace_delta', 'pace_abs_delta'])
+            assertEqual(m.get(`session_${suffix}`), '', suffix);
+        assertEqual(m.get('weekly_pct'), '41');
+        assertEqual(substitute('{session_pct}% · {session_reset}', m), '% · ');
+    });
+
+    it('a missing sonnet window keeps its 0 / - placeholders', () => {
+        const m = placeholders(parseUsage(ULTRA_VERIFIED, ULTRA), now);
+        assertEqual(m.get('sonnet_pct'), '0');
+        assertEqual(m.get('sonnet_reset'), '-');
+    });
+
+    it('notifyRows leaves the session out', () => {
+        const keys = notifyRows(parseUsage(ULTRA_VERIFIED, ULTRA)).map(r => r.key);
+        assertEqual(keys.includes('session'), false);
+        assertEqual(keys[0], 'weekly');
+    });
+
+    it('the cache keeps session: null', () => {
+        const back = parseCacheJson(snapshotToCacheJson(parseUsage(ULTRA_VERIFIED, ULTRA)));
+        assertEqual(back.session, null);
+        assertEqual(back.weekly.utilizationPct, 41);
     });
 });
 

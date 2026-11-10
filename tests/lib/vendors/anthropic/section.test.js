@@ -479,4 +479,14 @@ describe('buildSection: Claude Code sessions', () => {
     });
 });
 
+describe('buildSection: Ultra without a five-hour limit', () => {
+    const meta = {stale: false, lastError: null, fetchedAt: NOW};
+    const model = buildSection({...fullSnapshot(), plan: 'Ultra', session: null}, meta, NOW, theme);
+    const titles = model.rows.filter(r => r.kind === 'window').map(r => r.title);
+
+    it('has no Session row', () => assertEqual(titles.includes('Session'), false));
+    it('leads with the weekly window', () => assertEqual(titles[0], 'Weekly'));
+    it('titles the plan Claude Ultra', () => assertEqual(model.title, 'Claude Ultra'));
+});
+
 system.exit(summary());
