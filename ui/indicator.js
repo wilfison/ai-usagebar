@@ -308,7 +308,7 @@ class Indicator extends PanelMenu.Button {
                 color: severityColor(Severity.CRITICAL, this._theme),
                 iconName: 'dialog-warning-symbolic',
                 // Only Anthropic errors carry a plan (read from its credentials).
-                // Translators: %s is the Anthropic plan name (e.g. "Max 5x"), kept verbatim.
+                // Translators: %s is the Anthropic plan name (e.g. "Max"), kept verbatim.
                 title: res.plan ? vformat(_('Claude %s'), res.plan) : null,
             });
         }

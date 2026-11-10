@@ -70,7 +70,7 @@ describe('oauth/anthropic readCreds', () => {
             throw new Error(`unexpected default path: ${p}`);
     });
 
-    it('canonical shape: accessToken, expiresAtMs, planLabel Max 5x', withFixture(
+    it('canonical shape: accessToken, expiresAtMs, planLabel Max', withFixture(
         JSON.stringify({
             claudeAiOauth: {
                 accessToken: 'AT',
@@ -85,7 +85,7 @@ describe('oauth/anthropic readCreds', () => {
             assertEqual(oauth.accessToken, 'AT');
             assertEqual(oauth.refreshToken, 'RT');
             assertEqual(oauth.expiresAtMs, 1735000000000);
-            assertEqual(planLabel(oauth), 'Max 5x');
+            assertEqual(planLabel(oauth), 'Max');
         }
     ));
 
@@ -116,7 +116,7 @@ describe('oauth/anthropic readCreds', () => {
         }
     ));
 
-    it('max with 20x tier → Max 20x', withFixture(
+    it('max with 20x tier → Ultra (renamed October 2026)', withFixture(
         JSON.stringify({
             claudeAiOauth: {
                 accessToken: 'A', refreshToken: 'R', expiresAt: 0,
@@ -125,7 +125,7 @@ describe('oauth/anthropic readCreds', () => {
         }),
         (path) => {
             const {oauth} = runSync(readCreds(path));
-            assertEqual(planLabel(oauth), 'Max 20x');
+            assertEqual(planLabel(oauth), 'Ultra');
         }
     ));
 
@@ -192,6 +192,20 @@ describe('oauth/anthropic readCreds', () => {
             assertDeepEqual(oauth.scopes, ['user:inference']);
         }
     ));
+});
+
+describe('planLabel: current plan names', () => {
+    const label = (subscriptionType, rateLimitTier) => planLabel({subscriptionType, rateLimitTier});
+
+    it('Ultra needs both a max subscription and a 20x tier', () => {
+        assertEqual(label('max', 'default_claude_max_20x'), 'Ultra');
+        assertEqual(label('MAX', 'default_claude_max_20x'), 'Ultra');
+    });
+    it('Max 5x is now plain Max', () => assertEqual(label('max', 'default_claude_max_5x'), 'Max'));
+    it('a 20x tier on another subscription is not Ultra', () => assertEqual(label('team', 'default_claude_max_20x'), 'Team'));
+    it('Pro stays Pro', () => assertEqual(label('pro', ''), 'Pro'));
+    it('an empty subscription is Unknown', () => assertEqual(label('', 'default_claude_max_20x'), 'Unknown'));
+    it('no oauth at all is Unknown', () => assertEqual(planLabel(null), 'Unknown'));
 });
 
 system.exit(summary());

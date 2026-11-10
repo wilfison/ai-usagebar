@@ -13,7 +13,7 @@ const USAGE = JSON.stringify({
     seven_day: {utilization: 10},
 });
 
-const cached = (raw) => snapshotToCacheJson(parseUsage(raw, 'Pro 5x'));
+const cached = (raw) => snapshotToCacheJson(parseUsage(raw, 'Pro'));
 
 function runSync(promise) {
     const loop = GLib.MainLoop.new(null, false);
@@ -171,7 +171,7 @@ describe('fetchSnapshot', () => {
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(500, 'boom')), credsPath}));
         assertEqual(r.ok, false);
         assertEqual(r.kind, 'error');
-        assertEqual(r.plan, 'Pro 5x');
+        assertEqual(r.plan, 'Pro');
     }));
 
     it('an unknown plan is omitted from the error', withTemp(({cache, dir}) => {
@@ -217,7 +217,7 @@ describe('fetchSnapshot', () => {
         cache.writePayload(snapshotToCacheJson(parseUsage(USAGE, 'Old Plan')));
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, USAGE)), credsPath}));
         assertEqual(r.ok, true);
-        assertEqual(r.snapshot.plan, 'Pro 5x');
+        assertEqual(r.snapshot.plan, 'Pro');
     }));
 
     it('HTTP 429 falls back to stale cache with lastError.code 429', withTemp(({cache, credsPath}) => {
