@@ -3,78 +3,78 @@ import system from 'system';
 import {buildSection} from '../../../../lib/vendors/ollama/section.js';
 import {parseUsage} from '../../../../lib/vendors/ollama/parser.js';
 import {defaultTheme} from '../../../../lib/theme.js';
-import {describe, it, assertEqual, assertDeepEqual, summary} from '../../../_assert.js';
+import {describe, it, assertEqual, summary} from '../../../_assert.js';
 
 const theme = defaultTheme();
-const NOW = new Date('2026-09-09T18:30:00Z');
+const NOW = new Date('2026-10-08T17:00:00Z');
 const META = {stale: false, lastError: null, fetchedAt: NOW};
 
-const models = n => Array.from({length: n}, (_, i) => ({name: `m${i}`, request_count: (n - i) * 10}));
-const body = limits => JSON.stringify({limits, activity: {cost: '1.5'}});
+const QUOTA = JSON.stringify({included: {
+    session: {remaining_percent: 50, resets_at: '2026-10-08T19:00:00Z'},
+    weekly: {remaining_percent: 80, resets_at: '2026-10-12T00:00:00Z'},
+}});
+const CREDITS = JSON.stringify({
+    included: {balance_usd: 45, allowance_usd: 60, period: {from: '2026-10-08T08:00:00Z', until: '2026-11-08T08:00:00Z'}},
+    purchased: {balance_usd: 12.5},
+});
 
-describe('buildSection (ollama)', () => {
-    const snap = parseUsage(body({session: {usage: 0.5, models: models(7)}, weekly: {usage: 0.2, models: []}}), 'Pro');
-    const model = buildSection(snap, META, NOW, theme);
-    const rows = model.rows;
+const texts = model => model.rows.filter(r => r.kind === 'text').map(r => r.text);
+const windows = model => model.rows.filter(r => r.kind === 'window');
 
-    it('titles with the plan', () => {
-        assertEqual(model.title, 'Ollama Pro');
-        assertEqual(buildSection(parseUsage(body({})), META, NOW, theme).title, 'Ollama');
+describe('buildSection (ollama): quota account', () => {
+    const model = buildSection(parseUsage(QUOTA, 'Pro'), META, NOW, theme);
+
+    it('titles with the plan', () => assertEqual(model.title, 'Ollama Pro'));
+    it('one row per window, in order', () =>
+        assertEqual(windows(model).map(r => r.title).join(','), 'Session,Weekly'));
+    it('rows carry the countdown and the reset clock', () => {
+        const [session] = windows(model);
+        assertEqual(session.pct, 50);
+        assertEqual(session.reset, '2h 00m');
+        assertEqual(session.subtitle !== '', true);
     });
-
-    it('a window row per window, never paced', () => {
-        const windows = rows.filter(r => r.kind === 'window');
-        assertEqual(windows.length, 2);
-        for (const w of windows) {
-            assertEqual(w.paceGlyph, '');
-            assertEqual('elapsedPct' in w, false);
-            assertEqual('paceFootnote' in w, false);
-        }
+    it('windows are paced', () => {
+        const [session] = windows(model);
+        assertEqual(session.elapsedPct, 60);
+        assertEqual(typeof session.paceFootnote, 'string');
     });
-
-    it('the breakdown follows its window: heading + top 5 grouped rows', () => {
-        assertEqual(rows[0].kind, 'window');
-        assertDeepEqual(rows[1], {kind: 'group-heading', label: 'Breakdown'});
-        const grouped = rows.filter(r => r.kind === 'grouped');
-        assertEqual(grouped.length, 5);
-        assertEqual(grouped[0].label, 'm0');
-        assertEqual(grouped[0].valueText, '70 requests');
-        assertEqual(grouped[0].severity, null);
-        assertEqual(grouped[0].color, theme.dim);
+    it('no Breakdown, no Cost, no credits', () => {
+        assertEqual(model.rows.some(r => r.kind === 'group-heading' || r.kind === 'grouped'), false);
+        assertEqual(texts(model).some(t => t === 'Cost' || t === 'Credits'), false);
     });
+    it('ends with the footer', () => assertEqual(model.rows.at(-1).kind, 'footer'));
+});
 
-    it('a share is of every request in the window, not just the top 5', () => {
-        // 7 models: 70+60+…+10 = 280 requests; m0 has 70 → 25%.
-        assertEqual(rows.find(r => r.kind === 'grouped').pct, 25);
+describe('buildSection (ollama): credits account', () => {
+    const model = buildSection(parseUsage(CREDITS), META, NOW, theme);
+
+    it('falls back to the vendor name without a plan', () => assertEqual(model.title, 'Ollama'));
+    it('shows the month only', () => assertEqual(windows(model).map(r => r.title).join(','), 'Monthly'));
+    it('lists the remaining credits and the purchased ones', () => {
+        const t = texts(model);
+        assertEqual(t.includes('Credits'), true);
+        assertEqual(t.includes('$45.00 remaining of $60.00'), true);
+        assertEqual(t.includes('Purchased credits: $12.50'), true);
     });
-
-    it('keys are stable per window and model', () => {
-        const again = buildSection(snap, META, NOW, theme).rows.filter(r => r.kind === 'grouped');
-        assertEqual(again[0].key, rows.find(r => r.kind === 'grouped').key);
+    it('no purchased line without purchased credits', () => {
+        const body = JSON.parse(CREDITS);
+        delete body.purchased;
+        const t = texts(buildSection(parseUsage(JSON.stringify(body)), META, NOW, theme));
+        assertEqual(t.some(x => x.startsWith('Purchased')), false);
     });
-
-    it('a window without models has no breakdown', () => {
-        const weekly = rows.findIndex(r => r.kind === 'window' && r.title === 'Weekly');
-        assertEqual(rows[weekly + 1].kind === 'group-heading', false);
+    it('the translator reaches every string', () => {
+        const wrapped = buildSection(parseUsage(CREDITS), META, NOW, theme, s => `«${s}»`);
+        assertEqual(texts(wrapped).includes('«Credits»'), true);
     });
+});
 
-    it('a numeric cost is money; anything else stays raw', () => {
-        assertEqual(rows.some(r => r.text === '$1.50'), true);
-        const raw = buildSection(parseUsage(JSON.stringify({activity: {cost: 'n/a'}})), META, NOW, theme).rows;
-        assertEqual(raw.some(r => r.text === 'n/a'), true);
-    });
-
-    it('no windows → a dim note', () => {
-        const empty = buildSection(parseUsage('{}'), META, NOW, theme).rows;
-        assertEqual(empty[0].text, 'no usage windows reported');
-    });
-
-    it('one request is singular, through the injected ngettext', () => {
-        const one = parseUsage(body({session: {usage: 0.1, models: [{name: 'x', request_count: 1}]}}));
-        const ngettext = (s, p, n) => (n === 1 ? `<${s}>` : `<${p}>`);
-        const r = buildSection(one, META, NOW, theme, s => s, ngettext).rows.find(row => row.kind === 'grouped');
-        assertEqual(r.valueText, '<1 request>');
-        assertEqual(r.pct, 100);
+describe('buildSection (ollama): zero allowance', () => {
+    const z = parseUsage(JSON.stringify({included: {balance_usd: 0, allowance_usd: 0,
+        period: {from: '2026-10-01T00:00:00Z', until: '2026-11-01T00:00:00Z'}}}));
+    const model = buildSection(z, META, NOW, theme);
+    it('says no window is reported, still shows the balance', () => {
+        assertEqual(texts(model).includes('no usage windows reported'), true);
+        assertEqual(texts(model).includes('$0.00 remaining of $0.00'), true);
     });
 });
 

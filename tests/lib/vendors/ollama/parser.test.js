@@ -1,194 +1,201 @@
 import system from 'system';
 
 import {
-    parseUsage, placeholders, notifyRows, resetCredits, ollamaPeakUsage, ollamaSeverity, fakeSnapshot,
-    snapshotToCacheJson, parseCacheJson, SchemaError, SESSION_MS, WEEKLY_MS, MONTHLY_MS, VENDOR_SHORT,
+    parseUsage, placeholders, ollamaPeakUsage, ollamaSeverity, notifyRows, resetCredits, fakeSnapshot,
+    snapshotToCacheJson, parseCacheJson, planLabel, SchemaError, SESSION_MS, WEEKLY_MS, MONTHLY_MS,
 } from '../../../../lib/vendors/ollama/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
-import {describe, it, assertEqual, assertDeepEqual, assertThrows, summary} from '../../../_assert.js';
+import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
 
-// Real shape captured upstream on 2026-09-09 (Pro account, session + weekly).
-const LIVE = JSON.stringify({
-    activity: {
-        cost: '0.00000',
-        period: {type: 'last_4_weeks', starting_at: '2026-08-17T00:00:00Z', ending_at: '2026-09-09T18:28:57Z'},
-        models: [{name: 'ignored', request_count: 999}],
+// Real `/api/balance` captures pinned by the upstream project
+// (tests/fixtures/ollama/balance_quota.json and balance_credits.json).
+const QUOTA = JSON.stringify({
+    included: {
+        session: {remaining_percent: 100, resets_at: '2026-10-08T19:00:00Z'},
+        weekly: {remaining_percent: 59.19, resets_at: '2026-10-12T00:00:00Z'},
     },
-    limits: {
-        session: {
-            usage: 0.819,
-            models: [
-                {name: 'kimi-k3', request_count: 180},
-                {name: 'deepseek-v4-flash:0731', request_count: 27},
-                {name: 'minimax-m3', request_count: 8},
-                {name: 'glm-5.3-flash', request_count: 8},
-                {name: 'gpt-oss:120b', request_count: 2},
-            ],
-        },
-        weekly: {
-            usage: 0.23,
-            models: [
-                {name: 'kimi-k3', request_count: 180},
-                {name: 'minimax-m3', request_count: 554},
-                {name: 'deepseek-v4-flash:0731', request_count: 27},
-                {name: 'qwen3.5:397b', request_count: 2},
-                {name: 'glm-5.3-flash', request_count: 8},
-                {name: 'gpt-oss:120b', request_count: 2},
-            ],
-        },
-    },
+    purchased: {balance_usd: 0},
 });
+const CREDITS = JSON.stringify({
+    included: {
+        balance_usd: 45,
+        allowance_usd: 60,
+        period: {from: '2026-10-08T08:00:00Z', until: '2026-11-08T08:00:00Z'},
+    },
+    purchased: {balance_usd: 12.5},
+});
+const NOW = new Date('2026-10-08T17:00:00Z');
 
-const MONTHLY = JSON.stringify({limits: {monthly: {usage: 0.4, models: [{name: 'kimi-k3', request_count: 3}]}}});
-const NOW = new Date('2026-09-09T18:30:00Z');
+describe('parseUsage: session/weekly quota account', () => {
+    const s = parseUsage(QUOTA, 'Pro');
 
-describe('parseUsage: session + weekly', () => {
-    const s = parseUsage(LIVE, 'Pro');
-
-    it('fractions become rounded percentages', () => {
-        assertEqual(s.session.utilizationPct, 82);
-        assertEqual(s.weekly.utilizationPct, 23);
-        assertEqual(s.monthly, null);
+    it('utilization is the complement of remaining_percent', () => {
+        assertEqual(s.session.utilizationPct, 0);
+        assertEqual(s.weekly.utilizationPct, 41); // 59.19 left rounds to 41 used
     });
-
-    it('windows carry no reset and their nominal length', () => {
-        assertEqual(s.session.resetsAt, null);
+    it('resets travel with the windows', () => {
+        assertEqual(s.session.resetsAt.toISOString(), '2026-10-08T19:00:00.000Z');
+        assertEqual(s.weekly.resetsAt.toISOString(), '2026-10-12T00:00:00.000Z');
+    });
+    it('window lengths are 5 h and 7 d', () => {
         assertEqual(s.session.windowMs, SESSION_MS);
         assertEqual(s.weekly.windowMs, WEEKLY_MS);
     });
-
-    it('models are per window, sorted by requests, top 5; activity.models is ignored', () => {
-        assertDeepEqual(s.weekly.models.map(m => m.name),
-            ['minimax-m3', 'kimi-k3', 'deepseek-v4-flash:0731', 'glm-5.3-flash', 'qwen3.5:397b']);
-        assertEqual(s.weekly.models[0].requestCount, 554);
-        assertEqual(s.session.models.length, 5);
-        assertEqual(s.session.models.some(m => m.name === 'ignored'), false);
+    it('a zero purchased balance invents neither credits nor a month', () => {
+        assertEqual(s.credits, null);
+        assertEqual(s.monthly, null);
     });
-
-    it('the request total counts every model, not just the top 5', () => {
-        assertEqual(s.weekly.totalRequests, 180 + 554 + 27 + 2 + 8 + 2);
-    });
-
-    it('keeps the raw cost string and the period type', () => {
-        assertEqual(s.cost, '0.00000');
-        assertEqual(s.period, 'last_4_weeks');
-    });
-
-    it('takes the plan from the prefs', () => {
-        assertEqual(s.plan, 'Pro');
-        assertEqual(parseUsage(LIVE, '').plan, null);
-        assertEqual(parseUsage(LIVE).plan, null);
+    it('the plan comes from the prefs', () => assertEqual(s.plan, 'Pro'));
+    it('remaining outside [0, 100] saturates', () => {
+        const over = parseUsage(JSON.stringify({included: {
+            session: {remaining_percent: -5, resets_at: '2026-10-08T19:00:00Z'},
+            weekly: {remaining_percent: 140, resets_at: '2026-10-12T00:00:00Z'},
+        }}));
+        assertEqual(over.session.utilizationPct, 100);
+        assertEqual(over.weekly.utilizationPct, 0);
     });
 });
 
-describe('parseUsage: edges', () => {
-    it('monthly-only accounts', () => {
-        const s = parseUsage(MONTHLY);
+describe('parseUsage: monthly credits account', () => {
+    const s = parseUsage(CREDITS, null);
+
+    it('the month is the share of the allowance spent', () => assertEqual(s.monthly.utilizationPct, 25));
+    it('the month resets at the end of the billing period', () =>
+        assertEqual(s.monthly.resetsAt.toISOString(), '2026-11-08T08:00:00.000Z'));
+    it('the window is the real period length', () =>
+        assertEqual(s.monthly.windowMs, Date.parse('2026-11-08T08:00:00Z') - Date.parse('2026-10-08T08:00:00Z')));
+    it('carries the balance, the allowance and purchased credits', () => {
+        assertEqual(s.credits.balanceUsd, 45);
+        assertEqual(s.credits.allowanceUsd, 60);
+        assertEqual(s.credits.purchasedUsd, 12.5);
+    });
+    it('no session or weekly window', () => {
         assertEqual(s.session, null);
         assertEqual(s.weekly, null);
-        assertEqual(s.monthly.utilizationPct, 40);
-        assertEqual(s.monthly.windowMs, MONTHLY_MS);
     });
-
-    it('an empty models list', () => {
-        const s = parseUsage('{"limits":{"session":{"usage":0.1,"models":[]}}}');
-        assertDeepEqual(s.session.models, []);
-        assertEqual(s.session.totalRequests, 0);
+    it('no purchased block → purchasedUsd null', () => {
+        const body = JSON.parse(CREDITS);
+        delete body.purchased;
+        assertEqual(parseUsage(JSON.stringify(body)).credits.purchasedUsd, null);
     });
-
-    it('a fraction above 1 saturates at 100, below 0 at 0; absent is 0', () => {
-        assertEqual(parseUsage('{"limits":{"session":{"usage":1.4}}}').session.utilizationPct, 100);
-        assertEqual(parseUsage('{"limits":{"session":{"usage":-0.2}}}').session.utilizationPct, 0);
-        assertEqual(parseUsage('{"limits":{"session":{}}}').session.utilizationPct, 0);
+    it('a zero allowance is not a fabricated percentage', () => {
+        const z = parseUsage(JSON.stringify({included: {balance_usd: 0, allowance_usd: 0,
+            period: {from: '2026-10-01T00:00:00Z', until: '2026-11-01T00:00:00Z'}}}));
+        assertEqual(z.monthly, null);
+        assertEqual(z.credits.balanceUsd, 0);
     });
-
-    it('request_count defaults to 0; a model without a name is skipped', () => {
-        const s = parseUsage('{"limits":{"session":{"models":[{"name":"a"},{"request_count":5},{"name":"b","request_count":1}]}}}');
-        assertDeepEqual(s.session.models, [{name: 'b', requestCount: 1}, {name: 'a', requestCount: 0}]);
+    it('a balance above the allowance reads as 0% used', () => {
+        const b = JSON.parse(CREDITS);
+        b.included.balance_usd = 80;
+        assertEqual(parseUsage(JSON.stringify(b)).monthly.utilizationPct, 0);
     });
+});
 
-    it('no limits and no activity', () => {
-        const s = parseUsage('{}');
-        assertEqual(s.session, null);
-        assertEqual(s.cost, null);
-        assertEqual(s.period, null);
+describe('parseUsage: rejected shapes', () => {
+    const rejected = [
+        ['usage history', '{"range":"7d","totals":{"request_count":213,"usage_usd":0.2},"buckets":[]}'],
+        ['empty object', '{}'],
+        ['empty included', '{"included":{}}'],
+        ['balance alone', '{"included":{"balance_usd":45}}'],
+        ['the old /api/usage limits', '{"limits":{"session":{"usage":0.4}}}'],
+        ['session without weekly', '{"included":{"session":{"remaining_percent":10,"resets_at":"2026-10-08T19:00:00Z"}}}'],
+        ['unparseable reset', '{"included":{"session":{"remaining_percent":10,"resets_at":"soon"},"weekly":{"remaining_percent":10,"resets_at":"2026-10-12T00:00:00Z"}}}'],
+        ['a malformed purchased block', JSON.stringify({...JSON.parse(CREDITS), purchased: {balance_usd: 'lots'}})],
+        ['not JSON', 'nope'],
+        ['a top-level array', '[]'],
+    ];
+    for (const [what, body] of rejected)
+        it(what, () => assertThrows(() => parseUsage(body), SchemaError));
+});
+
+describe('peak usage and severity', () => {
+    it('the highest window and its reset win', () => {
+        const peak = ollamaPeakUsage(parseUsage(QUOTA));
+        assertEqual(peak.percent, 41);
+        assertEqual(peak.resetsAt.toISOString(), '2026-10-12T00:00:00.000Z');
     });
-
-    it('drift throws SchemaError', () => {
-        for (const bad of ['nope', '[]', '{"limits":[]}', '{"limits":{"session":3}}',
-            '{"limits":{"session":{"usage":"0.5"}}}', '{"limits":{"session":{"models":{}}}}'])
-            assertThrows(() => parseUsage(bad), SchemaError, bad);
-    });
-
-    it('a model name is sanitized', () => {
-        const s = parseUsage('{"limits":{"session":{"models":[{"name":"bad\\u001b[31m","request_count":1}]}}}');
-        assertEqual(s.session.models[0].name, 'bad[31m');
+    it('a credits account peaks on its month', () => assertEqual(ollamaPeakUsage(parseUsage(CREDITS)).percent, 25));
+    it('no window at all is 0%', () => {
+        const z = parseUsage(JSON.stringify({included: {balance_usd: 0, allowance_usd: 0,
+            period: {from: '2026-10-01T00:00:00Z', until: '2026-11-01T00:00:00Z'}}}));
+        assertEqual(ollamaPeakUsage(z).percent, 0);
+        assertEqual(ollamaSeverity(z), Severity.LOW);
     });
 });
 
 describe('placeholders', () => {
-    it('oll_* keys and the cross-vendor aliases', () => {
-        const m = placeholders(parseUsage(LIVE, 'Pro'), NOW);
-        assertEqual(m.get('vendor_short'), VENDOR_SHORT);
-        assertEqual(m.get('oll_session_pct'), '82');
-        assertEqual(m.get('oll_weekly_pct'), '23');
+    it('quota windows get real resets, elapsed and pace', () => {
+        const m = placeholders(parseUsage(QUOTA, 'Pro'), NOW);
+        assertEqual(m.get('oll_weekly_pct'), '41');
+        assertEqual(m.get('weekly_pct'), '41');
+        assertEqual(m.get('oll_session_reset'), '2h 00m');
+        assertEqual(m.get('session_reset'), '2h 00m');
+        assertEqual(m.get('oll_session_elapsed'), '60');
+        assertEqual(['↑', '→', '↓', ''].includes(m.get('weekly_pace')), true);
+        assertEqual(m.get('oll_weekly_pace'), m.get('weekly_pace'));
         assertEqual(m.get('oll_monthly_pct'), '');
-        assertEqual(m.get('oll_plan'), 'Pro');
-        assertEqual(m.get('oll_cost'), '0.00000');
-        assertEqual(m.get('oll_session_reset'), '-');
-        assertEqual(m.get('oll_session_elapsed'), '0');
-        assertEqual(m.get('session_pct'), '82');
-        assertEqual(m.get('weekly_pct'), '23');
-        assertEqual(m.get('session_reset'), '-');
-        assertEqual(m.get('weekly_elapsed'), '0');
-        assertEqual(m.get('plan'), 'Pro');
+        assertEqual(m.get('oll_monthly_reset'), '');
+        assertEqual(m.get('oll_monthly_pace'), '');
     });
-
-    it('an absent window is empty; no plan reads Ollama; no cost is -', () => {
-        const m = placeholders(parseUsage(MONTHLY), NOW);
+    it('a window present at 0% renders 0, an absent one stays empty', () => {
+        const m = placeholders(parseUsage(QUOTA), NOW);
+        assertEqual(m.get('oll_session_pct'), '0');
+        assertEqual(m.get('oll_monthly_pct'), '');
+    });
+    it('credits placeholders format as money', () => {
+        const m = placeholders(parseUsage(CREDITS), NOW);
+        assertEqual(substitute('{oll_balance} / {oll_allowance} +{oll_purchased}', m), '$45.00 / $60.00 +$12.50');
+        assertEqual(m.get('oll_monthly_pct'), '25');
         assertEqual(m.get('session_pct'), '');
-        assertEqual(m.get('oll_monthly_pct'), '40');
-        assertEqual(m.get('plan'), 'Ollama');
-        assertEqual(m.get('oll_cost'), '-');
+        assertEqual(m.get('session_pace'), '');
     });
-
-    it('the default bar format renders', () => {
-        assertEqual(substitute('{vendor_short} {oll_session_pct}%', placeholders(parseUsage(LIVE), NOW)), 'oll 82%');
+    it('credits placeholders are empty on a quota account', () => {
+        const m = placeholders(parseUsage(QUOTA), NOW);
+        assertEqual(m.get('oll_balance'), '');
+        assertEqual(m.get('oll_allowance'), '');
+        assertEqual(m.get('oll_purchased'), '');
+    });
+    it('oll_cost keeps a saved format rendering', () =>
+        assertEqual(placeholders(parseUsage(QUOTA), NOW).get('oll_cost'), '-'));
+    it('plan falls back to the vendor name', () => {
+        assertEqual(placeholders(parseUsage(QUOTA), NOW).get('plan'), 'Ollama');
+        assertEqual(planLabel({plan: 'Max'}), 'Max');
     });
 });
 
-describe('peak, severity, notifications', () => {
-    it('peak is the highest window, with no reset', () => {
-        assertDeepEqual(ollamaPeakUsage(parseUsage(LIVE)), {percent: 82, resetsAt: null});
-        assertEqual(ollamaPeakUsage(parseUsage('{}')).percent, 0);
-    });
-
-    it('severity follows the peak', () => {
-        assertEqual(ollamaSeverity(parseUsage(LIVE)), Severity.HIGH);
-    });
-
-    it('one notify row per window present; no reset credits', () => {
-        const rows = notifyRows(parseUsage(LIVE), t => `<${t}>`);
+describe('notifyRows / resetCredits', () => {
+    it('one row per present window, with its real reset', () => {
+        const rows = notifyRows(parseUsage(QUOTA));
         assertEqual(rows.map(r => r.key).join(','), 'session,weekly');
-        assertEqual(rows[0].label, '<Session>');
-        assertEqual(rows[0].resetsAt, null);
-        assertEqual(resetCredits(parseUsage(LIVE)).length, 0);
+        assertEqual(rows[1].percent, 41);
+        assertEqual(rows[1].resetsAt.toISOString(), '2026-10-12T00:00:00.000Z');
     });
+    it('a credits account notifies on its month', () =>
+        assertEqual(notifyRows(parseUsage(CREDITS)).map(r => r.key).join(','), 'monthly'));
+    it('no banked resets', () => assertEqual(resetCredits(parseUsage(QUOTA)).length, 0));
 });
 
-describe('cache + fake', () => {
-    it('round-trips the projected snapshot', () => {
-        const s = parseUsage(LIVE, 'Pro');
-        assertDeepEqual(parseCacheJson(snapshotToCacheJson(s)), s);
+describe('cache round-trip', () => {
+    it('keeps dates, windows and credits', () => {
+        const back = parseCacheJson(snapshotToCacheJson(parseUsage(CREDITS, 'Pro')));
+        assertEqual(back.monthly.resetsAt instanceof Date, true);
+        assertEqual(back.credits.purchasedUsd, 12.5);
+        assertEqual(back.plan, 'Pro');
     });
+    it('a version 1 cache is refused', () =>
+        assertThrows(() => parseCacheJson('{"cacheVersion":1,"snapshot":{"session":null}}'), SchemaError));
+});
 
-    it('fakeSnapshot is unpaced and carries a breakdown', () => {
-        const f = fakeSnapshot(90, NOW);
-        assertEqual(f.session.utilizationPct, 90);
-        assertEqual(f.session.resetsAt, null);
-        assertEqual(f.weekly.models.length, 5);
+describe('fakeSnapshot', () => {
+    const f = fakeSnapshot(40, NOW);
+    it('every window at the percentage, with a real reset', () => {
+        for (const [w, ms] of [['session', SESSION_MS], ['weekly', WEEKLY_MS], ['monthly', MONTHLY_MS]]) {
+            assertEqual(f[w].utilizationPct, 40, w);
+            assertEqual(f[w].resetsAt.getTime(), NOW.getTime() + ms, w);
+        }
     });
+    it('carries a credits block', () => assertEqual(f.credits.balanceUsd, 36));
 });
 
 system.exit(summary());

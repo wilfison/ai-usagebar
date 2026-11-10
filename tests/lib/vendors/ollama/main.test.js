@@ -7,8 +7,21 @@ import {parseUsage, snapshotToCacheJson} from '../../../../lib/vendors/ollama/pa
 import {fetchSnapshot, USAGE_URL} from '../../../../lib/vendors/ollama/main.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
 
-const LIVE = JSON.stringify({limits: {session: {usage: 0.42, models: [{name: 'kimi-k3', request_count: 3}]}}, activity: {cost: '0.1'}});
-const SEED = JSON.stringify({limits: {weekly: {usage: 0.1}}});
+const LIVE = JSON.stringify({
+    included: {
+        session: {remaining_percent: 58, resets_at: '2026-10-08T19:00:00Z'},
+        weekly: {remaining_percent: 90, resets_at: '2026-10-12T00:00:00Z'},
+    },
+    purchased: {balance_usd: 0},
+});
+const SEED = JSON.stringify({
+    included: {
+        session: {remaining_percent: 100, resets_at: '2026-10-08T19:00:00Z'},
+        weekly: {remaining_percent: 90, resets_at: '2026-10-12T00:00:00Z'},
+    },
+});
+// The request/token history `/api/usage` returns now.
+const HISTORY = JSON.stringify({range: '7d', totals: {request_count: 213, usage_usd: 0.2}, buckets: []});
 const cached = (raw) => snapshotToCacheJson(parseUsage(raw));
 
 function runSync(promise) {
@@ -156,6 +169,25 @@ describe('fetchSnapshot (ollama)', () => {
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
         assertEqual(r.ok, false);
         assertEqual(r.kind, 'loading');
+    }));
+
+    it('the balance route is the one requested', () =>
+        assertEqual(USAGE_URL, 'https://ollama.com/api/balance'));
+
+    it('a usage-history body is never cached as an empty quota', withTemp(({cache}) => {
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, HISTORY)), apiKey: 'k'}));
+        assertEqual(r.ok, false);
+        assertEqual(r.kind, 'error');
+        assertEqual(runSync(cache.maybePayload()), null);
+    }));
+
+    it('a cache from the old /api/usage format is refetched, not served', withTemp(({cache}) => {
+        cache.writePayload(JSON.stringify({cacheVersion: 1, snapshot: {plan: null, session: {utilizationPct: 5, resetsAt: null}}}));
+        const http = httpStub(res(200, LIVE));
+        const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
+        assertEqual(http.calls.length, 1);
+        assertEqual(r.snapshot.session.utilizationPct, 42);
+        assertEqual(r.snapshot.session.resetsAt instanceof Date, true);
     }));
 
     it('schema drift with no cache → error, nothing cached', withTemp(({cache}) => {
