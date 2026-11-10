@@ -81,4 +81,30 @@ describe('buildSection (openrouter): injected translator', () => {
     });
 });
 
+
+describe('buildSection (openrouter): recent models', () => {
+    const withModels = models => ({...snap(), recentModels: models});
+
+    it('a group with one line per model, spend and requests', () => {
+        const m = buildSection(withModels([{name: 'gpt-5-codex', costUsd: 1.25, requests: 42}, {name: 'free-model', costUsd: 0, requests: 1}]), META, NOW, theme);
+        const at = m.rows.findIndex(r => r.kind === 'group-heading');
+        assertEqual(m.rows[at].label, 'Recent models');
+        assertEqual(m.rows[at + 1].text, 'gpt-5-codex');
+        assertEqual(m.rows[at + 1].subtitle, '$1.25 · 42 requests');
+        assertEqual(m.rows[at + 2].subtitle, '1 request');
+    });
+
+    it('no models, no group', () => {
+        assertEqual(buildSection(withModels([]), META, NOW, theme).rows.some(r => r.kind === 'group-heading'), false);
+        assertEqual(buildSection(snap(), META, NOW, theme).rows.some(r => r.kind === 'group-heading'), false);
+    });
+
+    it('the translator and ngettext reach the group', () => {
+        const ngettext = (one, many, n) => `<${n === 1 ? one : many}>`;
+        const m = buildSection(withModels([{name: 'x', costUsd: 0, requests: 2}]), META, NOW, theme, s => `«${s}»`, ngettext);
+        assertEqual(m.rows.find(r => r.kind === 'group-heading').label, '«Recent models»');
+        assertEqual(m.rows.at(-2).subtitle, '<2 requests>');
+    });
+});
+
 system.exit(summary());

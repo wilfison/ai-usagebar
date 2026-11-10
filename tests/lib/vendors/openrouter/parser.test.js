@@ -3,11 +3,11 @@ import system from 'system';
 import {
     parseCredits, parseKey, combine, balance, consumedPct,
     snapshotToCacheJson, parseCacheJson, openrouterSeverity, openrouterPeakUsage, placeholders,
-    fakeSnapshot, notifyRows, resetCredits,
+    fakeSnapshot, notifyRows, resetCredits, parseActivity, recentModels, shortenModelId,
 } from '../../../../lib/vendors/openrouter/parser.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
-import {describe, it, assertEqual, summary} from '../../../_assert.js';
+import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
 
 describe('parseCredits / parseKey', () => {
     it('parses the credits envelope', () => {
@@ -158,6 +158,62 @@ describe('notifyRows / resetCredits', () => {
         assertEqual(rows[0].percent, 98);
         assertEqual(rows[0].resetsAt, null);
         assertEqual(resetCredits(snap).length, 0);
+    });
+});
+
+
+describe('recent models from /activity', () => {
+    const item = (date, model, usage, requests) => ({date, model, usage, requests});
+    const parse = items => recentModels(parseActivity(JSON.stringify({data: items})));
+
+    it('newest first, summed per model, two kept', () => {
+        const m = parse([
+            item('2026-10-01', 'anthropic/claude-sonnet-4.5', 0.5, 7),
+            item('2026-10-03', 'openai/gpt-5-codex', 1.0, 40),
+            item('2026-10-02', 'google/gemini-3-pro', 0.2, 3),
+            item('2026-10-01', 'openai/gpt-5-codex', 0.25, 2),
+        ]);
+        assertEqual(m.length, 2);
+        assertEqual(m[0].name, 'gpt-5-codex');
+        assertEqual(m[0].costUsd, 1.25);
+        assertEqual(m[0].requests, 42);
+        assertEqual(m[1].name, 'gemini-3-pro');
+    });
+
+    it('undated items keep the response order, after the dated ones', () => {
+        const m = parse([item(null, 'a/first', 0, 1), item('2026-10-01', 'a/dated', 0, 1), item(null, 'a/second', 0, 1)]);
+        assertEqual(m.map(x => x.name).join(','), 'dated,first');
+    });
+
+    it('items without a model are skipped; bad numbers count as zero', () => {
+        const m = recentModels(parseActivity(JSON.stringify({data: [{date: '2026-10-01', usage: 9}, {model: 'x/y', usage: 'a', requests: -3}, 7]})));
+        assertEqual(m.length, 1);
+        assertEqual(m[0].costUsd, 0);
+        assertEqual(m[0].requests, 0);
+    });
+
+    it('an empty or malformed body', () => {
+        assertEqual(parse([]).length, 0);
+        assertThrows(() => parseActivity('{"data":{}}'));
+        assertThrows(() => parseActivity('nope'));
+    });
+
+    it('shortens model ids', () => {
+        assertEqual(shortenModelId('openai/gpt-5-codex'), 'gpt-5-codex');
+        assertEqual(shortenModelId('meta/llama-3.3-70b-instruct'), 'llama-3.3-70b');
+        assertEqual(shortenModelId('x/model-preview'), 'model');
+        assertEqual(shortenModelId('x/thing-chat'), 'thing');
+        assertEqual(shortenModelId('anthropic/claude-sonnet-4.5-20260101'), 'claude-sonnet-4.5');
+        assertEqual(shortenModelId('averyveryverylongmodelname'), 'averyveryverylongmodelname');
+    });
+
+    it('names are sanitized', () =>
+        assertEqual(parse([item('2026-10-01', 'x/a‮b', 0, 1)])[0].name, 'ab'));
+
+    it('the cache keeps the models; an older cache without them reads as none', () => {
+        const s = combine({totalCredits: 10, totalUsage: 1}, parseKey('{"data":{}}'), [{name: 'm', costUsd: 0.5, requests: 3}]);
+        assertEqual(parseCacheJson(snapshotToCacheJson(s)).recentModels[0].requests, 3);
+        assertEqual(parseCacheJson('{"snapshot":{"total_credits":1}}').recentModels.length, 0);
     });
 });
 

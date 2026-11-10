@@ -3,6 +3,7 @@ import system from 'system';
 import {
     emptyToNull,
     resolveApiKey,
+    resolveOptionalKey,
     isEnabled,
     enabledVendors,
     normalizePrimary,
@@ -154,6 +155,16 @@ describe('cycleVendor', () => {
         assertEqual(cycleVendor(['zai'], 'zai', +1), 'zai'));
     it('empty list returns current unchanged', () =>
         assertEqual(cycleVendor([], 'zai', +1), 'zai'));
+});
+
+
+describe('resolveOptionalKey', () => {
+    const env = {MGMT: 'from-env'};
+    const getenv = k => env[k] ?? null;
+    it('env wins over inline', () => assertEqual(resolveOptionalKey('MGMT', 'inline', getenv), 'from-env'));
+    it('inline when the env var is unset', () => assertEqual(resolveOptionalKey('UNSET', 'inline', getenv), 'inline'));
+    it('null, never an error, when neither is set', () => assertEqual(resolveOptionalKey('UNSET', null, getenv), null));
+    it('an empty env var name reads only the inline key', () => assertEqual(resolveOptionalKey('', null, getenv), null));
 });
 
 system.exit(summary());

@@ -69,6 +69,9 @@ describe('readConfig: schema defaults', () => {
     it('update check on by default', () => assertEqual(cfg.updateCheck.enabled, true));
     it('openrouter env var name default', () =>
         assertEqual(cfg.vendors.openrouter.apiKeyEnv, 'OPENROUTER_API_KEY'));
+    it('openrouter management key env default', () =>
+        assertEqual(cfg.vendors.openrouter.managementKeyEnv, 'OPENROUTER_MANAGEMENT_API_KEY'));
+    it('openrouter management key unset → null', () => assertEqual(cfg.vendors.openrouter.managementKey, null));
     it('deepseek env var name default', () =>
         assertEqual(cfg.vendors.deepseek.apiKeyEnv, 'DEEPSEEK_API_KEY'));
     it('anthropicCredsPath falls back to the default path', () =>
@@ -84,6 +87,7 @@ describe('readConfig: overrides', () => {
     settings.set_string('color-mid', '#abcdef');
     settings.set_string('zai-api-key', 'zk');
     settings.set_string('openrouter-api-key', 'ork');
+    settings.set_string('openrouter-management-key', 'orm');
     settings.set_string('deepseek-api-key', 'dsk');
     settings.set_string('active-vendor', 'zai');
     settings.set_boolean('show-pace-marker', true);
@@ -105,6 +109,8 @@ describe('readConfig: overrides', () => {
     it('passes a non-empty zai key through', () => assertEqual(cfg.vendors.zai.apiKey, 'zk'));
     it('passes a non-empty openrouter key through', () =>
         assertEqual(cfg.vendors.openrouter.apiKey, 'ork'));
+    it('passes a non-empty openrouter management key through', () =>
+        assertEqual(cfg.vendors.openrouter.managementKey, 'orm'));
     it('passes a non-empty deepseek key through', () =>
         assertEqual(cfg.vendors.deepseek.apiKey, 'dsk'));
     it('honors the active-vendor override', () => assertEqual(cfg.activeVendor, 'zai'));

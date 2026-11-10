@@ -111,4 +111,60 @@ describe('fetchSnapshot (openrouter)', () => {
     }));
 });
 
+
+// Answers by URL, so the activity call's position among the parallel requests does not matter.
+function routeStub(routes) {
+    const calls = [];
+    const fn = (opts) => {
+        calls.push(opts);
+        const path = opts.url.replace(/^.*\/api\/v1/u, '');
+        return Promise.resolve(routes[path] ?? res(404, ''));
+    };
+    fn.calls = calls;
+    return fn;
+}
+
+const ACTIVITY = JSON.stringify({data: [
+    {date: '2026-10-01', model: 'anthropic/claude-sonnet-4.5', usage: 0.5, requests: 7},
+    {date: '2026-10-02', model: 'openai/gpt-5-codex', usage: 1.25, requests: 42},
+]});
+
+describe('fetchSnapshot (openrouter): recent models', () => {
+    it('the management key, and only it, goes to /activity', withTemp(({cache}) => {
+        const http = routeStub({'/credits': res(200, CREDITS), '/key': res(200, KEY), '/activity': res(200, ACTIVITY)});
+        const r = runSync(fetchSnapshot({cache, http, apiKey: 'sk-or-test', managementKey: 'sk-or-mgmt'}));
+        const activity = http.calls.filter(c => c.url.endsWith('/activity'));
+        assertEqual(activity.length, 1);
+        assertEqual(activity[0].headers.Authorization, 'Bearer sk-or-mgmt');
+        for (const c of http.calls.filter(x => !x.url.endsWith('/activity')))
+            assertEqual(c.headers.Authorization, 'Bearer sk-or-test');
+        assertEqual(r.snapshot.recentModels.map(m => m.name).join(','), 'gpt-5-codex,claude-sonnet-4.5');
+    }));
+
+    it('without a management key /activity is never requested', withTemp(({cache}) => {
+        const http = routeStub({'/credits': res(200, CREDITS), '/key': res(200, KEY)});
+        const r = runSync(fetchSnapshot({cache, http, apiKey: 'sk-or-test'}));
+        assertEqual(http.calls.some(c => c.url.endsWith('/activity')), false);
+        assertEqual(r.snapshot.recentModels.length, 0);
+    }));
+
+    it('a failing activity call is an empty list, the fetch stays fresh', withTemp(({cache}) => {
+        for (const bad of [res(401, 'nope'), res(200, 'not json'), {status: 0, headers: {}, bodyBytes: new Uint8Array(0), error: {kind: 'transport'}}]) {
+            const http = routeStub({'/credits': res(200, CREDITS), '/key': res(200, KEY), '/activity': bad});
+            const r = runSync(fetchSnapshot({cache, http, apiKey: 'k', managementKey: 'm', cacheTtlMs: 0}));
+            assertEqual(r.ok, true);
+            assertEqual(r.stale, false);
+            assertEqual(r.lastError, null);
+            assertEqual(r.snapshot.recentModels.length, 0);
+        }
+    }));
+
+    it('the recent models survive the cache', withTemp(({cache}) => {
+        const http = routeStub({'/credits': res(200, CREDITS), '/key': res(200, KEY), '/activity': res(200, ACTIVITY)});
+        runSync(fetchSnapshot({cache, http, apiKey: 'k', managementKey: 'm'}));
+        const again = runSync(fetchSnapshot({cache, http: routeStub({}), apiKey: 'k', managementKey: 'm'}));
+        assertEqual(again.snapshot.recentModels[0].requests, 42);
+    }));
+});
+
 system.exit(summary());

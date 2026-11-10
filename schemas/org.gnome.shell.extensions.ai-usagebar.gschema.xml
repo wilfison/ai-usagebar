@@ -221,6 +221,18 @@
       <description>Inline OpenRouter API key used when the environment variable is unset. Empty means none.</description>
     </key>
 
+    <key name="openrouter-management-key-env" type="s">
+      <default>'OPENROUTER_MANAGEMENT_API_KEY'</default>
+      <summary>OpenRouter management key environment variable</summary>
+      <description>Name of the environment variable holding an optional OpenRouter management key, used only to list recently used models (takes precedence over the inline key).</description>
+    </key>
+
+    <key name="openrouter-management-key" type="s">
+      <default>''</default>
+      <summary>OpenRouter inline management key</summary>
+      <description>Optional inline OpenRouter management key, used only to list recently used models. Empty means none: the activity request is skipped.</description>
+    </key>
+
     <key name="deepseek-enabled" type="b">
       <default>false</default>
       <summary>Enable DeepSeek</summary>

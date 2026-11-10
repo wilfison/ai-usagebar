@@ -455,6 +455,14 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         group.add(this._entryRow(settings, 'openrouter-api-key-env', _('API key env var')));
         group.add(this._passwordRow(settings, 'openrouter-api-key', _('API key (inline)')));
         page.add(group);
+
+        const activity = new Adw.PreferencesGroup({
+            title: _('Recent models'),
+            description: _('Optional. A management key lists the two most recently used models; it is sent only to the activity endpoint, never with usage requests.'),
+        });
+        activity.add(this._entryRow(settings, 'openrouter-management-key-env', _('Management key env var')));
+        activity.add(this._passwordRow(settings, 'openrouter-management-key', _('Management key (inline)')));
+        page.add(activity);
         return page;
     }
 
