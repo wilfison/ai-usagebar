@@ -116,21 +116,33 @@ comes from `VENDOR_IDS`), and `icons/<id>-symbolic.svg` (or list the id in `GENE
 error may carry a `code` (`rate-limited`, `auth-rejected`, `invalid-mapping`)
 that `errorText()` in `section-common.js` translates; `main.js` has no
 translator. The indicator
-renders it three ways: the **panel label** = `substitute(barFormat,
-adapter.placeholders(snapshot))` colored by `adapter.severity(snapshot)` (with a
-trailing `⏸` when stale); the **popup sub-section** = `adapter.buildSection(...)`
+renders it three ways: a **panel segment** = `segmentModel()`
+(`lib/panel-segments.js`): the vendor's logo or short code, then
+`panelLabel(barFormat, adapter.placeholders(snapshot))` colored by
+`adapter.severity(snapshot)` (with a trailing `⏸` when stale), or `⚠`, or
+`Loading…` (`…` beside other segments); the **popup sub-section** = `adapter.buildSection(...)`
 → `renderSection` (`ui/vendorSection.js`), which maps each pure row kind to St
 widgets laid out as a libadwaita boxed-list card; loading/error states get a
 single message row.
 
-Only the **active** vendor is polled on the timer; other enabled vendors render
-from an in-memory results map, populated lazily on scroll-cycle or "Refresh all".
-`lib/fetch-guard.js` keeps one active fetch in flight, coalesces requests made
-meanwhile, and lets a vendor switch supersede a slow fetch (its late result is
-stored, never painted or notified).
-Scrolling the panel button cycles `active-vendor` among enabled vendors. While
-the popup is open a 60s timer re-renders the active section so countdowns tick
-without hitting the network.
+The panel has one segment per `panelVendors(config)` (`lib/config-resolve.js`):
+the enabled ids of `panel-vendors`, in `VENDOR_IDS` order, or the active vendor
+alone when none is pinned and enabled (**single mode**). The timer polls
+`pollVendors(config)` = the segments plus the active vendor, in parallel; other
+enabled vendors render from an in-memory results map, populated lazily on
+scroll-cycle or "Refresh all". Each vendor has its own `lib/fetch-guard.js`
+slot: one fetch in flight, requests made meanwhile coalesced into one rerun. A
+fresh result notifies only while its vendor is still polled (or when "Refresh
+all" asked for it), so a vendor scrolled away from mid-fetch stays quiet.
+In single mode scrolling cycles `active-vendor` among enabled vendors; in
+**pinned mode** scrolling does nothing, and a click or tap on the button makes
+the nearest segment's vendor active: `open-state-changed` reads the opening
+event (`Clutter.get_current_event()`) and `nearestSegment()` matches its x,
+because the shell's own click handling changed in 50. A keyboard open
+(`Super+U`, Enter on the focused button) has no position and keeps the active
+vendor. While
+the popup is open a 60s timer repaints every segment and the active section so
+countdowns tick without hitting the network.
 
 **Pace** (`lib/pacing.js` `calc()`) reports a `state`: `estimating` in the first
 1% of a window (clamped to 60 s–1 h) while usage is above zero, `limit` at
@@ -170,10 +182,11 @@ GSettings is the **single source of truth**. `lib/config.js` `readConfig(setting
 snapshots it into a plain `ConfigSnapshot` (optional `''` keys → `null`); the
 rest of the code never touches raw keys. Note the **`active-vendor` vs
 `primary-vendor`** split: primary is the configured default; active is the
-scroll-selected one, mirrored to disk via `lib/active-vendor.js`; a
+scroll-selected (or segment-clicked) one, whose popup section is expanded,
+mirrored to disk via `lib/active-vendor.js`; a
 `primary-vendor` change forces `active := primary`. `lib/config-resolve.js`
 holds the pure resolution helpers (`normalizeActive`, `enabledVendors`,
-`cycleVendor`, `resolveApiKey`).
+`cycleVendor`, `panelVendors`, `pollVendors`, `withPinned`, `resolveApiKey`).
 
 `lib/cache.js` is a per-vendor directory with a payload file plus `.stale` /
 `.last_error` / `.retry_after` sidecars; a 60s fresh-TTL fast path skips HTTP,

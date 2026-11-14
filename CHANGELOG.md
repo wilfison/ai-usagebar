@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Several vendors on the panel.** *Panel* → *Vendors on the panel* pins
+  vendors side by side, each with its own logo (or short code), label and
+  severity color, all from the same bar format, in the fixed vendor order. A
+  loading segment reads `…` and a failing one `⚠` without touching the others.
+  Clicking a segment opens the popup on that vendor; `Super+U` opens it on the
+  last one. The idea comes from the upstream GNOME extension, but it stays one
+  panel button with one popup and one poll timer.
+
+### Changed
+
+- **Every pinned vendor is polled and notifies.** The poll tick fetches the
+  pinned vendors and the active one in parallel, each with its own in-flight
+  guard, so a slow vendor no longer holds the others back. Usage notifications
+  now fire for every pinned vendor, not only the active one.
+- **Scrolling does nothing while a pinned vendor is enabled.** With none pinned
+  the panel behaves as before: one vendor, cycled by scrolling.
+
 ## [1.6.0] - 2026-11-10
 
 Ported from the upstream widget, v1.31.0 to v1.50.0.
