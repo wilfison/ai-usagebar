@@ -17,13 +17,13 @@
     <key name="primary-vendor" enum="org.gnome.shell.extensions.ai-usagebar.vendor">
       <default>'anthropic'</default>
       <summary>Primary vendor shown on the panel</summary>
-      <description>Which vendor's usage the top-panel label displays.</description>
+      <description>Which vendor's usage the top-panel label displays when no vendor is pinned to the panel, and the vendor the popup opens on.</description>
     </key>
 
     <key name="active-vendor" enum="org.gnome.shell.extensions.ai-usagebar.vendor">
       <default>'anthropic'</default>
       <summary>Currently active vendor</summary>
-      <description>The vendor selected by scroll-cycling; defaults to the primary vendor.</description>
+      <description>The vendor selected by scroll-cycling, or by clicking its panel segment when vendors are pinned; its popup section is the expanded one. Defaults to the primary vendor.</description>
     </key>
 
     <key name="refresh-interval" type="i">
@@ -36,7 +36,7 @@
     <key name="bar-format" type="s">
       <default>'{session_pct}% · {session_reset}'</default>
       <summary>Panel label format template</summary>
-      <description>Template for the top-panel label. Supports {placeholder} substitution from the active vendor's value set.</description>
+      <description>Template for the top-panel label. Supports {placeholder} substitution from each shown vendor's value set; every pinned vendor uses the same template.</description>
     </key>
 
     <key name="tooltip-format" type="s">
@@ -85,6 +85,12 @@
       <range min="0" max="20"/>
       <summary>Position within the panel area</summary>
       <description>Where the indicator sits inside its area; 0 is the leftmost. In the center area 0 is left of the clock and 1 right of it.</description>
+    </key>
+
+    <key name="panel-vendors" type="as">
+      <default>[]</default>
+      <summary>Vendors pinned to the panel</summary>
+      <description>Vendor ids shown side by side in the panel, each with its own logo and label, in the fixed vendor order. Disabled vendors are skipped. An empty list (or one with no enabled vendor) shows only the active vendor, which scrolling cycles.</description>
     </key>
 
     <key name="toggle-menu" type="as">

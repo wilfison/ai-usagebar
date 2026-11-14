@@ -7,7 +7,7 @@ import system from 'system';
 GLib.setenv('GSETTINGS_BACKEND', 'memory', true);
 
 import {readConfig, anthropicCredsPath, codexAuthPath} from '../lib/config.js';
-import {describe, it, assertEqual, summary} from './_assert.js';
+import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
 const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
 
@@ -181,6 +181,15 @@ describe('readConfig: context monitor', () => {
         const c = readConfig(settings).context;
         assertEqual(c.windowTokens, 200000);
         assertEqual(JSON.stringify(c.modelWindows), '{"claude-opus-5":1000000}');
+    });
+});
+
+describe('readConfig: panel vendors', () => {
+    it('empty by default', () => assertDeepEqual(readConfig(makeSettings()).panelVendors, []));
+    it('drops unknown and repeated ids', () => {
+        const settings = makeSettings();
+        settings.set_strv('panel-vendors', ['openai', 'nope', 'anthropic', 'openai']);
+        assertDeepEqual(readConfig(settings).panelVendors, ['openai', 'anthropic']);
     });
 });
 

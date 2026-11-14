@@ -9,6 +9,10 @@ import {
     normalizePrimary,
     normalizeActive,
     cycleVendor,
+    isPinnedMode,
+    panelVendors,
+    pollVendors,
+    withPinned,
 } from '../lib/config-resolve.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
@@ -24,6 +28,7 @@ function snapshot(overrides = {}) {
     return {
         primaryVendor: overrides.primaryVendor ?? 'anthropic',
         activeVendor: overrides.activeVendor ?? '',
+        panelVendors: overrides.panelVendors ?? [],
         vendors: {
             anthropic: {enabled: enabled.anthropic},
             openai: {enabled: enabled.openai},
@@ -165,6 +170,48 @@ describe('resolveOptionalKey', () => {
     it('inline when the env var is unset', () => assertEqual(resolveOptionalKey('UNSET', 'inline', getenv), 'inline'));
     it('null, never an error, when neither is set', () => assertEqual(resolveOptionalKey('UNSET', null, getenv), null));
     it('an empty env var name reads only the inline key', () => assertEqual(resolveOptionalKey('', null, getenv), null));
+});
+
+describe('panelVendors / isPinnedMode / pollVendors', () => {
+    it('nothing pinned: single mode, the active vendor alone', () => {
+        const s = snapshot({activeVendor: 'openai'});
+        assertEqual(isPinnedMode(s), false);
+        assertDeepEqual(panelVendors(s), ['openai']);
+        assertDeepEqual(pollVendors(s), ['openai']);
+    });
+    it('a pinned but disabled vendor is skipped', () => {
+        const s = snapshot({panelVendors: ['openai', 'deepseek']});
+        assertDeepEqual(panelVendors(s), ['openai']);
+    });
+    it('every pinned vendor disabled falls back to single mode', () => {
+        const s = snapshot({panelVendors: ['deepseek'], activeVendor: 'zai'});
+        assertEqual(isPinnedMode(s), false);
+        assertDeepEqual(panelVendors(s), ['zai']);
+    });
+    it('segments follow VENDOR_IDS order, not the stored order', () => {
+        const s = snapshot({panelVendors: ['openrouter', 'anthropic', 'zai']});
+        assertEqual(isPinnedMode(s), true);
+        assertDeepEqual(panelVendors(s), ['anthropic', 'zai', 'openrouter']);
+    });
+    it('an unpinned active vendor is polled but gets no segment', () => {
+        const s = snapshot({panelVendors: ['openai', 'zai'], activeVendor: 'anthropic'});
+        assertDeepEqual(panelVendors(s), ['openai', 'zai']);
+        assertDeepEqual(pollVendors(s), ['openai', 'zai', 'anthropic']);
+    });
+    it('a pinned active vendor is polled once', () => {
+        const s = snapshot({panelVendors: ['openai', 'zai'], activeVendor: 'zai'});
+        assertDeepEqual(pollVendors(s), ['openai', 'zai']);
+    });
+});
+
+describe('withPinned', () => {
+    it('adds in VENDOR_IDS order', () => assertDeepEqual(withPinned(['zai'], 'anthropic', true), ['anthropic', 'zai']));
+    it('removes', () => assertDeepEqual(withPinned(['anthropic', 'zai'], 'zai', false), ['anthropic']));
+    it('is idempotent', () => {
+        assertDeepEqual(withPinned(['zai'], 'zai', true), ['zai']);
+        assertDeepEqual(withPinned(['zai'], 'openai', false), ['zai']);
+    });
+    it('drops unknown and repeated ids', () => assertDeepEqual(withPinned(['zai', 'zai', 'nope'], 'kimi', true), ['zai', 'kimi']));
 });
 
 system.exit(summary());
