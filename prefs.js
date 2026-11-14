@@ -10,7 +10,8 @@ import {vformat} from './lib/format.js';
 import {defaultTheme} from './lib/theme.js';
 import {prefsNav, prefsNavItems} from './lib/prefs-nav.js';
 import {VENDOR_LABELS} from './lib/vendors.js';
-import {parseExtraHeaders, validateMapping} from './lib/vendors/custom/parser.js';
+import {withPinned} from './lib/config-resolve.js';
+import {parseExtraHeaders, providerName, validateMapping} from './lib/vendors/custom/parser.js';
 
 const INTERVAL_MIN = 300;
 const INTERVAL_MAX = 86400;
@@ -195,7 +196,48 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             _('Ends the label with the session pace: ↑ ahead of pace, → on track, ↓ under. Skipped when the format already has a pace placeholder.')));
         page.add(labelGroup);
 
+        page.add(this._buildPinnedGroup(settings, cleanups));
+
         return page;
+    }
+
+    _buildPinnedGroup(settings, cleanups) {
+        const group = new Adw.PreferencesGroup({
+            title: _('Vendors on the panel'),
+            description: _('Each vendor switched on gets its own logo and label, side by side; clicking one opens the popup on it. With none on, the panel shows one vendor and scrolling cycles them. In the center area, extra vendors move the clock off center.'),
+        });
+        const vendors = prefsNav(_).find(section => section.id === 'vendors').items;
+        const rows = vendors.map(({id, title}) => {
+            const row = new Adw.SwitchRow({title, active: settings.get_strv('panel-vendors').includes(id)});
+            settings.bind(`${id}-enabled`, row, 'sensitive', Gio.SettingsBindFlags.GET);
+            const notifyId = row.connect('notify::active', () => {
+                const current = settings.get_strv('panel-vendors');
+                const next = withPinned(current, id, row.active);
+                if (next.join(',') !== current.join(','))
+                    settings.set_strv('panel-vendors', next);
+            });
+            cleanups.push(() => row.disconnect(notifyId));
+            group.add(row);
+            return {id, row};
+        });
+        // The custom provider is pinned under the name the panel and popup show.
+        const customRow = rows.find(({id}) => id === 'custom').row;
+        const syncCustomTitle = () => {
+            const raw = settings.get_string('custom-name');
+            customRow.title = raw.trim() === '' ? _('Custom') : providerName(raw);
+        };
+        syncCustomTitle();
+        const customNameId = settings.connect('changed::custom-name', syncCustomTitle);
+        cleanups.push(() => settings.disconnect(customNameId));
+        const resyncId = settings.connect('changed::panel-vendors', () => {
+            const pinned = settings.get_strv('panel-vendors');
+            for (const {id, row} of rows) {
+                if (row.active !== pinned.includes(id))
+                    row.active = pinned.includes(id);
+            }
+        });
+        cleanups.push(() => settings.disconnect(resyncId));
+        return group;
     }
 
     _buildPopupPage(settings, cleanups) {
@@ -226,7 +268,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             model.append(label);
         const combo = new Adw.ComboRow({
             title: _('Primary vendor'),
-            subtitle: _('Shown by default and used as the scroll-cycle reset target'),
+            subtitle: _('Shown on the panel when no vendor is pinned, opened first in the popup, and the scroll-cycle reset target'),
             model,
         });
         // The schema enum nicks are ordered identically to VENDOR_IDS / VENDOR_LABELS,

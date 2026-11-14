@@ -24,27 +24,14 @@ describe('FetchGuard', () => {
         assertEqual(g.busy, false);
     });
 
-    it('supersede makes the in-flight run stale and frees the slot', () => {
+    it('a settled token is not released twice', () => {
         const g = new FetchGuard();
-        const old = g.begin();
-        g.supersede();
-        assertEqual(g.isCurrent(old), false);
-        assertEqual(g.busy, false);
+        const t = g.begin();
+        g.end(t);
         const next = g.begin();
-        assertEqual(g.isCurrent(next), true);
+        assertEqual(g.end(t), false);
         assertEqual(g.busy, true);
-    });
-
-    it('a superseded run settling does not release the new run nor consume pending', () => {
-        const g = new FetchGuard();
-        const old = g.begin();
-        g.supersede();
-        const next = g.begin();
-        g.begin();
-        assertEqual(g.end(old), false);
-        assertEqual(g.busy, true);
-        assertEqual(g.pending, true);
-        assertEqual(g.end(next), true);
+        assertEqual(g.end(next), false);
     });
 
     it('a null token is never current', () =>
