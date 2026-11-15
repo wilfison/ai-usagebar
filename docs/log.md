@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- The default User-Agent carries the extension's `version-name` (it was a fixed `ai-usagebar/0.1`), and `disposeSession()` aborts the Soup session. Updated HTTP layer.
 - ESLint now enforces the module boundaries: no `gi://` in pure `lib/` modules, no adapters, `ui/` or Shell modules in the prefs. Updated conventions.
 - Preference spin rows take their bounds, and the panel area combo its choices, from the gschema through `schemaRange()` / `schemaChoices()`; a test pins the primary-vendor enum order to `VENDOR_IDS`.
 - Both OAuth vendors read and write their credentials through `lib/oauth/creds-file.js`; the OpenAI write-back now merges into the file as it is on disk at write time, like Anthropic's. Updated snapshot cache.

@@ -6,7 +6,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {readConfig} from './lib/config.js';
-import {disposeSession} from './lib/http.js';
+import {disposeSession, setUserAgent} from './lib/http.js';
 import {Indicator} from './ui/indicator.js';
 import {Notifier} from './ui/notifier.js';
 
@@ -15,6 +15,7 @@ const TOGGLE_MENU_KEY = 'toggle-menu';
 export default class AiUsagebarExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
+        setUserAgent(`ai-usagebar/${this.metadata['version-name']}`);
         this._notifier = new Notifier(this.path);
         this._placeId = null;
         this._settings.connectObject(
