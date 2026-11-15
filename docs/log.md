@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Kimi projects its 5h, weekly and monthly blocks to the shared window shape (`utilizationPct`, `resetsAt`, `windowMs`; null when absent), cache `CACHE_VERSION` 2.
 - OAuth stops carry `no-access-token` / `token-refresh-failed` codes with the login command, and the popup translates them, the key-echo redaction note and Anthropic's "minor units" amount.
 - The custom provider caches a metric's raw used/limit (`CACHE_VERSION` 2) and the popup formats it with a translated "%s of %s".
 - Vendors are one `VENDORS` table in `lib/vendors.js` (id, label, generic icon, user-given name); `apiKeyFetch` names a vendor by that label. Updated vendor adapters.

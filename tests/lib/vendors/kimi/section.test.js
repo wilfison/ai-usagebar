@@ -11,16 +11,16 @@ const NOW = new Date('2026-06-05T12:00:00Z');
 const MIN = 60 * 1000;
 const META = {stale: false, lastError: null, fetchedAt: NOW};
 
-function block(used, limit, mins) {
-    return {limit, used, remaining: Math.max(0, limit - used), resetAt: mins === null ? null : new Date(NOW.getTime() + mins * MIN)};
+function block(utilizationPct, windowMs, mins) {
+    return {utilizationPct, resetsAt: mins === null ? null : new Date(NOW.getTime() + mins * MIN), windowMs};
 }
 
 function fullSnapshot() {
     return {
         plan: 'LEVEL_PRO',
-        weekly: block(42, 100, 3 * 24 * 60),
+        weekly: block(42, WEEKLY_MS, 3 * 24 * 60),
         monthly: null,
-        window: block(80, 100, 90),
+        window: block(80, WINDOW_MS, 90),
     };
 }
 
@@ -38,7 +38,7 @@ describe('buildSection (kimi)', () => {
     it('newer shape: 5h window then Monthly, no weekly, no pace on Monthly', () => {
         const s = fullSnapshot();
         s.weekly = null;
-        s.monthly = {utilizationPct: 43, resetsAt: new Date(NOW.getTime() + 10 * 24 * 60 * MIN)};
+        s.monthly = {utilizationPct: 43, resetsAt: new Date(NOW.getTime() + 10 * 24 * 60 * MIN), windowMs: null};
         const m = buildSection(s, META, NOW, theme);
         assertDeepEqual(m.rows.map(r => r.title ?? r.kind), ['Window (5h)', 'Monthly', 'footer']);
         assertEqual(m.rows[1].pct, 43);
@@ -47,9 +47,9 @@ describe('buildSection (kimi)', () => {
         assertEqual(buildSection(s, META, NOW, theme, (t) => `«${t}»`).rows[1].title, '«Monthly»');
     });
 
-    it('omits the 5h window row when the window is absent (zeroed)', () => {
+    it('omits the 5h window row when the window is absent', () => {
         const s = fullSnapshot();
-        s.window = {limit: 0, used: 0, remaining: 0, resetAt: null};
+        s.window = null;
         const m = buildSection(s, META, NOW, theme);
         assertDeepEqual(m.rows.map(r => r.kind), ['window', 'footer']);
         assertEqual(m.rows[0].title, 'Weekly');
@@ -70,9 +70,9 @@ describe('buildSection (kimi)', () => {
 
     it('window rows carry elapsedPct + paceColor (bicolor bar data)', () => {
         // 60% used 40% into the window: critical, a red tail past the marker.
-        const s = {...fullSnapshot(), window: block(60, 100, 180)};
+        const s = {...fullSnapshot(), window: block(60, WINDOW_MS, 180)};
         const m = buildSection(s, META, NOW, theme);
-        const expected = calc({usagePct: 60, reset: s.window.resetAt, now: NOW, windowMs: WINDOW_MS}).elapsedPct;
+        const expected = calc({usagePct: 60, reset: s.window.resetsAt, now: NOW, windowMs: WINDOW_MS}).elapsedPct;
         assertEqual(m.rows[0].elapsedPct, expected);
         assertEqual(m.rows[0].paceColor, theme.red);
     });
@@ -85,7 +85,7 @@ describe('buildSection (kimi)', () => {
 
     it('weekly row uses the weekly window length for the marker', () => {
         const m = buildSection(fullSnapshot(), META, NOW, theme);
-        const expected = calc({usagePct: 42, reset: fullSnapshot().weekly.resetAt, now: NOW, windowMs: WEEKLY_MS}).elapsedPct;
+        const expected = calc({usagePct: 42, reset: fullSnapshot().weekly.resetsAt, now: NOW, windowMs: WEEKLY_MS}).elapsedPct;
         assertEqual(m.rows[1].elapsedPct, expected);
     });
 });
@@ -105,7 +105,7 @@ describe('buildSection (kimi): injected translator', () => {
 describe('buildSection (kimi): no pace footnote', () => {
     it('windows keep their glyph but carry no footnote', () => {
         const now = new Date('2026-06-05T12:00:00Z');
-        const block = windowMs => ({limit: 100, used: 30, remaining: 70, resetAt: new Date(now.getTime() + windowMs / 2)});
+        const block = windowMs => ({utilizationPct: 30, resetsAt: new Date(now.getTime() + windowMs / 2), windowMs});
         const model = buildSection({plan: 'Moderato', window: block(WINDOW_MS), weekly: block(WEEKLY_MS), monthly: null},
             {stale: false, lastError: null, fetchedAt: now}, now, defaultTheme());
         for (const row of model.rows.filter(r => r.kind === 'window'))
