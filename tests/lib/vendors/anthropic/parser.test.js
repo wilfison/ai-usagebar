@@ -10,7 +10,7 @@ import {
     placeholders,
     fakeSnapshot,
     resetsAvailable,
-    SchemaError, notifyRows, resetCredits, ULTRA, ExtraStatus, dollarsToCents,
+    SchemaError, notifyRows, resetCredits, ULTRA, credsPlanLabel, ExtraStatus, dollarsToCents,
 } from '../../../../lib/vendors/anthropic/parser.js';
 import {anthropicAdapter} from '../../../../lib/vendors/anthropic/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
@@ -819,6 +819,20 @@ describe('cache: new Anthropic fields', () => {
     });
     it('a version 2 cache is refused', () =>
         assertThrows(() => parseCacheJson(JSON.stringify({cacheVersion: 2, snapshot: {}})), SchemaError));
+});
+
+describe('credsPlanLabel: current plan names', () => {
+    const label = (subscriptionType, rateLimitTier) => credsPlanLabel({subscriptionType, rateLimitTier});
+
+    it('Ultra needs both a max subscription and a 20x tier', () => {
+        assertEqual(label('max', 'default_claude_max_20x'), 'Ultra');
+        assertEqual(label('MAX', 'default_claude_max_20x'), 'Ultra');
+    });
+    it('Max 5x is now plain Max', () => assertEqual(label('max', 'default_claude_max_5x'), 'Max'));
+    it('a 20x tier on another subscription is not Ultra', () => assertEqual(label('team', 'default_claude_max_20x'), 'Team'));
+    it('Pro stays Pro', () => assertEqual(label('pro', ''), 'Pro'));
+    it('an empty subscription is Unknown', () => assertEqual(label('', 'default_claude_max_20x'), 'Unknown'));
+    it('no oauth at all is Unknown', () => assertEqual(credsPlanLabel(null), 'Unknown'));
 });
 
 system.exit(summary());

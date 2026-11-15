@@ -1,7 +1,8 @@
 import GLib from 'gi://GLib';
 import system from 'system';
 
-import {readCreds, planLabel, defaultCredsPath} from '../../../lib/oauth/anthropic.js';
+import {readCreds, defaultCredsPath} from '../../../lib/oauth/anthropic.js';
+import {credsPlanLabel as planLabel} from '../../../lib/vendors/anthropic/parser.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 import {runSync, writeText, withTempDir} from '../../_harness.js';
 
@@ -138,20 +139,6 @@ describe('oauth/anthropic readCreds', () => {
             assertDeepEqual(oauth.scopes, ['user:inference']);
         }
     ));
-});
-
-describe('planLabel: current plan names', () => {
-    const label = (subscriptionType, rateLimitTier) => planLabel({subscriptionType, rateLimitTier});
-
-    it('Ultra needs both a max subscription and a 20x tier', () => {
-        assertEqual(label('max', 'default_claude_max_20x'), 'Ultra');
-        assertEqual(label('MAX', 'default_claude_max_20x'), 'Ultra');
-    });
-    it('Max 5x is now plain Max', () => assertEqual(label('max', 'default_claude_max_5x'), 'Max'));
-    it('a 20x tier on another subscription is not Ultra', () => assertEqual(label('team', 'default_claude_max_20x'), 'Team'));
-    it('Pro stays Pro', () => assertEqual(label('pro', ''), 'Pro'));
-    it('an empty subscription is Unknown', () => assertEqual(label('', 'default_claude_max_20x'), 'Unknown'));
-    it('no oauth at all is Unknown', () => assertEqual(planLabel(null), 'Unknown'));
 });
 
 system.exit(summary());
