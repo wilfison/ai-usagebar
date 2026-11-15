@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Sync with the refactor branch: Kimi, DeepSeek, OpenRouter and the custom provider state their snapshot shape and `CACHE_VERSION`; the error codes list `no-access-token` / `token-refresh-failed` and the OAuth `loginCommand`; the poller, the ordered `active_vendor` mirror and the extension-owned notifier are named where they act; `creds-file.js` and `devFetch.js` are cited as sources.
 - A rejected OAuth token (HTTP 401/403) now carries the login command, so the popup still says how to sign in again when there was no refresh token to try.
 - The indicator's fetch slots, results and fetch instants moved to the pure `VendorPoller` (`lib/vendor-poller.js`), now unit-tested. Updated fetch pipeline.
 - The per-model context windows entry is validated in the preferences and saved only when valid. Updated context monitor and preferences.

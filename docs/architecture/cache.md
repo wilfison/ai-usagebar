@@ -5,7 +5,7 @@ description: Per-vendor cache directory holding the projected snapshot plus stal
 tags: [cache, errors]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T18:22:59Z
+  at: 2026-11-15T18:57:13Z
 sources:
   - id: cache
     title: lib/cache.js
@@ -13,6 +13,9 @@ sources:
   - id: fetch-common
     title: lib/vendors/fetch-common.js
     resource: lib/vendors/fetch-common.js
+  - id: creds-file
+    title: lib/oauth/creds-file.js
+    resource: lib/oauth/creds-file.js
 ---
 
 # Layout
@@ -26,6 +29,6 @@ Under `$XDG_CACHE_HOME/ai-usagebar/` (usually `~/.cache/ai-usagebar/`), each ven
 - **Stale fallback**: a failed fetch returns the cached payload as a `stale` result (`staleResult`). A payload older than 7 days, unparseable, or of another version is never served; the original error is returned instead.
 - **429 backoff**: any `writeLastError(429)` arms a 5 minute window during which no request is made. A cached payload up to 7 days old is served stale with `lastError: {code:'rate-limited', retryInMs}`; without one the result is a `rate-limited` error (not the original error).
 
-- **Async IO**: every read and write is a Gio async call, so the Shell main loop never waits on the disk. `atomicWrite()` writes a private sibling tempfile and renames it over the target (a symlink there is replaced, not followed); the credential write-backs (`updateJsonCredentials()` in `lib/oauth/creds-file.js`, which merges into the file as it is on disk at write time), the update-check state and the `active_vendor` mirror use it too. A vendor directory removed while running is re-created on the next write.[^cache]
+- **Async IO**: every read and write is a Gio async call, so the Shell main loop never waits on the disk. `atomicWrite()` writes a private sibling tempfile and renames it over the target (a symlink there is replaced, not followed); the credential write-backs (`updateJsonCredentials()` in `lib/oauth/creds-file.js`[^creds-file], which merges into the file as it is on disk at write time), the update-check state and the `active_vendor` mirror use it too. A vendor directory removed while running is re-created on the next write.[^cache]
 
 See [fetch pipeline](/architecture/fetch-pipeline.md) for where these fire.

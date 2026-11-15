@@ -5,7 +5,7 @@ description: runFetch() is the shared fetch state machine; every vendor resolves
 tags: [cache, errors, polling]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-15T18:44:09Z
+  at: 2026-11-15T18:57:13Z
 sources:
   - id: fetch-common
     title: lib/vendors/fetch-common.js
@@ -42,7 +42,7 @@ An implicit discriminated union (there is no types module):
 | `{ok:false, kind:'loading'}` | No result yet, or a transport failure with no usable cache |
 | `{ok:false, kind:'error', message?, code?, status?, retryInMs?, ...}` | Failure; vendor `errorExtras` (e.g. `plan`) may ride along |
 
-`code` is `rate-limited` (no `message`, carries `retryInMs`), `auth-rejected` or `invalid-mapping`. `main.js` has no translator, so the code becomes text later in `errorText()` in `section-common.js`. A network failure with an empty or expired cache therefore shows "Loading…", not an error.
+`code` is `rate-limited` (no `message`, carries `retryInMs`), `auth-rejected`, `invalid-mapping`, `no-access-token` or `token-refresh-failed`. The OAuth vendors add `loginCommand` to their errors, so a rejected token, a failed refresh or a signed-out file says which command signs in again. `main.js` has no translator, so the code becomes text later in `errorText()` in `section-common.js`. A network failure with an empty or expired cache therefore shows "Loading…", not an error.
 
 # One fetch per vendor
 

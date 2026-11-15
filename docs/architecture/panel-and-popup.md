@@ -5,7 +5,7 @@ description: How results render as panel segments and popup sections, and how si
 tags: [gnome-shell, polling]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T14:00:00Z
+  at: 2026-11-15T18:57:13Z
 sources:
   - id: segments
     title: lib/panel-segments.js
@@ -41,6 +41,6 @@ The click is resolved after the menu opens, in `open-state-changed` (a no-op in 
 
 # Polling
 
-The timer polls `pollVendors(config)` = the segments plus the active vendor, in parallel, at the refresh interval (300 s, which is both the default and the schema minimum, because the endpoints rate-limit below that).[^readme] Other enabled vendors render from an in-memory results map filled lazily on scroll-cycle, their own refresh button or "Refresh all". A fresh result notifies only while its vendor is still polled (or a refresh button asked for it), so a vendor scrolled away mid-fetch stays quiet ([notifications](/features/notifications.md)).
+The timer polls `pollVendors(config)` = the segments plus the active vendor, in parallel, at the refresh interval (300 s, which is both the default and the schema minimum, because the endpoints rate-limit below that).[^readme] Other enabled vendors render from the results the `VendorPoller` ([fetch pipeline](/architecture/fetch-pipeline.md)) holds, filled lazily on scroll-cycle, their own refresh button or "Refresh all". A fresh result notifies only while its vendor is still polled (or a refresh button asked for it), so a vendor scrolled away mid-fetch stays quiet ([notifications](/features/notifications.md)).
 
 While the popup is open, a 60 s timer repaints every segment and every built section so countdowns tick without hitting the network.
