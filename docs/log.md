@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Both OAuth vendors read and write their credentials through `lib/oauth/creds-file.js`; the OpenAI write-back now merges into the file as it is on disk at write time, like Anthropic's. Updated snapshot cache.
 - The custom provider's configuration checks moved from its parser to `lib/vendors/custom/mapping.js`, with `authHeaderOf()` as the one Authorization fallback. Updated custom provider and preferences.
 - DeepSeek and OpenRouter cache their snapshot through `encodeSnapshot` with a `CACHE_VERSION` like the other vendors; their old unversioned caches are refetched. Updated snapshot cache.
 - The Indicator releases its timers, signals and cancellable in `_onDestroy()`, so a destroy from the shell side cleans up too; signals use `connectObject`. Updated lifecycle.
