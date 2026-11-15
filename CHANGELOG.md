@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.8.0] - 2026-11-15
 
 The popup layout follows the upstream Linux Mint tray.
 
@@ -16,6 +16,10 @@ The popup layout follows the upstream Linux Mint tray.
 - **Pace alert beside the title.** A window running hot says so on its title
   line ("Limit in 1h 04m", "~20% over pace", "Limit reached"), in the pace
   color.
+- **Context windows are checked before saving.** In the context tracker
+  preferences, an entry the per-model window list cannot read is named and its
+  row stays marked in error until fixed. It used to be saved as typed and
+  silently dropped, turning percentages into raw token counts.
 
 ### Changed
 
@@ -30,12 +34,40 @@ The popup layout follows the upstream Linux Mint tray.
   and the per-section "Updated" line shows only after a failed refresh.
 - **Fixed popup width** (450px), so expanding a section with little content no
   longer shrinks the popup.
+- **Smoother shell under polling.** Cache and credential writes no longer
+  block the shell's main loop, and a burst of settings changes (such as a
+  reset) is applied once instead of once per key.
+
+### Removed
+
+- The unused `openai-admin-key-env` setting. Nothing ever read it; a value saved
+  by an earlier release is ignored.
 
 ### Fixed
 
 - **Red text was hard to read on a dark shell theme.** Severity colors used as
   text in the popup are brightened until legible there; bars, the panel label
   and light themes keep the configured colors.
+- **Expired Anthropic login gave no next step.** A rejected token now shows the
+  command to run to log in again.
+- **Untranslated popup text.** The OAuth error messages, the note shown in place
+  of a response that quoted the API key, Anthropic's extra usage amount and the
+  custom provider's "12 of 100" line now follow the shell language.
+- **Moving the panel button cleared notifications.** Changing the panel
+  position no longer removes delivered usage notifications from the tray or
+  drops in-flight requests.
+- **A cancelled context scan was reported as an error.** It no longer shows
+  "cannot read" for the sessions directory.
+- **Leftover poll timer.** When the shell destroyed the panel button itself,
+  its poll timer and settings handler stayed alive; they are now released.
+- **User-Agent.** Requests send `ai-usagebar/<version>` instead of a fixed
+  `ai-usagebar/0.1`.
+
+### Security
+
+- **OAuth tokens kept out of errors and the cache.** Anthropic and OpenAI error
+  messages that echoed the bearer token are now redacted before they reach the
+  popup or the cached `.last_error`, including tokens rotated by a refresh.
 
 ## [1.7.0] - 2026-11-14
 
