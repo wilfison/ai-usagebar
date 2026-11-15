@@ -8,7 +8,7 @@ import {Cache} from '../lib/cache.js';
 // The `it` harness is synchronous, so resolve promises against a main loop.
 export function runSync(promise) {
     const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
+    let value, err, rejected = false, done = false;
     Promise.resolve(promise).then(
         v => {
             value = v;
@@ -17,13 +17,15 @@ export function runSync(promise) {
         },
         e => {
             err = e;
+            rejected = true;
             done = true;
             loop.quit();
         }
     );
     if (!done)
         loop.run();
-    if (err)
+    // A falsy reason (`Promise.reject()`) is still a rejection.
+    if (rejected)
         throw err;
     return value;
 }

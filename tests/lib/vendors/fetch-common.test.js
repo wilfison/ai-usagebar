@@ -1,10 +1,11 @@
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
-    redactingCache, redactResult, redactedFetch, runFetch, errorResult, isSuccess, bodyText, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh,
+    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh,
 } from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 import {runSync, res, resTransport} from '../../_harness.js';
+import {bodyText} from '../../../lib/http-util.js';
 
 function fakeCache({payload = null, lastError = null, ageMs = null, retryAfter = null} = {}) {
     return {
@@ -268,10 +269,11 @@ function run(cache, opts = {}) {
 }
 
 describe('helpers', () => {
-    it('isSuccess is 2xx only', () => assertDeepEqual([199, 200, 204, 299, 300, 404].map(isSuccess), [false, true, true, true, false, false]));
-    it('bodyText decodes the body, empty when absent', () => {
-        assertEqual(bodyText(res(500, 'oops')), 'oops');
-        assertEqual(bodyText({bodyBytes: null}), '');
+    it('loading is a fresh, writable result each time', () => {
+        const a = loading();
+        assertDeepEqual(a, {ok: false, kind: 'loading'});
+        assertEqual(a === loading(), false);
+        assertEqual(Object.isFrozen(a), false);
     });
     it('errorResult carries the message of an Error or a string', () => {
         assertDeepEqual(errorResult(new Error('no key')), {ok: false, kind: 'error', message: 'no key'});
@@ -358,6 +360,7 @@ describe('runFetch: transport failure', () => {
         const cache = memCache();
         const r = run(cache, {request: () => Promise.resolve(resTransport())});
         assertDeepEqual(r, {ok: false, kind: 'loading'});
+        assertEqual(Object.isFrozen(r), false, 'a result the caller may annotate');
         assertDeepEqual(writes(cache), []);
     });
     it('any failed response of a list counts', () => {
@@ -473,7 +476,9 @@ describe('settleRefresh', () => {
     });
     it('a transport failure is silent loading', () => {
         const cache = memCache();
-        assertDeepEqual(settle({ok: false, kind: 'transport', message: 'x'}, cache), {ok: false, kind: 'loading'});
+        const r = settle({ok: false, kind: 'transport', message: 'x'}, cache);
+        assertDeepEqual(r, {ok: false, kind: 'loading'});
+        assertEqual(Object.isFrozen(r), false);
         assertDeepEqual(writes(cache), []);
     });
     it('a schema failure records its message', () => {

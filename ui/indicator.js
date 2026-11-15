@@ -23,6 +23,7 @@ import {PanelSegments, badgeSignature} from './panelSegments.js';
 import {Notifier} from './notifier.js';
 import {UpdateItem} from './updateItem.js';
 import {errorText} from '../lib/vendors/section-common.js';
+import {loading} from '../lib/vendors/fetch-common.js';
 import {scanSessions} from '../lib/context/scan.js';
 import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
@@ -103,7 +104,7 @@ class Indicator extends PanelMenu.Button {
         // Seed the polled vendors with a Loading… state so their sub-sections (and
         // an immediately-opened popup) are never empty before the first fetch lands.
         for (const id of this._pollIds)
-            this._results.set(id, {ok: false, kind: 'loading'});
+            this._results.set(id, loading());
         this._rebuildVendorSections(this._config);
         this._rebuildSegments(this._config);
 
@@ -288,7 +289,7 @@ class Indicator extends PanelMenu.Button {
         const added = this._pollIds.filter(id => !before.includes(id));
         for (const id of added) {
             if (!this._results.has(id))
-                this._results.set(id, {ok: false, kind: 'loading'});
+                this._results.set(id, loading());
         }
 
         this._maybeRebuildVendorSections(config);

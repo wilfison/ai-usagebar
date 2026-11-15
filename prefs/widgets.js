@@ -76,7 +76,8 @@ export function comboRow(settings, key, {title, subtitle, labels, read, write}, 
     const row = new Adw.ComboRow({title, ...subtitle ? {subtitle} : {}, model});
     row.selected = Math.max(0, read());
     const notifyId = row.connect('notify::selected', () => {
-        if (read() !== row.selected)
+        // No selection (Gtk.INVALID_LIST_POSITION) writes nothing.
+        if (row.selected < labels.length && read() !== row.selected)
             write(row.selected);
     });
     const resyncId = settings.connect(`changed::${key}`, () => {

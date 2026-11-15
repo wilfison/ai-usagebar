@@ -27,6 +27,18 @@ describe('runSync', () => {
         }));
         assertEqual(runSync(p), 'later');
     });
+    for (const reason of [undefined, null, 0, '']) {
+        it(`rethrows a rejection whose reason is ${JSON.stringify(reason) ?? 'undefined'}`, () => {
+            let threw = false;
+            try {
+                runSync(Promise.reject(reason));
+            } catch (e) {
+                threw = true;
+                assertEqual(e, reason);
+            }
+            assertEqual(threw, true);
+        });
+    }
     it('rethrows a rejection', () => {
         const e = expectThrow(() => runSync(Promise.reject(new Error('boom'))));
         assertEqual(e.message, 'boom');

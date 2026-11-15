@@ -31,10 +31,6 @@ export class PanelSegments {
         this.actor = new St.BoxLayout({style_class: 'panel-status-menu-box aiusagebar-segments'});
     }
 
-    get size() {
-        return this._segments.size;
-    }
-
     ids() {
         return [...this._segments.keys()];
     }
