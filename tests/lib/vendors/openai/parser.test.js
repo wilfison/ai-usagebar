@@ -1,9 +1,10 @@
 import system from 'system';
 
 import {
-    parseUsage, snapshotToCacheJson, parseCacheJson, openaiSeverity, openaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS,
+    parseUsage, snapshotToCacheJson, parseCacheJson, openaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS,
     parseResetCredits, mergeResetCredits, notifyRows, resetCredits, creditCount,
 } from '../../../../lib/vendors/openai/parser.js';
+import {openaiAdapter} from '../../../../lib/vendors/openai/adapter.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertDeepEqual, assertThrows, summary} from '../../../_assert.js';
@@ -179,7 +180,7 @@ describe('openaiSeverity', () => {
         const s = parseUsage(JSON.stringify({
             rate_limit: {primary_window: {used_percent: 10}, secondary_window: {used_percent: 95}},
         }), null);
-        assertEqual(openaiSeverity(s), Severity.CRITICAL);
+        assertEqual(openaiAdapter.severity(s), Severity.CRITICAL);
     });
 });
 
@@ -189,7 +190,7 @@ describe('openaiSeverity: absent windows', () => {
             rate_limit: {primary_window: {used_percent: 10, limit_window_seconds: 604800}},
             code_review_rate_limit: {primary_window: {used_percent: 95}},
         }), null);
-        assertEqual(openaiSeverity(s), Severity.CRITICAL);
+        assertEqual(openaiAdapter.severity(s), Severity.CRITICAL);
         assertEqual(openaiPeakUsage(s).percent, 95);
     });
 

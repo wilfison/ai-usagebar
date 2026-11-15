@@ -5,7 +5,7 @@ description: The indicator drives every vendor through one uniform Adapter; each
 tags: [vendors, pure-modules]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T18:01:56Z
+  at: 2026-11-15T18:03:45Z
 sources:
   - id: registry
     title: lib/vendors/registry.js
@@ -20,7 +20,7 @@ sources:
 
 # Overview
 
-The indicator never branches per vendor. `lib/vendors/registry.js` maps a vendor id to an `Adapter` in `ADAPTERS`,[^registry] and the indicator calls `getAdapter(id)` and drives it generically. The adapter carries `id`, `cacheId`, `icon`, `vendorShort`, `fetchSnapshot`, vendor-prefixed `severity` / `peakUsage` (e.g. `anthropicSeverity`, mapped by the adapter), `placeholders`, `notifyRows`, `resetCredits`, `buildSection`, and optionally `fakeSnapshot` and `shortCode(config)`.
+The indicator never branches per vendor. `lib/vendors/registry.js` maps a vendor id to an `Adapter` in `ADAPTERS`,[^registry] and the indicator calls `getAdapter(id)` and drives it generically. The adapter carries `id`, `cacheId`, `icon`, `vendorShort`, `fetchSnapshot`, vendor-prefixed `peakUsage` (e.g. `anthropicPeakUsage`, mapped by the adapter), `severity` (by default the peak's, via `vendorAdapter()`; the balance vendors OpenRouter and DeepSeek pass their own), `placeholders`, `notifyRows`, `resetCredits`, `buildSection`, and optionally `fakeSnapshot` and `shortCode(config)`.
 
 # The module quad
 
@@ -30,7 +30,7 @@ Each vendor lives in `lib/vendors/<vendor>/`:
 | --- | --- | --- |
 | `adapter.js` | Wires the others with `vendorAdapter()`;[^adapter-common] `apiKeyFetch()` / `guardedFetch()` turn a credential resolution error into the standard error result (the custom adapter uses neither: its key is optional) | Imports `main.js`, no `resource://`, so the whole registry loads under `gjs -m` |
 | `main.js` | `fetchSnapshot`, a call to `runFetch()` (see [fetch pipeline](/architecture/fetch-pipeline.md)) with the vendor's request, parser and hooks | Cache and HTTP injected, tested against a temp cache; gi-bound only through `lib/oauth/` (Anthropic, OpenAI) |
-| `parser.js` | The response parser (`parseUsage` in most vendors, with vendor arguments; `parseEnvelope`, `parseBalance`, `parseCredits`/`parseKey`/`parseActivity` elsewhere), `severity`, `peakUsage`, `placeholders` (`ngettext` injected where plurals occur), `notifyRows`, `resetCredits`, cache (de)serialization, `ICON`, `VENDOR_SHORT` | Pure |
+| `parser.js` | The response parser (`parseUsage` in most vendors, with vendor arguments; `parseEnvelope`, `parseBalance`, `parseCredits`/`parseKey`/`parseActivity` elsewhere), `peakUsage` (plus `severity` for the balance vendors), `placeholders` (`ngettext` injected where plurals occur), `notifyRows`, `resetCredits`, cache (de)serialization, `ICON`, `VENDOR_SHORT` | Pure |
 | `section.js` | `buildSection(snapshot, meta, now, theme, _[, ngettext])` (`ngettext` in Anthropic, OpenAI, OpenRouter) returns an ordered list of typed rows | Pure |
 
 Shared helpers stay flat in `lib/vendors/`: `fetch-common.js`, `parse-common.js` (`SchemaError`, JSON decode, `parseInstant`, window lengths), `placeholder-common.js`, `section-common.js` (`windowRow()`, `pacedWindowRow()`, `closingRows()`, `noWindowsRow()`, `errorText()`), `snapshot-cache.js`. The OAuth refresh both CLIs share is `lib/oauth/refresh.js`.

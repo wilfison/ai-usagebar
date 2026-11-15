@@ -1,10 +1,11 @@
 import system from 'system';
 
 import {
-    parseUsage, validateMapping, placeholders, customPeakUsage, customSeverity, formatNumber, SchemaError,
+    parseUsage, validateMapping, placeholders, customPeakUsage, formatNumber, SchemaError,
     shortCode, providerName, urlProblem, parseExtraHeaders, parseMapping, requestHeaders, notifyRows, resetCredits,
     snapshotToCacheJson, parseCacheJson, fakeSnapshot,
 } from '../../../../lib/vendors/custom/parser.js';
+import {customAdapter} from '../../../../lib/vendors/custom/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../../_assert.js';
 
@@ -198,7 +199,7 @@ describe('placeholders / peak / severity', () => {
 
     it('peak and severity follow the highest metric', () => {
         assertEqual(customPeakUsage(s).percent, 43);
-        assertEqual(customSeverity(s), Severity.LOW);
+        assertEqual(customAdapter.severity(s), Severity.LOW);
         assertEqual(customPeakUsage({metrics: []}).percent, null);
     });
 });
@@ -356,7 +357,7 @@ describe('fakeSnapshot', () => {
         assertDeepEqual(parseCacheJson(snapshotToCacheJson(s)).metrics.map(m => m.label), ['Requests', 'Budget']));
     it('feeds placeholders and severity', () => {
         assertEqual(placeholders(s, NOW).get('session_pct'), '84');
-        assertEqual(customSeverity(fakeSnapshot(95, NOW)), Severity.CRITICAL);
+        assertEqual(customAdapter.severity(fakeSnapshot(95, NOW)), Severity.CRITICAL);
     });
 });
 

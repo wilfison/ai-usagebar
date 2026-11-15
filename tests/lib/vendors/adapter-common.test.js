@@ -104,4 +104,18 @@ describe('apiKeyFetch', () => {
     });
 });
 
+describe('vendorAdapter: default severity', () => {
+    const make = peak => vendorAdapter({id: 'zz', parser, peakUsage: () => peak, buildSection, fetchSnapshot: () => null});
+
+    it('derives the severity from the peak usage', () => {
+        assertEqual(make({percent: 95, resetsAt: null}).severity({}), 'critical');
+        assertEqual(make({percent: 10, resetsAt: null}).severity({}), 'low');
+    });
+    it('no peak reads as low', () => assertEqual(make({percent: null, resetsAt: null}).severity({}), 'low'));
+    it('an explicit severity wins', () => {
+        const a = vendorAdapter({id: 'zz', parser, severity, peakUsage: () => ({percent: 99}), buildSection, fetchSnapshot: () => null});
+        assertEqual(a.severity({}), 'low');
+    });
+});
+
 system.exit(summary());

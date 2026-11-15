@@ -2,7 +2,6 @@ import system from 'system';
 
 import {
     parseUsage,
-    anthropicSeverity,
     anthropicPeakUsage,
     formatMinor,
     snapshotToCacheJson,
@@ -13,6 +12,7 @@ import {
     resetsAvailable,
     SchemaError, notifyRows, resetCredits, ULTRA, ExtraStatus, dollarsToCents,
 } from '../../../../lib/vendors/anthropic/parser.js';
+import {anthropicAdapter} from '../../../../lib/vendors/anthropic/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
@@ -203,23 +203,23 @@ describe('parseUsage', () => {
 
 describe('anthropicSeverity', () => {
     it('picks worst of three windows', () => {
-        assertEqual(anthropicSeverity(snap(40, 60, 80, null)), Severity.HIGH); // 80
+        assertEqual(anthropicAdapter.severity(snap(40, 60, 80, null)), Severity.HIGH); // 80
     });
 
     it('ignores extra when no window at cap', () => {
-        assertEqual(anthropicSeverity(snap(50, 60, null, [10000, 9500])), Severity.MID); // 60
+        assertEqual(anthropicAdapter.severity(snap(50, 60, null, [10000, 9500])), Severity.MID); // 60
     });
 
     it('promotes extra to critical when a window is at 100', () => {
-        assertEqual(anthropicSeverity(snap(100, 50, null, [10000, 9500])), Severity.CRITICAL);
+        assertEqual(anthropicAdapter.severity(snap(100, 50, null, [10000, 9500])), Severity.CRITICAL);
     });
 
     it('falls through to extra when extra higher than capped window', () => {
-        assertEqual(anthropicSeverity(snap(100, 50, null, [10000, 10000])), Severity.CRITICAL);
+        assertEqual(anthropicAdapter.severity(snap(100, 50, null, [10000, 10000])), Severity.CRITICAL);
     });
 
     it('counts scoped windows in the max (weekly 55 mid + Fable 84 → high)', () => {
-        assertEqual(anthropicSeverity(snap(10, 55, null, null, [84])), Severity.HIGH);
+        assertEqual(anthropicAdapter.severity(snap(10, 55, null, null, [84])), Severity.HIGH);
     });
 
     it('a scoped window at 100 is a cap hit that promotes extra into the peak', () => {
@@ -227,7 +227,7 @@ describe('anthropicSeverity', () => {
         // path, promoting extra (spent 150% of limit) into the peak.
         const s = snap(10, 50, null, [10000, 15000], [100]);
         assertEqual(anthropicPeakUsage(s).percent, 150);
-        assertEqual(anthropicSeverity(s), Severity.CRITICAL);
+        assertEqual(anthropicAdapter.severity(s), Severity.CRITICAL);
     });
 });
 
@@ -586,7 +586,7 @@ describe('parseUsage: Ultra without a five-hour limit', () => {
         const peak = anthropicPeakUsage(s);
         assertEqual(peak.percent, 41);
         assertEqual(peak.resetsAt instanceof Date, true);
-        assertEqual(anthropicSeverity(s), Severity.LOW);
+        assertEqual(anthropicAdapter.severity(s), Severity.LOW);
     });
 
     it('the extra-usage fallback still works without a session', () => {

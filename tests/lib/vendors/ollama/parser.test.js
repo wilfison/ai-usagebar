@@ -1,9 +1,10 @@
 import system from 'system';
 
 import {
-    parseUsage, placeholders, ollamaPeakUsage, ollamaSeverity, notifyRows, resetCredits, fakeSnapshot,
+    parseUsage, placeholders, ollamaPeakUsage, notifyRows, resetCredits, fakeSnapshot,
     snapshotToCacheJson, parseCacheJson, planLabel, SchemaError, SESSION_MS, WEEKLY_MS, MONTHLY_MS,
 } from '../../../../lib/vendors/ollama/parser.js';
+import {ollamaAdapter} from '../../../../lib/vendors/ollama/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
@@ -120,7 +121,7 @@ describe('peak usage and severity', () => {
         const z = parseUsage(JSON.stringify({included: {balance_usd: 0, allowance_usd: 0,
             period: {from: '2026-10-01T00:00:00Z', until: '2026-11-01T00:00:00Z'}}}));
         assertEqual(ollamaPeakUsage(z).percent, 0);
-        assertEqual(ollamaSeverity(z), Severity.LOW);
+        assertEqual(ollamaAdapter.severity(z), Severity.LOW);
     });
 });
 

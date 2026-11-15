@@ -1,10 +1,11 @@
 import system from 'system';
 
 import {
-    parseUsage, kimiSeverity, kimiPeakUsage, placeholders, fakeSnapshot, pct,
+    parseUsage, kimiPeakUsage, placeholders, fakeSnapshot, pct,
     humanizeLevel, planLabelFromMe, snapshotToCacheJson, parseCacheJson,
     WEEKLY_MS, WINDOW_MS, SchemaError, notifyRows, resetCredits,
 } from '../../../../lib/vendors/kimi/parser.js';
+import {kimiAdapter} from '../../../../lib/vendors/kimi/adapter.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
@@ -227,7 +228,7 @@ describe('kimiSeverity / kimiPeakUsage', () => {
             usage: {limit: 100, used: 10, remaining: 90},
             limits: [{window: {duration: 300, timeUnit: 'MINUTE'}, detail: {limit: 100, used: 95, remaining: 5}}],
         }));
-        assertEqual(kimiSeverity(s), Severity.CRITICAL); // window 95
+        assertEqual(kimiAdapter.severity(s), Severity.CRITICAL); // window 95
         const p = kimiPeakUsage(s);
         assertEqual(p.percent, 95);
         assertEqual(p.resetsAt, s.window.resetAt);
@@ -236,7 +237,7 @@ describe('kimiSeverity / kimiPeakUsage', () => {
     it('weekly wins when higher', () => {
         const s = parseUsage('{"usage":{"limit":100,"used":80,"remaining":20}}');
         assertEqual(kimiPeakUsage(s).percent, 80);
-        assertEqual(kimiSeverity(s), Severity.HIGH);
+        assertEqual(kimiAdapter.severity(s), Severity.HIGH);
     });
 });
 
@@ -244,7 +245,7 @@ describe('kimiPeakUsage: monthly shape', () => {
     it('the monthly pool alone can drive severity', () => {
         const s = parseUsage('{"usages":{"limit_month_total":{"used_ratio":0.95}}}');
         assertEqual(kimiPeakUsage(s).percent, 95);
-        assertEqual(kimiSeverity(s), Severity.CRITICAL);
+        assertEqual(kimiAdapter.severity(s), Severity.CRITICAL);
     });
 
     it('the 5h window wins when higher than the monthly pool', () => {
