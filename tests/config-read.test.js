@@ -196,4 +196,27 @@ describe('readConfig: panel vendors', () => {
     });
 });
 
+describe('readConfig: cleared fields', () => {
+    const KEYED = ['zai', 'openrouter', 'deepseek', 'kimi', 'ollama', 'custom'];
+
+    it('a cleared env var name is null for every keyed vendor', () => {
+        const settings = makeSettings();
+        for (const id of KEYED)
+            settings.set_string(`${id}-api-key-env`, '');
+        const cfg = readConfig(settings);
+        for (const id of KEYED)
+            assertEqual(cfg.vendors[id].apiKeyEnv, null, id);
+    });
+    it('a cleared management key env is null', () => {
+        const settings = makeSettings();
+        settings.set_string('openrouter-management-key-env', '');
+        assertEqual(readConfig(settings).vendors.openrouter.managementKeyEnv, null);
+    });
+    it('a blank custom auth header falls back to Authorization', () => {
+        const settings = makeSettings();
+        settings.set_string('custom-auth-header', '  ');
+        assertEqual(readConfig(settings).vendors.custom.authHeader, 'Authorization');
+    });
+});
+
 system.exit(summary());

@@ -96,6 +96,16 @@ describe('resolveApiKey', () => {
         assertEqual(msg.includes('ZAI_API_KEY'), true, 'names env var');
         assertEqual(msg.includes('API key'), true, 'names API key');
     });
+    it('without an env var name, asks only for the inline key', () => {
+        let msg = null;
+        try {
+            resolveApiKey('Z.AI', null, null, fakeGetenv({}));
+        } catch (e) {
+            msg = e.message;
+        }
+        assertEqual(msg.includes('export'), false, 'no empty export hint');
+        assertEqual(msg.includes('inline API key'), true);
+    });
 });
 
 describe('normalizePrimary', () => {
