@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Vendor sections build paced rows through `pacedWindowRow()` in `section-common.js`. Updated vendor adapters.
 - Both OAuth vendors share `authorizeOAuth()`; Anthropic no longer POSTs an empty refresh token. Updated fetch pipeline.
 - OAuth vendors (Anthropic, OpenAI) now redact their tokens from `.last_error` and the result through `redactedRun`, including tokens rotated by a refresh. Updated fetch pipeline.
 - Popup sections restyled after the upstream Linux Mint tray, still as an accordion: the header carries the plan and a per-vendor refresh button, the body is one rounded card, and the footer carries the last update time. The pace text is split into an alert and a footnote. Updated panel and popup, lifecycle, pace and vendor adapters.

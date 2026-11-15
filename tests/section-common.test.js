@@ -15,6 +15,9 @@ import {
     ICON_ERR_CLIENT,
     ICON_FOOTER,
     windowRow,
+    pacedWindowRow,
+    ICON_SESSION,
+    ICON_WEEKLY,
     closingRows,
     noWindowsRow,
 } from '../lib/vendors/section-common.js';
@@ -430,6 +433,27 @@ describe('closingRows', () => {
 describe('noWindowsRow', () => {
     it('is a dim text row, translated', () => {
         assertDeepEqual(noWindowsRow(bracket), {kind: 'text', text: '[no usage windows reported]', tone: 'dim'});
+    });
+});
+
+describe('pacedWindowRow', () => {
+    const t = defaultTheme();
+    const now = new Date(Date.UTC(2026, 4, 1, 12));
+    const resetsAt = new Date(now.getTime() + 3 * 3600 * 1000);
+    const windowMs = 5 * 3600 * 1000;
+
+    it('paces the window against its length', () => {
+        const r = pacedWindowRow({icon: ICON_SESSION, title: 'S', pct: 60, resetsAt, windowMs, now, theme: t});
+        const pace = calc({usagePct: 60, reset: resetsAt, now, windowMs});
+        assertDeepEqual(r, windowRow({icon: ICON_SESSION, title: 'S', pct: 60, resetsAt, pace, now, theme: t}));
+    });
+    it('a null window length is no pace', () => {
+        const r = pacedWindowRow({icon: ICON_WEEKLY, title: 'M', pct: 10, resetsAt, windowMs: null, now, theme: t});
+        assertDeepEqual(r, windowRow({icon: ICON_WEEKLY, title: 'M', pct: 10, resetsAt, pace: null, now, theme: t}));
+    });
+    it('passes the row options through', () => {
+        const r = pacedWindowRow({icon: 'x', title: 'W', pct: 60, resetsAt, windowMs, now, theme: t, footnote: false});
+        assertEqual('paceAlert' in r, false);
     });
 });
 

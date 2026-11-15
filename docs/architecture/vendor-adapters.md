@@ -5,7 +5,7 @@ description: The indicator drives every vendor through one uniform Adapter; each
 tags: [vendors, pure-modules]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T14:00:00Z
+  at: 2026-11-15T18:01:56Z
 sources:
   - id: registry
     title: lib/vendors/registry.js
@@ -33,7 +33,7 @@ Each vendor lives in `lib/vendors/<vendor>/`:
 | `parser.js` | The response parser (`parseUsage` in most vendors, with vendor arguments; `parseEnvelope`, `parseBalance`, `parseCredits`/`parseKey`/`parseActivity` elsewhere), `severity`, `peakUsage`, `placeholders` (`ngettext` injected where plurals occur), `notifyRows`, `resetCredits`, cache (de)serialization, `ICON`, `VENDOR_SHORT` | Pure |
 | `section.js` | `buildSection(snapshot, meta, now, theme, _[, ngettext])` (`ngettext` in Anthropic, OpenAI, OpenRouter) returns an ordered list of typed rows | Pure |
 
-Shared helpers stay flat in `lib/vendors/`: `fetch-common.js`, `parse-common.js` (`SchemaError`, JSON decode, `parseInstant`, window lengths), `placeholder-common.js`, `section-common.js` (`windowRow()`, `closingRows()`, `noWindowsRow()`, `errorText()`), `snapshot-cache.js`. The OAuth refresh both CLIs share is `lib/oauth/refresh.js`.
+Shared helpers stay flat in `lib/vendors/`: `fetch-common.js`, `parse-common.js` (`SchemaError`, JSON decode, `parseInstant`, window lengths), `placeholder-common.js`, `section-common.js` (`windowRow()`, `pacedWindowRow()`, `closingRows()`, `noWindowsRow()`, `errorText()`), `snapshot-cache.js`. The OAuth refresh both CLIs share is `lib/oauth/refresh.js`.
 
 The pure `section.js` builders produce already-translated rows; the renderer `ui/vendorSection.js` maps row kinds (`window`, `gauge`, `text`, `group-heading`, `grouped`, `spacer`, `http-error`, `footer`) to St widgets inside the vendor's card and owns no prose; the section `title` becomes the plan beside the vendor name. See [panel and popup](/architecture/panel-and-popup.md). See [i18n](/development/i18n.md).
 
