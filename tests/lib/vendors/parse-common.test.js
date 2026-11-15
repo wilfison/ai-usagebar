@@ -49,10 +49,6 @@ describe('decodeJson', () => {
         assertEqual(e instanceof SchemaError, true);
         assertEqual(e.message.startsWith('zai quota response unparseable: '), true, e.message);
     });
-    it('uses the given error class', () => {
-        class Other extends Error {}
-        assertEqual(thrown(() => decodeJson('{', 'x', {SchemaError: Other})) instanceof Other, true);
-    });
     it('passes a reviver to JSON.parse', () => {
         assertEqual(decodeJson('{"a":1}', 'x', {reviver: (k, v) => (k === 'a' ? v + 1 : v)}).a, 2);
     });

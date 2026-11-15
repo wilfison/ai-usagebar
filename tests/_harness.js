@@ -125,7 +125,7 @@ export function withCacheHome(vendor, fn, {setup = () => ({})} = {}) {
         const prev = GLib.getenv('XDG_CACHE_HOME');
         GLib.setenv('XDG_CACHE_HOME', dir, true);
         try {
-            return fn({cache: vendor ? Cache.forVendor(vendor) : null, dir, ...setup(dir)});
+            return fn({cache: vendor ? new Cache(vendor) : null, dir, ...setup(dir)});
         } finally {
             if (prev !== null && prev !== undefined)
                 GLib.setenv('XDG_CACHE_HOME', prev, true);

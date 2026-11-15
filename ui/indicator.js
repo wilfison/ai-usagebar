@@ -383,7 +383,7 @@ class Indicator extends PanelMenu.Button {
 
         this._vendorItems.get(id)?.setBusy(true);
         const adapter = getAdapter(id);
-        const cache = Cache.forVendor(adapter.cacheId);
+        const cache = new Cache(adapter.cacheId);
         const config = this._config;
         let res;
         try {

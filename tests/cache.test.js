@@ -23,12 +23,12 @@ function bytesEqual(a, b) {
 
 describe('Cache', () => {
     it('payloadAgeMs returns null on empty dir (no throw)', withTempCache(() => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         assertEqual(runSync(c.payloadAgeMs()), null);
     }));
 
     it('writePayload round-trip via maybePayload, path is <xdg>/ai-usagebar/<vendor>/usage.json', withTempCache((dir) => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         const data = new TextEncoder().encode('{"x":1}');
         runSync(c.writePayload(data));
         const got = runSync(c.maybePayload());
@@ -40,7 +40,7 @@ describe('Cache', () => {
     }));
 
     it('freshPayload TTL boundary: fresh when age < ttl, null when age >= ttl', withTempCache(() => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         runSync(c.writePayload('{}'));
         // Backdate mtime by 60 seconds so age is deterministic.
         const f = Gio.File.new_for_path(c.payloadPath);
@@ -62,7 +62,7 @@ describe('Cache', () => {
     }));
 
     it('markStale / isStale / writePayload clears .stale', withTempCache(() => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         assertEqual(runSync(c.isStale()), false);
         runSync(c.markStale());
         assertEqual(runSync(c.isStale()), true);
@@ -71,7 +71,7 @@ describe('Cache', () => {
     }));
 
     it('writeLastError / readLastError; on-disk format is first-line code + body; writePayload clears .last_error', withTempCache((dir) => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         runSync(c.writeLastError(429, 'rate limited'));
         assertDeepEqual(runSync(c.readLastError()), {code: 429, body: 'rate limited'});
 
@@ -85,7 +85,7 @@ describe('Cache', () => {
     }));
 
     it('writeNotified / readNotified round-trip JSON; absent or old format → empty; writePayload keeps .notified', withTempCache((dir) => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         const empty = {version: 2, entries: {}};
         assertDeepEqual(runSync(c.readNotified()), empty);
 
@@ -109,7 +109,7 @@ describe('Cache', () => {
     }));
 
     it('atomic write: orphan sibling tempfile leaves usage.json unchanged', withTempCache(() => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         runSync(c.writePayload('sentinel'));
         // Simulate an aborted writePayload: sibling tempfile written but never renamed.
         const orphan = Gio.File.new_for_path(GLib.build_filenamev([c.dir, '.usage.json.tmp-orphan']));
@@ -124,7 +124,7 @@ describe('Cache', () => {
     }));
 
     it('readLastError + maybePayload return null on missing cache (no throw)', withTempCache(() => {
-        const c = Cache.forVendor('test');
+        const c = new Cache('test');
         assertEqual(runSync(c.readLastError()), null);
         assertEqual(runSync(c.maybePayload()), null);
     }));
@@ -156,7 +156,7 @@ describe('Cache', () => {
 
 describe('Cache retry_after sidecar', () => {
     it('round-trips an epoch-seconds marker as ms', withTempCache(() => {
-        const c = Cache.forVendor('rt');
+        const c = new Cache('rt');
         assertEqual(runSync(c.readRetryAfter()), null);
         runSync(c.writeRetryAfter(1_800_000_000_500));
         assertEqual(runSync(c.readRetryAfter()), 1_800_000_001_000);
@@ -165,7 +165,7 @@ describe('Cache retry_after sidecar', () => {
     }));
 
     it('a corrupt marker reads as no backoff', withTempCache((dir) => {
-        const c = Cache.forVendor('rt');
+        const c = new Cache('rt');
         runSync(c.writeRetryAfter(0));
         Gio.File.new_for_path(GLib.build_filenamev([dir, 'ai-usagebar', 'rt', '.retry_after'])).replace_contents(
             new TextEncoder().encode('soon'), null, false, Gio.FileCreateFlags.NONE, null);
@@ -173,7 +173,7 @@ describe('Cache retry_after sidecar', () => {
     }));
 
     it('writeLastError(429) arms it; other codes do not', withTempCache(() => {
-        const c = Cache.forVendor('rt');
+        const c = new Cache('rt');
         runSync(c.writeLastError(500, 'down'));
         assertEqual(runSync(c.readRetryAfter()), null);
         const before = Date.now();
@@ -183,7 +183,7 @@ describe('Cache retry_after sidecar', () => {
     }));
 
     it('writePayload and clearLastError clear it', withTempCache(() => {
-        const c = Cache.forVendor('rt');
+        const c = new Cache('rt');
         runSync(c.writeLastError(429, 'x'));
         runSync(c.writePayload('{}'));
         assertEqual(runSync(c.readRetryAfter()), null);
@@ -196,7 +196,7 @@ describe('Cache retry_after sidecar', () => {
 
 describe('Cache writes never block the main loop', () => {
     it('every write answers a Promise', withTempCache(() => {
-        const c = Cache.forVendor('async');
+        const c = new Cache('async');
         for (const write of [
             () => c.writePayload('{}'),
             () => c.markStale(),
@@ -223,7 +223,7 @@ describe('Cache writes never block the main loop', () => {
     }));
 
     it('a cache dir removed after the first write is re-created', withTempCache((dir) => {
-        const c = Cache.forVendor('gone');
+        const c = new Cache('gone');
         runSync(c.writePayload('{}'));
         GLib.spawn_command_line_sync(`rm -rf ${GLib.build_filenamev([dir, 'ai-usagebar', 'gone'])}`);
         runSync(c.writePayload('{"x":1}'));
