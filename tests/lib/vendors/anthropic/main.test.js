@@ -233,6 +233,14 @@ describe('fetchSnapshot: a signed-out credentials file', () => {
         assertEqual(r.ok, true);
     }));
 
+    it('an expired token without a refresh token that is rejected keeps the login hint', withTemp(({cache, dir}) => {
+        const http = httpStub(res(401, 'expired'));
+        const r = runSync(fetchSnapshot({cache, http, credsPath: blankCreds(dir, {accessToken: 'at', refreshToken: '', expiresAt: 0})}));
+        assertEqual(http.calls.length, 1);
+        assertEqual(r.code, 'auth-rejected');
+        assertEqual(r.loginCommand, 'claude');
+    }));
+
     it('both tokens blank: no POST, no GET, the login hint', withTemp(({cache, dir}) => {
         const http = httpStub(res(200, USAGE));
         const r = runSync(fetchSnapshot({cache, http, credsPath: blankCreds(dir, {accessToken: '', refreshToken: '', expiresAt: 0})}));

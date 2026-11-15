@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 15:39-0300\n"
+"POT-Creation-Date: 2026-11-15 15:53-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -591,6 +591,12 @@ msgstr ""
 
 #: lib/vendors/section-common.js
 msgid "The provider's answer quoted the key, so it is not shown."
+msgstr ""
+
+#. Translators: %s is a command to run in a terminal, e.g. `claude`.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "Run %s to sign in again."
 msgstr ""
 
 #: lib/vendors/section-common.js

@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- A rejected OAuth token (HTTP 401/403) now carries the login command, so the popup still says how to sign in again when there was no refresh token to try.
 - The indicator's fetch slots, results and fetch instants moved to the pure `VendorPoller` (`lib/vendor-poller.js`), now unit-tested. Updated fetch pipeline.
 - The per-model context windows entry is validated in the preferences and saved only when valid. Updated context monitor and preferences.
 - Tests get GSettings from `testSettings(overrides)` in the harness (checkout schema, private memory backend). Updated testing.

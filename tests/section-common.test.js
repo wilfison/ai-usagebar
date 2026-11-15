@@ -386,6 +386,11 @@ describe('errorText / httpErrorRow: translated prose', () => {
     it('a signed-out credentials file names the login command', () =>
         assertEqual(errorText({ok: false, kind: 'error', code: NO_ACCESS_TOKEN, loginCommand: 'claude', message: 'x'}, bracket),
             '[No access token: run %s to log in.]'.replace('%s', '`claude`')));
+    it('a rejected OAuth token names the login command', () => {
+        const text = errorText({ok: false, kind: 'error', code: 'auth-rejected', status: 401, loginCommand: 'claude', message: 'x'}, bracket);
+        assertEqual(text.endsWith('. [Run %s to sign in again.]'.replace('%s', '`claude`')), true, text);
+        assertEqual(errorText({ok: false, kind: 'error', code: 'auth-rejected', status: 401, message: 'x'}, bracket).includes('Run'), false);
+    });
     it('a failed refresh names the login command', () =>
         assertEqual(errorText({ok: false, kind: 'error', code: TOKEN_REFRESH_FAILED, loginCommand: 'codex login', message: 'x'}, bracket),
             '[Token refresh failed: run %s to sign in again.]'.replace('%s', '`codex login`')));
