@@ -5,11 +5,14 @@ description: "Repository rules that are not enforced by a compiler: imports, pun
 tags: [pure-modules]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:26:44Z
 sources:
   - id: lint
     title: tools/lint.sh
     resource: tools/lint.sh
+  - id: eslint
+    title: eslint.config.js
+    resource: eslint.config.js
   - id: pr
     title: PR template
     resource: https://github.com/wilfison/ai-usagebar/blob/main/.github/pull_request_template.md
@@ -18,7 +21,7 @@ sources:
 # Code
 
 - Stay on the GNOME ESM surface: `gi://` and `resource:///org/gnome/shell/…` imports, no legacy `imports.*`. `tools/lint.sh` rejects `imports.*`, missing trailing newlines and SPDX headers.[^lint]
-- Pure modules stay `gi://`-free, gettext included ([i18n](/development/i18n.md), [testing](/development/testing.md)).
+- Pure modules stay `gi://`-free, gettext included ([i18n](/development/i18n.md), [testing](/development/testing.md)). ESLint enforces it: `no-restricted-imports` refuses `gi://` and `resource:///` in `lib/` outside the gi-bound list `GI_BOUND_LIB` in `eslint.config.js`, and refuses the adapter registry, vendor adapters, `ui/` and Shell modules in `prefs.js` / `prefs/`.[^eslint]
 - Comments are a last resort: only for a non-obvious why (a workaround, an invariant, a gotcha), short.
 - **No em dash (U+2014) anywhere**: code, strings, translations, docs, commits. Use a comma, colon, parentheses or a new sentence.
 
