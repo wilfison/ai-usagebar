@@ -21,7 +21,8 @@ import {
     closingRows,
     noWindowsRow,
 } from '../lib/vendors/section-common.js';
-import {localTimeHm} from '../lib/format.js';
+import {localTimeHm, PARTIAL_ECHO_NOTE} from '../lib/format.js';
+import {NO_ACCESS_TOKEN, TOKEN_REFRESH_FAILED} from '../lib/vendors/fetch-common.js';
 import {calc} from '../lib/pacing.js';
 import {localDateHm, format as formatCountdown, formatWithClock} from '../lib/countdown.js';
 import {defaultTheme} from '../lib/theme.js';
@@ -374,6 +375,20 @@ describe('errorText: invalid mapping', () => {
         const text = errorText({ok: false, kind: 'error', code: 'invalid-mapping', message: 'x'}, bracket);
         assertEqual(text.startsWith('[The custom provider mapping'), true);
     });
+});
+
+describe('errorText / httpErrorRow: translated prose', () => {
+    it('the key-echo note is translated, as a message and as a body', () => {
+        assertEqual(errorText({ok: false, kind: 'error', message: PARTIAL_ECHO_NOTE}, bracket), `[${PARTIAL_ECHO_NOTE}]`);
+        const row = httpErrorRow({lastError: {code: 500, body: PARTIAL_ECHO_NOTE}}, theme, bracket);
+        assertEqual(row.lines.join(' '), `[${PARTIAL_ECHO_NOTE}]`);
+    });
+    it('a signed-out credentials file names the login command', () =>
+        assertEqual(errorText({ok: false, kind: 'error', code: NO_ACCESS_TOKEN, loginCommand: 'claude', message: 'x'}, bracket),
+            '[No access token: run %s to log in.]'.replace('%s', '`claude`')));
+    it('a failed refresh names the login command', () =>
+        assertEqual(errorText({ok: false, kind: 'error', code: TOKEN_REFRESH_FAILED, loginCommand: 'codex login', message: 'x'}, bracket),
+            '[Token refresh failed: run %s to sign in again.]'.replace('%s', '`codex login`')));
 });
 
 describe('paceAlert: an early burst in a long window', () => {

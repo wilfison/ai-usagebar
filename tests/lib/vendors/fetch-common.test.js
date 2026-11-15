@@ -461,13 +461,13 @@ describe('settleRefresh', () => {
         const r = settle({ok: true}, cache, () => Promise.resolve({rotated: true, saved: {ok: false, message: 'EACCES'}}));
         assertDeepEqual(writes(cache), [['lastError', 0,
             'refreshed token could not be saved (EACCES); the rotated refresh token is lost; re-run `claude`']]);
-        assertDeepEqual(r, {ok: false, kind: 'error', message: 'token refresh failed; run `claude` to re-authenticate'});
+        assertDeepEqual(r, {ok: false, kind: 'error', code: 'token-refresh-failed', loginCommand: 'claude', message: 'token refresh failed; run `claude` to re-authenticate'});
     });
     it('an HTTP refusal records its status', () => {
         const cache = memCache();
         const r = settle({ok: false, kind: 'http', status: 400, body: 'invalid_grant'}, cache);
         assertDeepEqual(writes(cache), [['lastError', 400, 'invalid_grant']]);
-        assertDeepEqual(r, {ok: false, kind: 'error', message: 'token refresh failed; run `claude` to re-authenticate', status: 400});
+        assertDeepEqual(r, {ok: false, kind: 'error', code: 'token-refresh-failed', loginCommand: 'claude', message: 'token refresh failed; run `claude` to re-authenticate', status: 400});
     });
     it('a 401 refusal keeps no body', () => {
         const cache = memCache();
@@ -533,12 +533,16 @@ describe('authorizeOAuth', () => {
     it('a blank access token asks to log in, with the extras', () => {
         const {r} = run({accessToken: ' '});
         assertEqual(r.kind, 'error');
+        assertEqual(r.code, 'no-access-token');
+        assertEqual(r.loginCommand, 'claude');
         assertEqual(r.message, 'no access token; run `claude` to log in');
         assertEqual(r.plan, 'Pro');
     });
     it('a failed refresh stops the fetch with the extras', () => {
         const {r} = run({expiresAtSecs: NOW, rr: {ok: false, kind: 'other', message: 'nope'}});
         assertEqual(r.kind, 'error');
+        assertEqual(r.code, 'token-refresh-failed');
+        assertEqual(r.loginCommand, 'claude');
         assertEqual(r.plan, 'Pro');
     });
     it('a transport failure is loading, without extras', () => {

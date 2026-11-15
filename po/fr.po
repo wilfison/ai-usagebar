@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 15:33-0300\n"
+"POT-Creation-Date: 2026-11-15 15:35-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: French\n"
@@ -267,6 +267,12 @@ msgstr "Ollama Cloud"
 #: lib/prefs-pages.js
 msgid "Plan name (optional)"
 msgstr "Nom de l’offre (facultatif)"
+
+#. Translators: "14157 minor units BRL": an amount in the currency's smallest unit.
+#: lib/vendors/anthropic/parser.js
+#, javascript-format
+msgid "%s minor units %s"
+msgstr "%s unités mineures %s"
 
 #: lib/vendors/anthropic/parser.js lib/vendors/anthropic/section.js
 #: lib/vendors/ollama/parser.js lib/vendors/ollama/section.js
@@ -575,12 +581,28 @@ msgstr ""
 "absents, expirés ou invalides"
 
 #: lib/vendors/section-common.js
+msgid "The provider's answer quoted the key, so it is not shown."
+msgstr "La réponse du fournisseur citait la clé, elle n’est donc pas affichée."
+
+#: lib/vendors/section-common.js
 msgid ""
 "The custom provider mapping or extra headers are not valid; fix them in the "
 "preferences."
 msgstr ""
 "Le mappage ou les en-têtes supplémentaires du fournisseur personnalisé ne "
 "sont pas valides ; corrigez-les dans les préférences."
+
+#. Translators: %s is a command to run in a terminal, e.g. `claude`.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "No access token: run %s to log in."
+msgstr "Aucun jeton d’accès : exécutez %s pour vous connecter."
+
+#. Translators: %s is a command to run in a terminal, e.g. `codex login`.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "Token refresh failed: run %s to sign in again."
+msgstr "Échec du renouvellement du jeton : exécutez %s pour vous reconnecter."
 
 #: lib/vendors/section-common.js
 #, javascript-format

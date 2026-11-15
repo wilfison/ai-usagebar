@@ -275,6 +275,8 @@ describe('formatExtraAmount', () => {
 
     it('both fields → that scale and currency', () => assertEqual(fmt('BRL', 2, 14157), 'R$141.57'));
     it('currency without decimal_places → raw minor units', () => assertEqual(fmt('BRL', null, 14157), '14157 minor units BRL'));
+    it('the minor-units wording is translated', () =>
+        assertEqual(formatExtraAmount({currency: 'BRL', decimalPlaces: null}, -5, s => `[${s}]`), '[-5 minor units BRL]'));
     it('decimal_places without currency → that scale with $', () => assertEqual(fmt(null, 3, 14157), '$14.157'));
     it('neither → legacy $ cents', () => assertEqual(fmt(null, null, 14157), '$141.57'));
     it('a snapshot built without the fields reads as legacy', () =>

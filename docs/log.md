@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- OAuth stops carry `no-access-token` / `token-refresh-failed` codes with the login command, and the popup translates them, the key-echo redaction note and Anthropic's "minor units" amount.
 - The custom provider caches a metric's raw used/limit (`CACHE_VERSION` 2) and the popup formats it with a translated "%s of %s".
 - Vendors are one `VENDORS` table in `lib/vendors.js` (id, label, generic icon, user-given name); `apiKeyFetch` names a vendor by that label. Updated vendor adapters.
 - The update check reads its deadline from disk once per indicator and keeps it in memory; any 2xx answer is parsed. Updated update check.
