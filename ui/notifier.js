@@ -38,6 +38,9 @@ export class Notifier {
             if (this._destroyed)
                 return;
             await cache.writeNotified(state);
+            // The write is async: disable() may have run meanwhile.
+            if (this._destroyed)
+                return;
             for (const n of fired) {
                 const source = this._notificationSource();
                 source.addNotification(new MessageTray.Notification({
