@@ -92,8 +92,9 @@ Every vendor provides `{icon}`, `{vendor_short}`, `{plan}`, `{session_pct}`,
 the share of the window that has passed. Vendors with a reset instant also give
 `{session_pace}` and `{weekly_pace}` (`↑` ahead of pace, `→` on track, `↓`
 under); **Pace arrows** under *Panel* appends the session arrow to the label
-without editing the format. OpenRouter and DeepSeek have no usage windows, so there the `session_` /
-`weekly_` tokens hold the consumed share (OpenRouter) or `0`.
+without editing the format. OpenRouter and DeepSeek have no usage windows, so there `{session_pct}` /
+`{weekly_pct}` hold the consumed share (OpenRouter) or `0`, the `*_reset` tokens
+are `-` and the `*_elapsed` ones `0`.
 
 <details>
 <summary>Vendor-specific tokens</summary>
@@ -218,8 +219,10 @@ sudo apt install gjs libglib2.0-bin gettext gir1.2-soup-3.0 mutter-dev-bin
 sudo pacman -S gjs glib2-devel gnome-shell gettext libsoup3 mutter
 ```
 
-Architecture, conventions and the testing policy are in
-[`CLAUDE.md`](CLAUDE.md). Issues and pull requests are welcome.
+How the extension is built (architecture, features, vendors, testing, i18n
+and release) is documented in [`docs/`](docs/index.md); the short version for
+contributors and coding agents is [`CLAUDE.md`](CLAUDE.md). Issues and pull
+requests are welcome.
 
 ## Credits & license
 
