@@ -34,7 +34,7 @@ export class Notifier {
             });
             if (this._destroyed)
                 return;
-            cache.writeNotified(state);
+            await cache.writeNotified(state);
             for (const n of fired) {
                 const source = this._notificationSource();
                 source.addNotification(new MessageTray.Notification({

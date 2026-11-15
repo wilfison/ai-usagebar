@@ -144,12 +144,12 @@ describe('redactHttpError / recordHttpError', () => {
     it('records the redacted pair and returns the matching result', () => {
         const written = [];
         const cache = {writeLastError: (code, msg) => written.push([code, msg])};
-        const r = recordHttpError(cache, 401, TOKEN_BODY, 'usage request failed (HTTP 401)');
+        const r = runSync(recordHttpError(cache, 401, TOKEN_BODY, 'usage request failed (HTTP 401)'));
         assertDeepEqual(written, [[401, '']]);
         assertEqual(r.code, 'auth-rejected');
         assertEqual(JSON.stringify(r).includes('sk-ant-secret-123'), false);
 
-        const r500 = recordHttpError(cache, 500, 'down', 'usage request failed (HTTP 500)');
+        const r500 = runSync(recordHttpError(cache, 500, 'down', 'usage request failed (HTTP 500)'));
         assertDeepEqual(written[1], [500, 'down']);
         assertEqual(r500.message, 'usage request failed (HTTP 500)');
         assertEqual(r500.status, 500);
@@ -194,7 +194,7 @@ describe('redaction of the request secret', () => {
         const writes = [];
         const cache = {dir: '/c', writeLastError: (status, body) => writes.push([status, body]), readLastError: () => 'x'};
         const wrapped = redactingCache(cache, [KEY]);
-        wrapped.writeLastError(0, `zai: API reported failure: bad key ${KEY}`);
+        runSync(wrapped.writeLastError(0, `zai: API reported failure: bad key ${KEY}`));
         assertDeepEqual(writes, [[0, 'zai: API reported failure: bad key [key]']]);
         assertEqual(wrapped.dir, '/c');
         assertEqual(wrapped.readLastError(), 'x');
@@ -211,7 +211,7 @@ describe('redaction of the request secret', () => {
         const writes = [];
         const cache = {writeLastError: (s, b) => writes.push(b)};
         const r = runSync(redactedFetch([KEY, null], {cache}, async (deps) => {
-            deps.cache.writeLastError(0, `echo ${KEY}`);
+            await deps.cache.writeLastError(0, `echo ${KEY}`);
             return {ok: false, kind: 'error', message: `echo ${KEY}`};
         }));
         assertEqual(r.message, 'echo [key]');
@@ -557,7 +557,7 @@ describe('vendorFetch', () => {
             order.push('start');
             await Promise.resolve();
             order.push('end');
-            deps.cache.writeLastError(500, `echo ${deps.apiKey}`);
+            await deps.cache.writeLastError(500, `echo ${deps.apiKey}`);
             return {ok: false, kind: 'error', message: `bad ${deps.apiKey}`};
         };
         const fetch = vendorFetch('zz', deps => [deps.apiKey], doFetch);

@@ -185,14 +185,14 @@ describe('b64url / fakeJwt', () => {
 describe('retryArmed', () => {
     it('is false until a backoff is written, then true', withCacheHome('zai', ({cache}) => {
         assertEqual(retryArmed(cache), false);
-        cache.writeRetryAfter(Date.now() + 60_000);
+        runSync(cache.writeRetryAfter(Date.now() + 60_000));
         assertEqual(retryArmed(cache), true);
     }));
 });
 
 describe('backdate', () => {
     it('moves the payload mtime into the past', withCacheHome('zai', ({cache}) => {
-        cache.writePayload('{}');
+        runSync(cache.writePayload('{}'));
         backdate(cache, 3600);
         const age = runSync(cache.payloadAgeMs());
         assertEqual(age >= 3600_000 && age < 3700_000, true, `age ${age}`);

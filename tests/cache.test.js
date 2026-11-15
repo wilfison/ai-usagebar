@@ -30,7 +30,7 @@ describe('Cache', () => {
     it('writePayload round-trip via maybePayload, path is <xdg>/ai-usagebar/<vendor>/usage.json', withTempCache((dir) => {
         const c = Cache.forVendor('test');
         const data = new TextEncoder().encode('{"x":1}');
-        c.writePayload(data);
+        runSync(c.writePayload(data));
         const got = runSync(c.maybePayload());
         if (!bytesEqual(got, data))
             throw new Error(`round-trip mismatch: got ${bytesToString(got)}`);
@@ -41,7 +41,7 @@ describe('Cache', () => {
 
     it('freshPayload TTL boundary: fresh when age < ttl, null when age >= ttl', withTempCache(() => {
         const c = Cache.forVendor('test');
-        c.writePayload('{}');
+        runSync(c.writePayload('{}'));
         // Backdate mtime by 60 seconds so age is deterministic.
         const f = Gio.File.new_for_path(c.payloadPath);
         const past = Math.floor(Date.now() / 1000) - 60;
@@ -63,16 +63,16 @@ describe('Cache', () => {
 
     it('markStale / isStale / writePayload clears .stale', withTempCache(() => {
         const c = Cache.forVendor('test');
-        assertEqual(c.isStale(), false);
-        c.markStale();
-        assertEqual(c.isStale(), true);
-        c.writePayload('{}');
-        assertEqual(c.isStale(), false);
+        assertEqual(runSync(c.isStale()), false);
+        runSync(c.markStale());
+        assertEqual(runSync(c.isStale()), true);
+        runSync(c.writePayload('{}'));
+        assertEqual(runSync(c.isStale()), false);
     }));
 
     it('writeLastError / readLastError; on-disk format is first-line code + body; writePayload clears .last_error', withTempCache((dir) => {
         const c = Cache.forVendor('test');
-        c.writeLastError(429, 'rate limited');
+        runSync(c.writeLastError(429, 'rate limited'));
         assertDeepEqual(runSync(c.readLastError()), {code: 429, body: 'rate limited'});
 
         const errPath = GLib.build_filenamev([dir, 'ai-usagebar', 'test', '.last_error']);
@@ -80,7 +80,7 @@ describe('Cache', () => {
         assertEqual(ok, true);
         assertEqual(bytesToString(contents), '429\nrate limited');
 
-        c.writePayload('{}');
+        runSync(c.writePayload('{}'));
         assertEqual(runSync(c.readLastError()), null);
     }));
 
@@ -90,7 +90,7 @@ describe('Cache', () => {
         assertDeepEqual(runSync(c.readNotified()), empty);
 
         const state = {version: 2, entries: {'Claude::session': {notifiedAt: 1700000000000, resetAt: null}}};
-        c.writeNotified(state);
+        runSync(c.writeNotified(state));
         assertDeepEqual(runSync(c.readNotified()), state);
 
         const path = GLib.build_filenamev([dir, 'ai-usagebar', 'test', '.notified']);
@@ -99,7 +99,7 @@ describe('Cache', () => {
         assertDeepEqual(JSON.parse(bytesToString(contents)), state);
 
         // The dedupe state must survive a payload write (unlike .stale/.last_error).
-        c.writePayload('{}');
+        runSync(c.writePayload('{}'));
         assertDeepEqual(runSync(c.readNotified()), state);
 
         // The three-line format of older releases is discarded.
@@ -110,7 +110,7 @@ describe('Cache', () => {
 
     it('atomic write: orphan sibling tempfile leaves usage.json unchanged', withTempCache(() => {
         const c = Cache.forVendor('test');
-        c.writePayload('sentinel');
+        runSync(c.writePayload('sentinel'));
         // Simulate an aborted writePayload: sibling tempfile written but never renamed.
         const orphan = Gio.File.new_for_path(GLib.build_filenamev([c.dir, '.usage.json.tmp-orphan']));
         orphan.replace_contents(
@@ -135,7 +135,7 @@ describe('Cache', () => {
         const targetPath = GLib.build_filenamev([targetDir, 'data.bin']);
         const file = Gio.File.new_for_path(targetPath);
         const data = new TextEncoder().encode('hello atomic');
-        atomicWrite(file, data);
+        runSync(atomicWrite(file, data));
 
         const [ok, contents] = file.load_contents(null);
         assertEqual(ok, true);
@@ -158,15 +158,15 @@ describe('Cache retry_after sidecar', () => {
     it('round-trips an epoch-seconds marker as ms', withTempCache(() => {
         const c = Cache.forVendor('rt');
         assertEqual(runSync(c.readRetryAfter()), null);
-        c.writeRetryAfter(1_800_000_000_500);
+        runSync(c.writeRetryAfter(1_800_000_000_500));
         assertEqual(runSync(c.readRetryAfter()), 1_800_000_001_000);
-        c.clearRetryAfter();
+        runSync(c.clearRetryAfter());
         assertEqual(runSync(c.readRetryAfter()), null);
     }));
 
     it('a corrupt marker reads as no backoff', withTempCache((dir) => {
         const c = Cache.forVendor('rt');
-        c.ensureDir();
+        runSync(c.writeRetryAfter(0));
         Gio.File.new_for_path(GLib.build_filenamev([dir, 'ai-usagebar', 'rt', '.retry_after'])).replace_contents(
             new TextEncoder().encode('soon'), null, false, Gio.FileCreateFlags.NONE, null);
         assertEqual(runSync(c.readRetryAfter()), null);
@@ -174,23 +174,72 @@ describe('Cache retry_after sidecar', () => {
 
     it('writeLastError(429) arms it; other codes do not', withTempCache(() => {
         const c = Cache.forVendor('rt');
-        c.writeLastError(500, 'down');
+        runSync(c.writeLastError(500, 'down'));
         assertEqual(runSync(c.readRetryAfter()), null);
         const before = Date.now();
-        c.writeLastError(429, 'slow down');
+        runSync(c.writeLastError(429, 'slow down'));
         const until = runSync(c.readRetryAfter());
         assertEqual(until >= before + 5 * 60 * 1000 && until <= Date.now() + 5 * 60 * 1000 + 1000, true);
     }));
 
     it('writePayload and clearLastError clear it', withTempCache(() => {
         const c = Cache.forVendor('rt');
-        c.writeLastError(429, 'x');
-        c.writePayload('{}');
+        runSync(c.writeLastError(429, 'x'));
+        runSync(c.writePayload('{}'));
         assertEqual(runSync(c.readRetryAfter()), null);
-        c.writeLastError(429, 'x');
-        c.clearLastError();
+        runSync(c.writeLastError(429, 'x'));
+        runSync(c.clearLastError());
         assertEqual(runSync(c.readRetryAfter()), null);
         assertEqual(runSync(c.readLastError()), null);
+    }));
+});
+
+describe('Cache writes never block the main loop', () => {
+    it('every write answers a Promise', withTempCache(() => {
+        const c = Cache.forVendor('async');
+        for (const write of [
+            () => c.writePayload('{}'),
+            () => c.markStale(),
+            () => c.writeLastError(500, 'x'),
+            () => c.writeRetryAfter(Date.now()),
+            () => c.writeNotified({version: 2, entries: {}}),
+            () => c.clearLastError(),
+            () => c.clearRetryAfter(),
+            () => c.isStale(),
+        ]) {
+            const p = write();
+            assertEqual(p instanceof Promise, true, String(write));
+            runSync(p);
+        }
+    }));
+
+    it('atomicWrite answers a Promise and leaves the file whole', withTempCache((dir) => {
+        const file = Gio.File.new_for_path(GLib.build_filenamev([dir, 'big.bin']));
+        const text = `${'x'.repeat(200_000)}END`;
+        const p = atomicWrite(file, new TextEncoder().encode(text));
+        assertEqual(p instanceof Promise, true);
+        runSync(p);
+        assertEqual(bytesToString(file.load_contents(null)[1]), text);
+    }));
+
+    it('a cache dir removed after the first write is re-created', withTempCache((dir) => {
+        const c = Cache.forVendor('gone');
+        runSync(c.writePayload('{}'));
+        GLib.spawn_command_line_sync(`rm -rf ${GLib.build_filenamev([dir, 'ai-usagebar', 'gone'])}`);
+        runSync(c.writePayload('{"x":1}'));
+        runSync(c.markStale());
+        assertEqual(bytesToString(runSync(c.maybePayload())), '{"x":1}');
+    }));
+
+    it('a missing parent directory rejects and leaves no tempfile', withTempCache((dir) => {
+        const file = Gio.File.new_for_path(GLib.build_filenamev([dir, 'nope', 'x.bin']));
+        let failed = false;
+        try {
+            runSync(atomicWrite(file, new TextEncoder().encode('x')));
+        } catch (_) {
+            failed = true;
+        }
+        assertEqual(failed, true);
     }));
 });
 

@@ -69,7 +69,7 @@ describe('fetchSnapshot (custom)', () => {
         const r = runSync(fetchSnapshot(deps(cache, httpStub(res(200, '{"usage":{}}')))));
         assertEqual(r.ok, false);
         assertEqual(r.message.includes('/account/tier is missing'), true);
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const stale = runSync(fetchSnapshot(deps(cache, httpStub(res(200, '{"usage":{}}')))));
         assertEqual(stale.ok, true);

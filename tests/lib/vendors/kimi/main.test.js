@@ -63,7 +63,7 @@ describe('fetchSnapshot (kimi)', () => {
     }));
 
     it('HTTP 401 falls back to stale cache with lastError.code 401', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const http = httpStub(res(401, '{"secret":"do-not-leak"}'));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));

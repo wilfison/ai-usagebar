@@ -4,7 +4,7 @@ import system from 'system';
 
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
-import {withCacheHome} from './_harness.js';
+import {runSync, withCacheHome} from './_harness.js';
 
 const withTempCache = fn => withCacheHome(null, ({dir}) => fn(dir));
 
@@ -17,7 +17,7 @@ describe('writeActiveVendorMirror', () => {
         const root = GLib.build_filenamev([dir, 'ai-usagebar']);
         GLib.mkdir_with_parents(root, 0o700);
 
-        writeActiveVendorMirror('zai');
+        runSync(writeActiveVendorMirror('zai'));
 
         const mirror = Gio.File.new_for_path(GLib.build_filenamev([root, 'active_vendor']));
         assertEqual(mirror.query_exists(null), true, 'mirror file should exist');
@@ -29,7 +29,7 @@ describe('writeActiveVendorMirror', () => {
     it('does not create the file (and does not throw) when the cache root is absent', withTempCache((dir) => {
         const root = GLib.build_filenamev([dir, 'ai-usagebar']);
 
-        writeActiveVendorMirror('openrouter');
+        runSync(writeActiveVendorMirror('openrouter'));
 
         assertEqual(Gio.File.new_for_path(root).query_exists(null), false, 'cache root must not be created');
         const mirror = Gio.File.new_for_path(GLib.build_filenamev([root, 'active_vendor']));

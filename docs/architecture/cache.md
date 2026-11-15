@@ -5,7 +5,7 @@ description: Per-vendor cache directory holding the projected snapshot plus stal
 tags: [cache, errors]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T12:00:00Z
+  at: 2026-11-15T18:09:25Z
 sources:
   - id: cache
     title: lib/cache.js
@@ -25,5 +25,7 @@ Under `$XDG_CACHE_HOME/ai-usagebar/` (usually `~/.cache/ai-usagebar/`), each ven
 - **Projected, not raw**: the payload is always the snapshot (`snapshotToCacheJson` / `parseCacheJson`), never a response body. Six vendors version it through `encodeSnapshot` / `decodeSnapshot` in `snapshot-cache.js` with a `CACHE_VERSION`: bump it when the snapshot shape changes. DeepSeek and OpenRouter have no version: DeepSeek's reader rejects wrong field types, OpenRouter's only requires a `snapshot` object and defaults bad fields.
 - **Stale fallback**: a failed fetch returns the cached payload as a `stale` result (`staleResult`). A payload older than 7 days, unparseable, or of another version is never served; the original error is returned instead.
 - **429 backoff**: any `writeLastError(429)` arms a 5 minute window during which no request is made. A cached payload up to 7 days old is served stale with `lastError: {code:'rate-limited', retryInMs}`; without one the result is a `rate-limited` error (not the original error).
+
+- **Async IO**: every read and write is a Gio async call, so the Shell main loop never waits on the disk. `atomicWrite()` writes a private sibling tempfile and renames it over the target (a symlink there is replaced, not followed); the credential write-backs, the update-check state and the `active_vendor` mirror use it too. A vendor directory removed while running is re-created on the next write.[^cache]
 
 See [fetch pipeline](/architecture/fetch-pipeline.md) for where these fire.

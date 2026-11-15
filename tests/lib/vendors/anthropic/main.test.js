@@ -25,7 +25,7 @@ const withTemp = (fn, {expiresAt = 9_999_999_999_000} = {}) => withCacheHome('an
 
 describe('fetchSnapshot', () => {
     it('fresh cache skips the network', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         const http = httpStub(res(200, USAGE));
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
         assertEqual(http.calls.length, 0, 'no HTTP call when cache is fresh');
@@ -84,7 +84,7 @@ describe('fetchSnapshot', () => {
     }));
 
     it('an unsaved rotated refresh token is an auth error with stale fallback', withTemp(({cache, dir}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         backdate(cache, 120);
         const credsPath = writeCreds(dir, 'ro/creds.json', {expiresAt: 0});
         chmod(GLib.path_get_dirname(credsPath), 0o555);
@@ -116,14 +116,14 @@ describe('fetchSnapshot', () => {
     }));
 
     it('a cached snapshot takes its plan from the current credentials', withTemp(({cache, credsPath}) => {
-        cache.writePayload(snapshotToCacheJson(parseUsage(USAGE, 'Old Plan')));
+        runSync(cache.writePayload(snapshotToCacheJson(parseUsage(USAGE, 'Old Plan'))));
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, USAGE)), credsPath}));
         assertEqual(r.ok, true);
         assertEqual(r.snapshot.plan, 'Pro');
     }));
 
     it('HTTP 429 falls back to stale cache with lastError.code 429', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         backdate(cache, 120); // older than the 60s TTL → not "fresh"
         const http = httpStub(res(429, 'slow down'));
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
@@ -134,7 +134,7 @@ describe('fetchSnapshot', () => {
     }));
 
     it('after a 429 the next poll makes no request, token refresh included', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         backdate(cache, 120);
         runSync(fetchSnapshot({cache, http: httpStub(res(429, 'slow down')), credsPath}));
 
@@ -148,7 +148,7 @@ describe('fetchSnapshot', () => {
     }));
 
     it('under backoff with no cache → rate-limited error, no request', withTemp(({cache, credsPath}) => {
-        cache.writeRetryAfter(Date.now() + 60_000);
+        runSync(cache.writeRetryAfter(Date.now() + 60_000));
         const http = httpStub(res(200, USAGE));
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
         assertEqual(http.calls.length, 0);
@@ -157,7 +157,7 @@ describe('fetchSnapshot', () => {
     }, {expiresAt: 0}));
 
     it('transient failure with cache → silent stale (no last_error)', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         backdate(cache, 120);
         const http = httpStub(resTransport());
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
@@ -187,7 +187,7 @@ describe('fetchSnapshot', () => {
         assertEqual(r.ok, false);
         assertEqual(r.kind, 'error');
         assertEqual(runSync(cache.maybePayload()), null, 'unparseable 2xx body is never cached');
-        assertEqual(cache.isStale(), true);
+        assertEqual(runSync(cache.isStale()), true);
         assertEqual(runSync(cache.readLastError()).code, 0);
     }));
 });
@@ -210,7 +210,7 @@ describe('fetchSnapshot: a signed-out credentials file', () => {
     }));
 
     it('a blank access token serves the cached snapshot as stale', withTemp(({cache, dir}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, USAGE)), credsPath: blankCreds(dir), cacheTtlMs: 0}));
         assertEqual(r.ok, true);
         assertEqual(r.stale, true);

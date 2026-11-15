@@ -27,7 +27,7 @@ describe('fetchSnapshot (deepseek)', () => {
     }));
 
     it('an unsupported currency is an error, keeps the good cache and is not cached', withTemp(({cache}) => {
-        cache.writePayload(SEED);
+        runSync(cache.writePayload(SEED));
         backdate(cache, 120);
         const eur = JSON.stringify({is_available: true, balance_infos: [
             {currency: 'EUR', total_balance: '9.00', granted_balance: '9.00', topped_up_balance: '0.00'}]});
@@ -39,7 +39,7 @@ describe('fetchSnapshot (deepseek)', () => {
     }));
 
     it('a corrupt fresh cache triggers a live fetch', withTemp(({cache}) => {
-        cache.writePayload('{"is_available":true}');
+        runSync(cache.writePayload('{"is_available":true}'));
         const http = httpStub(res(200, LIVE));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
         assertEqual(http.calls.length, 1);
@@ -48,7 +48,7 @@ describe('fetchSnapshot (deepseek)', () => {
     }));
 
     it('a cache older than 7 days is not served: the real error surfaces', withTemp(({cache}) => {
-        cache.writePayload(SEED);
+        runSync(cache.writePayload(SEED));
         backdate(cache, 8 * 86400);
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(401, '{"error":"invalid api key"}')), apiKey: 'bad'}));
         assertEqual(r.ok, false);
@@ -57,7 +57,7 @@ describe('fetchSnapshot (deepseek)', () => {
     }));
 
     it('HTTP 401 falls back to seeded cache with lastError.code 401', withTemp(({cache}) => {
-        cache.writePayload(SEED);
+        runSync(cache.writePayload(SEED));
         backdate(cache, 120);
         const http = httpStub(res(401, '{"error":"invalid api key"}'));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'bad'}));

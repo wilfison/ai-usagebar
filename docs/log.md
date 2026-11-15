@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Cache writes (`writePayload`, sidecars, `atomicWrite`) are async Gio calls; the credential write-backs, update state and active vendor mirror await them. Updated snapshot cache.
 - Every vendor `fetchSnapshot` is built by `vendorFetch()`; GETs and optional side requests share `httpGet()` and `optionalRequest()`. Updated fetch pipeline.
 - `vendorAdapter()` derives `severity` from `peakUsage` by default; only OpenRouter and DeepSeek keep their own. Updated vendor adapters.
 - Vendor sections build paced rows through `pacedWindowRow()` in `section-common.js`. Updated vendor adapters.

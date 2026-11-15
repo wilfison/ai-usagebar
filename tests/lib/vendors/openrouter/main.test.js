@@ -28,7 +28,7 @@ describe('fetchSnapshot (openrouter)', () => {
     }));
 
     it('401 on /credits falls back to seeded cache with lastError.code 401', withTemp(({cache}) => {
-        cache.writePayload(SEED);
+        runSync(cache.writePayload(SEED));
         backdate(cache, 120);
         const http = httpStub([res(401, '{"error":"unauthorized"}'), res(200, KEY)]);
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
