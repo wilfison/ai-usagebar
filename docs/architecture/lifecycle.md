@@ -5,7 +5,7 @@ description: enable() constructs the Indicator and adds it to the panel; disable
 tags: [gnome-shell]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T18:13:22Z
+  at: 2026-11-15T18:14:46Z
 sources:
   - id: ext
     title: extension.js
@@ -17,19 +17,20 @@ sources:
 
 # Overview
 
-`extension.js` is small but owns three things:[^ext]
+`extension.js` is small but owns four things:[^ext]
 
-- the `Indicator`, built in `_place()` with the settings, an `openPreferences` callback, the extension path and `version-name`, then added to the panel at the configured box and index;
+- the `Indicator`, built in `_place()` with the settings, an `openPreferences` callback, the extension path, `version-name` and the notifier, then added to the panel at the configured box and index;
+- the `Notifier` and the Soup session of the [HTTP layer](/architecture/http.md), so a rebuild keeps delivered notifications and requests of the other parts;
 - the `toggle-menu` keybinding (`Super+U`), bound on the extension so it survives rebuilds;
-- the `changed::panel-box` / `changed::panel-index` handlers. A panel item cannot change area in place, so a new position destroys and rebuilds the whole Indicator; the cache's fresh TTL keeps that from refetching ([snapshot cache](/architecture/cache.md)).
+- the `changed::panel-box` / `changed::panel-index` handlers. A panel item cannot change area in place, so a new position destroys and rebuilds the whole Indicator, once per main-loop turn even when both keys change; the cache's fresh TTL keeps that from refetching ([snapshot cache](/architecture/cache.md)).
 
-`disable()` removes the keybinding, disconnects both signals and destroys the Indicator.
+`disable()` removes the keybinding, disconnects both signals, drops a pending rebuild, destroys the Indicator and the Notifier and disposes the Soup session.
 
 # The release invariant
 
 Everything created in `enable()` must be released in `disable()`: widgets, GLib timeout sources (`GLib.Source.remove`), signal handlers, the Soup session of the [HTTP layer](/architecture/http.md), and the Cancellable. Extension reviewers reject extensions that leak on disable.
 
-Inside the Indicator, its `destroy()` owns that discipline,[^indicator] and so does each part it builds under `ui/`: `Tooltip` (the hover label shared by the footer and card buttons, with its timer), `PanelSegments`, `Notifier` and `UpdateItem`. A new part that holds a source or a signal needs its own `destroy()` wired into the indicator's.
+Inside the Indicator, its `destroy()` owns that discipline,[^indicator] and so does each part it builds under `ui/`: `Tooltip` (the hover label shared by the footer and card buttons, with its timer), `PanelSegments` and `UpdateItem`. A new part that holds a source or a signal needs its own `destroy()` wired into the indicator's.
 
 # Settings effects
 

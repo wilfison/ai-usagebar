@@ -1,15 +1,18 @@
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
 import {decide, Urgency} from '../lib/notify.js';
-import {vendorLabel} from '../lib/vendors.js';
+import {vendorLabel, GENERIC_ICON} from '../lib/vendors.js';
 
-// Desktop notifications for usage thresholds and expiring reset credits.
+// Desktop notifications for usage thresholds and expiring reset credits. Owned
+// by the extension, not the indicator, so a panel move keeps the delivered ones.
 export class Notifier {
-    // `icon()` is the extension's GIcon for the tray source.
-    constructor(icon) {
-        this._icon = icon;
+    constructor(extensionPath) {
+        this._path = extensionPath;
         this._source = null;
         this._destroyed = false;
     }
@@ -62,6 +65,10 @@ export class Notifier {
             Main.messageTray.add(this._source);
         }
         return this._source;
+    }
+
+    _icon() {
+        return new Gio.FileIcon({file: Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', `${GENERIC_ICON}.svg`]))});
     }
 
     destroy() {

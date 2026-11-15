@@ -14,14 +14,13 @@ import {
     normalizeActive, cycleVendor, enabledVendors, isPinnedMode, pollVendors,
 } from '../lib/config-resolve.js';
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
-import {request, disposeSession} from '../lib/http.js';
+import {request} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
 import {vendorLabel, vendorIconName, GENERIC_ICON, VENDOR_IDS} from '../lib/vendors.js';
 import {VendorCard} from './vendorSection.js';
 import {ActionBar} from './actionBar.js';
 import {Tooltip} from './tooltip.js';
 import {PanelSegments, badgeSignature} from './panelSegments.js';
-import {Notifier} from './notifier.js';
 import {UpdateItem} from './updateItem.js';
 import {errorText, footerRow} from '../lib/vendors/section-common.js';
 import {loading} from '../lib/vendors/fetch-common.js';
@@ -46,7 +45,8 @@ function warnOnFailure(what) {
 
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    _init(settings, openPreferences, extensionPath, version) {
+    // `notifier` belongs to the extension and outlives a rebuild.
+    _init(settings, openPreferences, extensionPath, version, notifier) {
         const config = readConfig(settings);
         // Centered like the clock's menu when beside it; _place() rebuilds on a box change.
         super._init(config.panel.box === 'center' ? 0.5 : 0.0, 'ai-usagebar');
@@ -92,7 +92,7 @@ class Indicator extends PanelMenu.Button {
 
         this._segments = new PanelSegments(id => this._vendorGicon(id));
         this.add_child(this._segments.actor);
-        this._notifier = new Notifier(() => this._vendorGicon());
+        this._notifier = notifier;
 
         this._tooltip = new Tooltip();
 
@@ -621,8 +621,7 @@ class Indicator extends PanelMenu.Button {
             this._cancellable.cancel();
             this._cancellable = null;
         }
-        disposeSession();
-        this._notifier.destroy();
+        this._notifier = null;
         this._settings = null;
 
         this._vendorItems.clear();

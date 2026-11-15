@@ -5,7 +5,7 @@ description: "lib/http.js is the only Soup consumer: async libsoup3 on a shared 
 tags: [http, privacy]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:14:46Z
 sources:
   - id: http
     title: lib/http.js
@@ -14,7 +14,7 @@ sources:
 
 # Overview
 
-`lib/http.js` is the only module that imports Soup.[^http] It is async libsoup3 on one shared session, disposed on the indicator's `destroy()` ([lifecycle](/architecture/lifecycle.md)). Never block the main loop.
+`lib/http.js` is the only module that imports Soup.[^http] It is async libsoup3 on one shared session, disposed in the extension's `disable()` ([lifecycle](/architecture/lifecycle.md)). Never block the main loop.
 
 # Redirects
 
