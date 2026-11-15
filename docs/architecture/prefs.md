@@ -4,8 +4,8 @@ title: Preferences window
 description: prefs.js runs in its own process with pure imports only and replaces the stock tabs with a sidebar split view.
 tags: [gnome-shell]
 generated:
-  by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  by: claude/fable-5-2
+  at: 2026-11-15T12:00:00Z
 sources:
   - id: prefs
     title: prefs.js
@@ -20,7 +20,7 @@ sources:
 
 # Process boundary
 
-`prefs.js` runs in a separate process and cannot import the gi-bound adapter registry.[^prefs] The General page (`prefs/general.js`) uses `lib/vendors.js` (`VENDOR_LABELS`) for the primary-vendor combo and only pure modules otherwise (the custom provider's `validateMapping` for its JSON editors).
+`prefs.js` runs in a separate process and cannot import the gi-bound adapter registry.[^prefs] The General pages (`prefs/general.js`) use `lib/vendors.js` (`VENDOR_LABELS`) for the primary-vendor combo, and the prefs code imports only pure modules otherwise (`prefs/custom.js` takes `validateMapping` and `parseExtraHeaders` from the custom provider's parser for its JSON editors).
 
 # Pages
 

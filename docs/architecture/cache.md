@@ -4,8 +4,8 @@ title: Snapshot cache
 description: Per-vendor cache directory holding the projected snapshot plus stale, last-error and retry-after sidecars.
 tags: [cache, errors]
 generated:
-  by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  by: claude/fable-5-2
+  at: 2026-11-15T12:00:00Z
 sources:
   - id: cache
     title: lib/cache.js
@@ -22,7 +22,7 @@ Under `$XDG_CACHE_HOME/ai-usagebar/` (usually `~/.cache/ai-usagebar/`), each ven
 # Rules
 
 - **Fresh TTL**: a payload under 60 s old is served without HTTP.[^fetch-common]
-- **Projected, not raw**: the payload is always the snapshot (`snapshotToCacheJson` / `parseCacheJson`, never a response body. Six vendors version it through `encodeSnapshot` / `decodeSnapshot` in `snapshot-cache.js` with a `CACHE_VERSION`: bump it when the snapshot shape changes. DeepSeek and OpenRouter have no version: DeepSeek's reader rejects wrong field types, OpenRouter's only requires a `snapshot` object and defaults bad fields.
+- **Projected, not raw**: the payload is always the snapshot (`snapshotToCacheJson` / `parseCacheJson`), never a response body. Six vendors version it through `encodeSnapshot` / `decodeSnapshot` in `snapshot-cache.js` with a `CACHE_VERSION`: bump it when the snapshot shape changes. DeepSeek and OpenRouter have no version: DeepSeek's reader rejects wrong field types, OpenRouter's only requires a `snapshot` object and defaults bad fields.
 - **Stale fallback**: a failed fetch returns the cached payload as a `stale` result (`staleResult`). A payload older than 7 days, unparseable, or of another version is never served; the original error is returned instead.
 - **429 backoff**: any `writeLastError(429)` arms a 5 minute window during which no request is made. A cached payload up to 7 days old is served stale with `lastError: {code:'rate-limited', retryInMs}`; without one the result is a `rate-limited` error (not the original error).
 
