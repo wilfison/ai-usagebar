@@ -2,7 +2,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import system from 'system';
 
-import {writeActiveVendorMirror} from '../lib/active-vendor.js';
+import {writeActiveVendorMirror, pendingMirrorWrites} from '../lib/active-vendor.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 import {runSync, withCacheHome} from './_harness.js';
 
@@ -34,6 +34,19 @@ describe('writeActiveVendorMirror', () => {
         assertEqual(Gio.File.new_for_path(root).query_exists(null), false, 'cache root must not be created');
         const mirror = Gio.File.new_for_path(GLib.build_filenamev([root, 'active_vendor']));
         assertEqual(mirror.query_exists(null), false, 'mirror file must not be created');
+    }));
+});
+
+describe('writeActiveVendorMirror: overlapping writes', () => {
+    it('the last call wins, and the ones it overtook are skipped', withTempCache((dir) => {
+        const root = GLib.build_filenamev([dir, 'ai-usagebar']);
+        GLib.mkdir_with_parents(root, 0o700);
+        const ids = ['openai', 'zai', 'kimi', 'deepseek', 'anthropic'];
+        const writes = ids.map(id => writeActiveVendorMirror(id));
+        runSync(Promise.all(writes));
+        const [, contents] = Gio.File.new_for_path(GLib.build_filenamev([root, 'active_vendor'])).load_contents(null);
+        assertEqual(bytesToString(contents), 'anthropic\n');
+        assertEqual(pendingMirrorWrites(), 0);
     }));
 });
 
