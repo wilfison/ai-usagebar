@@ -91,6 +91,15 @@ describe('vendorPageSpec: details', () => {
     });
 });
 
+describe('validated entries', () => {
+    it('the model windows entry is checked before it is saved', () => {
+        const row = rowsOf(vendorPageSpec('anthropic', fake)).find(r => r.key === 'context-model-windows');
+        assertEqual(typeof row.validate, 'function');
+        assertDeepEqual(row.validate('{"m": 1}', fake), []);
+        assertEqual(row.validate('{"m": 0}', fake).length, 1);
+    });
+});
+
 describe('schemaRange / schemaChoices', () => {
     it('reads an integer key\'s bounds from the schema', () => {
         assertDeepEqual(schemaRange(SCHEMA, 'refresh-interval'), {lower: 300, upper: 86400});

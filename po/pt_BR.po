@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 15:35-0300\n"
+"POT-Creation-Date: 2026-11-15 15:39-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Portuguese (Brazil)\n"
@@ -14,6 +14,25 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: lib/context/parser.js prefs/custom.js
+#, javascript-format
+msgid "Not valid JSON: %s"
+msgstr "JSON inválido: %s"
+
+#: lib/context/parser.js
+msgid "Not a JSON object of model names to token counts."
+msgstr "Não é um objeto JSON de nomes de modelo para contagens de tokens."
+
+#: lib/context/parser.js
+msgid "A model name cannot be empty."
+msgstr "O nome do modelo não pode ficar vazio."
+
+#. Translators: %s is a model name, e.g. claude-opus-5.
+#: lib/context/parser.js
+#, javascript-format
+msgid "%s: the token count must be a whole number above 0."
+msgstr "%s: a contagem de tokens deve ser um número inteiro maior que 0."
 
 #. Translators: compact duration, s = seconds.
 #: lib/countdown.js
@@ -762,11 +781,6 @@ msgstr ""
 "por JSON Pointer; uma moeda opcional (ex.: \"USD\") mostra usado + limite ou "
 "um texto como valor monetário. Salvo quando o editor perde o foco e o "
 "mapeamento é válido."
-
-#: prefs/custom.js
-#, javascript-format
-msgid "Not valid JSON: %s"
-msgstr "JSON inválido: %s"
 
 #: prefs/general.js
 msgid "Panel position"

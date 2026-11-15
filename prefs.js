@@ -28,7 +28,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         const pages = new Map();
         for (const {id} of prefsNavItems(nav)) {
             const spec = vendorPageSpec(id, _);
-            const build = builders[id] ?? (spec && (() => specPage(settings, spec)));
+            const build = builders[id] ?? (spec && (() => specPage(settings, spec, cleanups)));
             if (!build)
                 throw new Error(`No preferences page for "${id}"`);
             pages.set(id, build());

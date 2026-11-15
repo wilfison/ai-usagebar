@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseSessionTail, parseModelWindows, recentFirst, cleanDisplay, MAX_LINE_CHARS, MAX_DISPLAY_CHARS,
+    parseSessionTail, parseModelWindows, validateModelWindows, recentFirst, cleanDisplay, MAX_LINE_CHARS, MAX_DISPLAY_CHARS,
 } from '../../../lib/context/parser.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 
@@ -163,6 +163,25 @@ describe('recentFirst', () => {
         const c = [{path: 'b', mtime: 1}, {path: 'a', mtime: 1}, {path: 'z', mtime: 5}, {path: 'y', mtime: 3}];
         assertDeepEqual(recentFirst(c).map(x => x.path), ['z', 'y', 'a', 'b']);
         assertDeepEqual(recentFirst(c, 2).map(x => x.path), ['z', 'y']);
+    });
+});
+
+describe('validateModelWindows', () => {
+    const bracket = s => `[${s}]`;
+    it('empty and a valid object have no problem', () => {
+        assertDeepEqual(validateModelWindows(''), []);
+        assertDeepEqual(validateModelWindows('{"claude-opus-5": 1000000}'), []);
+    });
+    it('names each entry parseModelWindows would drop', () =>
+        assertDeepEqual(validateModelWindows('{"a": 0, "": 5, "b": 1.5, "c": "9"}', bracket), [
+            '[%s: the token count must be a whole number above 0.]'.replace('%s', 'a'),
+            '[A model name cannot be empty.]',
+            '[%s: the token count must be a whole number above 0.]'.replace('%s', 'b'),
+            '[%s: the token count must be a whole number above 0.]'.replace('%s', 'c'),
+        ]));
+    it('invalid JSON and a non-object are one problem each', () => {
+        assertEqual(validateModelWindows('{', bracket)[0].startsWith('[Not valid JSON: '), true);
+        assertDeepEqual(validateModelWindows('[1]', bracket), ['[Not a JSON object of model names to token counts.]']);
     });
 });
 

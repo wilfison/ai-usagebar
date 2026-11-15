@@ -5,7 +5,7 @@ description: prefs.js runs in its own process with pure imports only and replace
 tags: [gnome-shell]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T18:20:33Z
+  at: 2026-11-15T18:40:34Z
 sources:
   - id: prefs
     title: prefs.js
@@ -24,7 +24,7 @@ sources:
 
 # Pages
 
-Pages live in `prefs/` (`general.js`, `custom.js`) built from `prefs/widgets.js`. Built-in vendor pages are data: `vendorPageSpec` in `lib/prefs-pages.js`[^pages] rendered by `specPage()`. `make pack` ships `prefs/` through `--extra-source`, so a new top-level directory needs one too.
+Pages live in `prefs/` (`general.js`, `custom.js`) built from `prefs/widgets.js`. Built-in vendor pages are data: `vendorPageSpec` in `lib/prefs-pages.js`[^pages] rendered by `specPage()`; an entry with a `validate(text, _)` becomes an apply-button row saved only when that finds no problem. `make pack` ships `prefs/` through `--extra-source`, so a new top-level directory needs one too.
 
 # Sidebar
 

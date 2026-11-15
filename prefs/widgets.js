@@ -28,6 +28,33 @@ export function entryRow(settings, key, title) {
     return row;
 }
 
+// An entry saved through its apply button, and only when `validate(text, _)`
+// finds no problem; the problems mark the row and fill its tooltip.
+export function validatedEntryRow(settings, key, title, validate, cleanups) {
+    const row = new Adw.EntryRow({title, show_apply_button: true, text: settings.get_string(key)});
+    const check = () => {
+        const problems = validate(row.text.trim(), _);
+        row.tooltip_text = problems.length > 0 ? problems.join('\n') : null;
+        if (problems.length > 0)
+            row.add_css_class('error');
+        else
+            row.remove_css_class('error');
+        return problems;
+    };
+    row.connect('changed', check);
+    row.connect('apply', () => {
+        const text = row.text.trim();
+        if (check().length === 0 && settings.get_string(key) !== text)
+            settings.set_string(key, text);
+    });
+    onSetting(settings, key, () => {
+        if (row.text.trim() !== settings.get_string(key))
+            row.text = settings.get_string(key);
+    }, cleanups);
+    check();
+    return row;
+}
+
 export function passwordRow(settings, key, title) {
     const row = new Adw.PasswordEntryRow({title});
     settings.bind(key, row, 'text', Gio.SettingsBindFlags.DEFAULT);
@@ -73,23 +100,25 @@ export function comboRow(settings, key, {title, subtitle, labels, read, write}, 
 }
 
 // The rows of a lib/prefs-pages.js spec, built into Adw.PreferencesGroups.
-export function specPage(settings, spec) {
+export function specPage(settings, spec, cleanups) {
     const page = new Adw.PreferencesPage();
     for (const g of spec.groups) {
         const group = new Adw.PreferencesGroup(g.description ? {title: g.title, description: g.description} : {title: g.title});
         for (const r of g.rows)
-            group.add(specRow(settings, r));
+            group.add(specRow(settings, r, cleanups));
         page.add(group);
     }
     return page;
 }
 
-function specRow(settings, row) {
+function specRow(settings, row, cleanups) {
     switch (row.type) {
     case RowType.SWITCH:
         return switchRow(settings, row.key, row.title);
     case RowType.ENTRY:
-        return entryRow(settings, row.key, row.title);
+        return row.validate
+            ? validatedEntryRow(settings, row.key, row.title, row.validate, cleanups)
+            : entryRow(settings, row.key, row.title);
     case RowType.PASSWORD:
         return passwordRow(settings, row.key, row.title);
     case RowType.SPIN:
