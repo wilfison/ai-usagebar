@@ -16,12 +16,13 @@ import {
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {request} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
-import {vendorLabel, vendorIconName, GENERIC_ICON, VENDOR_IDS} from '../lib/vendors.js';
+import {vendorLabel, vendorIconName, GENERIC_ICON} from '../lib/vendors.js';
 import {VendorCard} from './vendorSection.js';
 import {ActionBar} from './actionBar.js';
 import {Tooltip} from './tooltip.js';
 import {PanelSegments, badgeSignature} from './panelSegments.js';
 import {UpdateItem} from './updateItem.js';
+import {DevFetch} from './devFetch.js';
 import {errorText, footerRow} from '../lib/vendors/section-common.js';
 import {loading} from '../lib/vendors/fetch-common.js';
 import {scanSessions} from '../lib/context/scan.js';
@@ -29,10 +30,6 @@ import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
 import {settingsEffects} from '../lib/settings-effect.js';
-import {
-    parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, fakeResult, fakeHttpFailure,
-    FAKE_PCT_ENV, FAKE_ERROR_ENV, FAKE_DELAY_ENV,
-} from '../lib/debug.js';
 
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
@@ -73,7 +70,7 @@ class Indicator extends PanelMenu.Button {
         this._destroyed = false;
         this._darkPopup = true;
 
-        this._readDevOverrides();
+        this._devFetch = new DevFetch();
 
         // Lazy per-vendor data: only the poll set (panel segments + the active
         // vendor) is polled; other sub-sections render from whatever is already
@@ -125,22 +122,6 @@ class Indicator extends PanelMenu.Button {
         this._refresh().catch(warnOnFailure('refresh'));
         this._rearmPollTimer(this._config.refreshIntervalSecs);
         this._checkForUpdate();
-    }
-
-    // AI_USAGEBAR_FAKE_PCT=<0..100> answers every fetch with a synthetic
-    // snapshot; AI_USAGEBAR_FAKE_ERROR=<id[:stale]|*,...> fails those vendors'
-    // fetches; AI_USAGEBAR_FAKE_DELAY_MS=<ms> holds every fetch that long first.
-    _readDevOverrides() {
-        this._fakePct = parseFakePct(GLib.getenv(FAKE_PCT_ENV));
-        if (this._fakePct !== null)
-            log(`ai-usagebar: ${FAKE_PCT_ENV}=${this._fakePct}, overriding usage fetch`);
-        this._fakeErrors = parseFakeErrorVendors(GLib.getenv(FAKE_ERROR_ENV), VENDOR_IDS);
-        this._fakeDelayMs = parseFakeDelayMs(GLib.getenv(FAKE_DELAY_ENV));
-        if (this._fakeErrors !== null)
-            log(`ai-usagebar: ${FAKE_ERROR_ENV}=${[...this._fakeErrors].map(([id, f]) => `${id}:${f}`).join(',')}, failing those fetches`);
-        if (this._fakeDelayMs !== null)
-            log(`ai-usagebar: ${FAKE_DELAY_ENV}=${this._fakeDelayMs}, delaying every fetch`);
-        this._fakeDelayIds = new Set();
     }
 
     // Removes the GLib source stored in `this[field]`, if any.
@@ -392,7 +373,7 @@ class Indicator extends PanelMenu.Button {
         const config = this._config;
         let res;
         try {
-            res = await this._runFetch(adapter, {config, cache, http: request, signal: this._cancellable});
+            res = await this._devFetch.run(adapter, {config, cache, http: request, signal: this._cancellable});
         } catch (e) {
             res = {ok: false, kind: 'error', message: e?.message ?? String(e)};
         }
@@ -418,31 +399,6 @@ class Indicator extends PanelMenu.Button {
         const rerunAll = this._pendingAll.delete(id);
         if (again && (rerunAll || this._pollIds.includes(id)))
             await this._refreshVendor(id, {all: rerunAll});
-    }
-
-    // The real fetch, reshaped by the dev overrides when set (see
-    // _readDevOverrides). Without FAKE_PCT a failed vendor's real fetch runs
-    // against an HTTP 503, so its own stale fallback and sidecars are exercised.
-    async _runFetch(adapter, ctx) {
-        if (this._fakeDelayMs !== null)
-            await this._fakeDelay(this._fakeDelayMs);
-        const failure = this._fakeErrors?.get(adapter.id) ?? null;
-        if (this._fakePct !== null && typeof adapter.fakeSnapshot === 'function')
-            return fakeResult(failure, () => adapter.fakeSnapshot(this._fakePct, new Date(), ctx.config));
-        if (failure !== null)
-            return adapter.fetchSnapshot({...ctx, http: () => Promise.resolve(fakeHttpFailure())});
-        return adapter.fetchSnapshot(ctx);
-    }
-
-    _fakeDelay(ms) {
-        return new Promise(resolve => {
-            const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
-                this._fakeDelayIds.delete(id);
-                resolve();
-                return GLib.SOURCE_REMOVE;
-            });
-            this._fakeDelayIds.add(id);
-        });
     }
 
     _storeResult(id, res) {
@@ -594,9 +550,7 @@ class Indicator extends PanelMenu.Button {
         this._clearSource('_timeoutId');
         this._clearSource('_renderTimeoutId');
         this._clearSource('_settingsIdleId');
-        for (const id of this._fakeDelayIds)
-            GLib.Source.remove(id);
-        this._fakeDelayIds.clear();
+        this._devFetch.destroy();
         this.menu.disconnectObject(this);
         this._settings.disconnectObject(this);
         this._cancellable.cancel();

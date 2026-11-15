@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- The dev fetch overrides moved out of the indicator into `DevFetch` (`ui/devFetch.js`). Updated headless.
 - Kimi projects its 5h, weekly and monthly blocks to the shared window shape (`utilizationPct`, `resetsAt`, `windowMs`; null when absent), cache `CACHE_VERSION` 2.
 - OAuth stops carry `no-access-token` / `token-refresh-failed` codes with the login command, and the popup translates them, the key-echo redaction note and Anthropic's "minor units" amount.
 - The custom provider caches a metric's raw used/limit (`CACHE_VERSION` 2) and the popup formats it with a translated "%s of %s".

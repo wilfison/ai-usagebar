@@ -5,7 +5,7 @@ description: tools/headless.sh runs an isolated headless gnome-shell with its ow
 tags: [testing, gnome-shell]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:38:14Z
 sources:
   - id: headless
     title: tools/headless.sh
@@ -44,3 +44,5 @@ Also honoured by `make run`:[^fake]
 | `AI_USAGEBAR_FAKE_PCT` | Every adapter returns `fakeSnapshot(pct, now, config)`, custom provider included |
 | `AI_USAGEBAR_FAKE_ERROR` | `zai,openai:stale` (`*` for all): with FAKE_PCT, `id` is an error and `id:stale` a stale snapshot with an HTTP 503 `lastError`; without it, the real fetch runs against an HTTP 503 (and writes that cache) |
 | `AI_USAGEBAR_FAKE_DELAY_MS` | Every fetch waits first, to see loading states |
+
+The parsing is pure (`lib/debug.js`); `DevFetch` in `ui/devFetch.js` reads the variables once per indicator and wraps every vendor fetch with them.
