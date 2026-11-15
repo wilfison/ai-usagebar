@@ -185,12 +185,6 @@
       <description>Path to the Codex auth file. Empty uses ~/.codex/auth.json.</description>
     </key>
 
-    <key name="openai-admin-key-env" type="s">
-      <default>'OPENAI_ADMIN_KEY'</default>
-      <summary>OpenAI admin key environment variable</summary>
-      <description>Name of the environment variable holding the OpenAI admin key for the API-key fallback path.</description>
-    </key>
-
     <key name="zai-enabled" type="b">
       <default>true</default>
       <summary>Enable Z.AI</summary>

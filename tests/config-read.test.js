@@ -43,7 +43,10 @@ describe('readConfig: schema defaults', () => {
     it('anthropic creds path unset → null', () => assertEqual(cfg.vendors.anthropic.credentialsPath, null));
     it('deepseek disabled by default', () => assertEqual(cfg.vendors.deepseek.enabled, false));
     it('zai env var name default', () => assertEqual(cfg.vendors.zai.apiKeyEnv, 'ZAI_API_KEY'));
-    it('openai admin env default', () => assertEqual(cfg.vendors.openai.adminKeyEnv, 'OPENAI_ADMIN_KEY'));
+    it('openai reads only its enable flag and auth path', () =>
+        assertDeepEqual(Object.keys(cfg.vendors.openai).sort(), ['codexAuthPath', 'enabled']));
+    it('the schema has no unused OpenAI admin key', () =>
+        assertEqual(makeSettings().settings_schema.has_key('openai-admin-key-env'), false));
     it('tooltip format unset → null', () => assertEqual(cfg.tooltipFormat, null));
     it('color override unset → null', () => assertEqual(cfg.colors.low, null));
     it('mid color unset → null', () => assertEqual(cfg.colors.mid, null));
