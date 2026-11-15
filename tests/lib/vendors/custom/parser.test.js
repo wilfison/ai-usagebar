@@ -3,7 +3,7 @@ import system from 'system';
 import {
     parseUsage, validateMapping, placeholders, customPeakUsage, customSeverity, formatNumber, SchemaError,
     shortCode, providerName, urlProblem, parseExtraHeaders, parseMapping, requestHeaders, notifyRows, resetCredits,
-    snapshotToCacheJson, parseCacheJson,
+    snapshotToCacheJson, parseCacheJson, fakeSnapshot,
 } from '../../../../lib/vendors/custom/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../../_assert.js';
@@ -337,6 +337,26 @@ describe('currency', () => {
         assertEqual(validateMapping({metrics: [{label: 'P', percent: '/p', currency: 'USD'}]}).some(e => e.includes('currency cannot be combined with percent')), true));
     it('a valid currency passes validation', () => {
         assertDeepEqual(validateMapping({metrics: [metric({currency: 'USD'})], texts: [{label: 'W', value: '/w', currency: 'BRL'}]}), []);
+    });
+});
+
+describe('fakeSnapshot', () => {
+    const s = fakeSnapshot(84.4, NOW);
+    it('both metrics at the rounded percentage', () => assertDeepEqual(s.metrics.map(m => m.pct), [84, 84]));
+    it('the same shape as a parsed metric (empty footnote, no name)', () => {
+        assertEqual(s.metrics[0].footnote, '');
+        assertEqual('name' in s, false);
+    });
+    it('a non-numeric percentage reads as 0', () => assertEqual(fakeSnapshot('x', NOW).metrics[0].pct, 0));
+    it('a paced 5h window on the first metric', () => {
+        assertEqual(s.metrics[0].windowMs, 5 * 3600_000);
+        assertEqual(s.metrics[0].resetsAt.getTime() - NOW.getTime(), 5 * 3600_000);
+    });
+    it('round-trips through the cache', () =>
+        assertDeepEqual(parseCacheJson(snapshotToCacheJson(s)).metrics.map(m => m.label), ['Requests', 'Budget']));
+    it('feeds placeholders and severity', () => {
+        assertEqual(placeholders(s, NOW).get('session_pct'), '84');
+        assertEqual(customSeverity(fakeSnapshot(95, NOW)), Severity.CRITICAL);
     });
 });
 
