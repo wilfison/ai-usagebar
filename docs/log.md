@@ -2,32 +2,10 @@
 
 ## 2026-11-15
 
-- Sync with the refactor branch: Kimi, DeepSeek, OpenRouter and the custom provider state their snapshot shape and `CACHE_VERSION`; the error codes list `no-access-token` / `token-refresh-failed` and the OAuth `loginCommand`; the poller, the ordered `active_vendor` mirror and the extension-owned notifier are named where they act; `creds-file.js` and `devFetch.js` are cited as sources.
-- A rejected OAuth token (HTTP 401/403) now carries the login command, so the popup still says how to sign in again when there was no refresh token to try.
-- The indicator's fetch slots, results and fetch instants moved to the pure `VendorPoller` (`lib/vendor-poller.js`), now unit-tested. Updated fetch pipeline.
-- The per-model context windows entry is validated in the preferences and saved only when valid. Updated context monitor and preferences.
-- Tests get GSettings from `testSettings(overrides)` in the harness (checkout schema, private memory backend). Updated testing.
-- The dev fetch overrides moved out of the indicator into `DevFetch` (`ui/devFetch.js`). Updated headless.
-- Kimi projects its 5h, weekly and monthly blocks to the shared window shape (`utilizationPct`, `resetsAt`, `windowMs`; null when absent), cache `CACHE_VERSION` 2.
-- OAuth stops carry `no-access-token` / `token-refresh-failed` codes with the login command, and the popup translates them, the key-echo redaction note and Anthropic's "minor units" amount.
-- The custom provider caches a metric's raw used/limit (`CACHE_VERSION` 2) and the popup formats it with a translated "%s of %s".
-- Vendors are one `VENDORS` table in `lib/vendors.js` (id, label, generic icon, user-given name); `apiKeyFetch` names a vendor by that label. Updated vendor adapters.
-- The update check reads its deadline from disk once per indicator and keeps it in memory; any 2xx answer is parsed. Updated update check.
-- The default User-Agent carries the extension's `version-name` (it was a fixed `ai-usagebar/0.1`), and `disposeSession()` aborts the Soup session. Updated HTTP layer.
-- ESLint now enforces the module boundaries: no `gi://` in pure `lib/` modules, no adapters, `ui/` or Shell modules in the prefs. Updated conventions.
-- Preference spin rows take their bounds, and the panel area combo its choices, from the gschema through `schemaRange()` / `schemaChoices()`; a test pins the primary-vendor enum order to `VENDOR_IDS`.
-- Both OAuth vendors read and write their credentials through `lib/oauth/creds-file.js`; the OpenAI write-back now merges into the file as it is on disk at write time, like Anthropic's. Updated snapshot cache.
-- The custom provider's configuration checks moved from its parser to `lib/vendors/custom/mapping.js`, with `authHeaderOf()` as the one Authorization fallback. Updated custom provider and preferences.
-- DeepSeek and OpenRouter cache their snapshot through `encodeSnapshot` with a `CACHE_VERSION` like the other vendors; their old unversioned caches are refetched. Updated snapshot cache.
-- The Indicator releases its timers, signals and cancellable in `_onDestroy()`, so a destroy from the shell side cleans up too; signals use `connectObject`. Updated lifecycle.
-- The Notifier and the Soup session belong to the extension, so a panel move keeps delivered notifications; both panel keys changing together rebuild the indicator once. Updated lifecycle and HTTP layer.
-- Settings changes are coalesced into one idle pass (`settingsEffects`), so a reset no longer repaints once per key; the active vendor write goes through `_setActiveVendor`. Updated lifecycle.
-- Cache writes (`writePayload`, sidecars, `atomicWrite`) are async Gio calls; the credential write-backs, update state and active vendor mirror await them. Updated snapshot cache.
-- Every vendor `fetchSnapshot` is built by `vendorFetch()`; GETs and optional side requests share `httpGet()` and `optionalRequest()`. Updated fetch pipeline.
-- `vendorAdapter()` derives `severity` from `peakUsage` by default; only OpenRouter and DeepSeek keep their own. Updated vendor adapters.
-- Vendor sections build paced rows through `pacedWindowRow()` in `section-common.js`. Updated vendor adapters.
-- Both OAuth vendors share `authorizeOAuth()`; Anthropic no longer POSTs an empty refresh token. Updated fetch pipeline.
-- OAuth vendors (Anthropic, OpenAI) now redact their tokens from `.last_error` and the result through `redactedRun`, including tokens rotated by a refresh. Updated fetch pipeline.
+- Review refactor, fetch and OAuth: every vendor `fetchSnapshot` comes from `vendorFetch()` (mutex, redaction, `httpGet()`, `optionalRequest()`); both OAuth vendors share `authorizeOAuth()` and `lib/oauth/creds-file.js`, redact their tokens (`redactedRun`), never POST an empty refresh token and carry `loginCommand` on errors (`no-access-token`, `token-refresh-failed`, a rejected token). The fetch slots and results moved to the pure, tested `VendorPoller`. Updated fetch pipeline, snapshot cache, panel and popup.
+- Review refactor, vendors: one `VENDORS` table in `lib/vendors.js`; `severity` defaults to the peak's; `pacedWindowRow()` builds the paced rows; every vendor caches a versioned snapshot (DeepSeek and OpenRouter 1, custom 2 with a raw `amount`, Kimi 2 in the shared window shape); the custom config checks moved to `custom/mapping.js`. Updated vendor adapters, custom provider and the vendor pages.
+- Review refactor, shell lifecycle: cache and credential writes are async Gio calls (the `active_vendor` mirror in call order); the Indicator cleans up in `_onDestroy()` with `connectObject`; settings changes apply once per idle (`settingsEffects`); the Notifier and the Soup session belong to the extension, and one panel move rebuilds once; the dev overrides live in `DevFetch`; the update deadline stays in memory; the default User-Agent carries `version-name`. Updated lifecycle, HTTP layer, update check, notifications, config and headless.
+- Review refactor, prefs, i18n and tooling: spin bounds and panel areas come from the gschema (`schemaRange()` / `schemaChoices()`); the per-model context windows entry is validated before saving; OAuth hints, the key-echo note, "minor units" and the custom "%s of %s" are translated; ESLint enforces the pure-module and prefs import boundaries; tests share `testSettings()`. Updated preferences, context monitor, conventions and testing.
 - Popup sections restyled after the upstream Linux Mint tray, still as an accordion: the header carries the plan and a per-vendor refresh button, the body is one rounded card, and the footer carries the last update time. The pace text is split into an alert and a footnote. Updated panel and popup, lifecycle, pace and vendor adapters.
 - Severity colours used as text in a dark popup are brightened by `legibleOnDark()` in `lib/theme.js` (the default red was too dark to read as small type); bars and a light popup keep the palette as is.
 - Audit against the tracked code: the update check also waits 1 h after a transport failure (it is not retried on the next tick), `validateMapping` is used by `prefs/custom.js` rather than the General pages, and a missing parenthesis in the snapshot cache rules.
