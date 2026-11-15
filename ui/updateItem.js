@@ -50,6 +50,8 @@ export class UpdateItem {
                 return;
             this._state = afterCheck(this._state, latest, Date.now());
             await writeUpdateState(this._state);
+            if (this._destroyed)
+                return;
             this._paint(this._state);
         } catch (e) {
             console.warn(`ai-usagebar: update check failed: ${e}`);
