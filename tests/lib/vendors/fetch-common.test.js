@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
-    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh, authorizeOAuth,
+    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh, authorizeOAuth, vendorFetch, httpGet, optionalRequest,
 } from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 import {runSync, res, resTransport} from '../../_harness.js';
@@ -546,6 +546,57 @@ describe('authorizeOAuth', () => {
         assertEqual(r.kind, 'loading');
         assertEqual(r.plan, undefined);
     });
+});
+
+describe('vendorFetch', () => {
+    const KEY = 'sk-abcdefgh12345678';
+
+    it('serializes on the cache dir and redacts the named secrets', () => {
+        const order = [];
+        const doFetch = async deps => {
+            order.push('start');
+            await Promise.resolve();
+            order.push('end');
+            deps.cache.writeLastError(500, `echo ${deps.apiKey}`);
+            return {ok: false, kind: 'error', message: `bad ${deps.apiKey}`};
+        };
+        const fetch = vendorFetch('zz', deps => [deps.apiKey], doFetch);
+        const cache = memCache();
+        const [a] = runSync(Promise.all([fetch({cache, apiKey: KEY}), fetch({cache, apiKey: KEY})]));
+        assertDeepEqual(order, ['start', 'end', 'start', 'end']);
+        assertEqual(a.message.includes(KEY), false);
+        assertEqual(cache.log.some(([, , msg]) => String(msg).includes(KEY)), false);
+    });
+});
+
+describe('httpGet', () => {
+    it('sends a GET with the shared timeout and the fetch signal', () => {
+        const calls = [];
+        const deps = {http: req => calls.push(req), signal: 'S'};
+        httpGet(deps, 'https://x', {A: '1'});
+        assertDeepEqual(calls, [{method: 'GET', url: 'https://x', headers: {A: '1'}, timeoutMs: HTTP_TIMEOUT_MS, cancellable: 'S'}]);
+    });
+    it('no signal is undefined, not null', () => {
+        const calls = [];
+        httpGet({http: req => calls.push(req), signal: null}, 'u', {});
+        assertEqual(calls[0].cancellable, undefined);
+    });
+});
+
+describe('optionalRequest', () => {
+    const ok = {status: 200, bodyBytes: 'b'};
+    const parse = res => `parsed ${res.bodyBytes}`;
+
+    it('parses a successful response', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve(ok), parse, 'fb')), 'parsed b'));
+    it('a transport error is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve({error: 'x'}), parse, 'fb')), 'fb'));
+    it('an HTTP error is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve({status: 500}), parse, 'fb')), 'fb'));
+    it('a parse error is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve(ok), () => { throw new Error('no'); }, 'fb')), 'fb'));
+    it('a rejected request is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.reject(new Error('x')), parse, 'fb')), 'fb'));
 });
 
 system.exit(summary());

@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Every vendor `fetchSnapshot` is built by `vendorFetch()`; GETs and optional side requests share `httpGet()` and `optionalRequest()`. Updated fetch pipeline.
 - `vendorAdapter()` derives `severity` from `peakUsage` by default; only OpenRouter and DeepSeek keep their own. Updated vendor adapters.
 - Vendor sections build paced rows through `pacedWindowRow()` in `section-common.js`. Updated vendor adapters.
 - Both OAuth vendors share `authorizeOAuth()`; Anthropic no longer POSTs an empty refresh token. Updated fetch pipeline.
