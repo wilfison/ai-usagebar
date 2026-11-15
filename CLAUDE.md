@@ -29,11 +29,15 @@ make validate  # tools/validate.sh: metadata.json + schema --strict
 make watch     # re-run `make test` on changes under lib/ ui/ tests/ (needs inotify-tools)
 make reload    # disable + enable (Wayland still needs a full relog to pick up changes)
 make run       # launch a throwaway nested gnome-shell (Wayland) to test live
+make headless  # isolated headless gnome-shell driven by tools/headless.sh (see Testing policy)
+make headless-stop
 make logs      # journalctl -f -o cat /usr/bin/gnome-shell
 make pot       # tools/i18n.sh pot: re-extract strings into po/<uuid>.pot
 make update-po # msgmerge each po/*.po against the refreshed template
 make compile-locale  # msgfmt po/*.po → locale/<lang>/LC_MESSAGES/*.mo (dev)
 make i18n-check      # fail on a stale .pot or a malformed po/*.po (CI gate)
+make i18n-todo       # each catalog's untranslated and fuzzy msgids
+make upstream-diff FROM=v1.52.1  # upstream changes since a tag (tools/upstream-diff.sh)
 make pack      # gnome-extensions pack . --podir=po --force → upload zip (with .mo)
 make info      # gnome-extensions info ai-usagebar@wilfison
 ```
@@ -272,8 +276,27 @@ as the argument, never a template literal, which `xgettext` cannot extract.
   make update-po      # msgmerge each po/*.po against the refreshed template
   make compile-locale # msgfmt po/*.po → locale/<lang>/LC_MESSAGES/*.mo (dev/live)
   make i18n-check     # CI gate: .pot drift (regenerate+diff) + msgfmt --check
+  make i18n-todo      # what is left: untranslated and fuzzy msgids per catalog
+  ./tools/i18n.sh fill t.json  # set msgstrs from {msgid: {lang: text}}, clear fuzzy, rewrap
   make pack           # zip with --podir=po so .mo files ship in the bundle
   ```
+
+  The `.pot` records only the file of each string (`--add-location=file`), so
+  editing code does not dirty the catalogs. `msgmerge` never rewraps an entry
+  written by hand; `fill` runs `msgcat` so a long msgstr wraps like the rest.
+- **Glossary.** Reuse the catalog's existing terms; check with `msgcat --no-wrap
+  po/<ll>.po | grep -A1 'msgid "Vendors"'` before adding a string:
+
+  | English | pt_BR | es | fr | de |
+  | --- | --- | --- | --- | --- |
+  | vendor | fornecedor | proveedor | fournisseur | Anbieter |
+  | panel | painel | panel | panneau | Panel |
+  | popup | popup | ventana emergente | fenêtre contextuelle | Popup |
+  | pinned | fixado | fijado | épinglé | angeheftet |
+  | pace | ritmo | ritmo | rythme | Tempo |
+  | session / weekly | sessão / semanal | sesión / semanal | session / hebdomadaire | Sitzung / wöchentlich |
+  | severity | severidade | severidad | gravité | Schweregrad |
+  | custom (provider) | personalizado | personalizado | personnalisé | benutzerdefiniert |
 
 - **Adding a language** (3 commands, no source changes): copy the template and
   translate, then compile and test under that locale:
@@ -283,7 +306,8 @@ as the argument, never a template literal, which `xgettext` cannot extract.
   shipping the `.po`; `make i18n-check` keeps it honest.
 - **Adding a string.** Wrap it in `_('literal')` (inject `_` if the module is
   pure), run `make pot` + `make update-po`, translate the new `msgid` in each
-  `po/*.po`, then `make i18n-check`.
+  `po/*.po` (`make i18n-todo` lists them; `tools/i18n.sh fill` writes them),
+  then `make i18n-check`.
 
 #### Verifying a translation (Wayland-gated)
 
@@ -294,9 +318,12 @@ relog under it:
 ```bash
 make compile-locale
 env LANG=pt_BR.UTF-8 LANGUAGE=pt_BR make run   # nested gnome-shell (Wayland)
+make headless LANG_UNDER_TEST=pt_BR FAKE_PCT=40   # or headless, no screen needed
 ```
 
-In the nested shell, open the popup (and scroll-cycle a vendor), check the panel
+Headless, `tools/headless.sh prefs` reopens the preferences in a fresh process
+(the prefs service keeps the `.mo` it first loaded) and `shot` captures them.
+Only locales listed by `locale -a` can be started. In the nested shell, open the popup (and scroll-cycle a vendor), check the panel
 label, the menu items, and the prefs window, then watch `make logs` for errors.
 Record the exact commands + what you observed; never claim "verified" from code
 reading alone. Swap the locale (`es_ES.UTF-8`, `fr_FR.UTF-8`, `de_DE.UTF-8`) to
@@ -319,6 +346,11 @@ spot-check the other catalogs.
 - **No em dash (U+2014) anywhere**: code, comments, user-facing strings,
   translations, docs and commit messages. Use a comma, colon, parentheses or a
   new sentence instead.
+- **Commit messages** are Conventional Commits (`feat(panel): …`) ending with
+  the co-author line when an agent wrote them. Never cite PRD stories
+  (`US-001`) or the PRD itself: older history does, but the PRDs live in the
+  gitignored `tasks/` and mean nothing to a reader of the log. PR descriptions
+  follow `.github/pull_request_template.md`.
 - **Comments are a last resort: make the code self-explanatory first.** Don't
   restate what the code already says; add a comment only for the non-obvious
   *why* (a workaround, an invariant, a gotcha). When one is needed, keep it
@@ -344,9 +376,53 @@ not-testable is the `gi://` import line:
   Reload the extension, watch `make logs` for errors, and verify the panel
   behaves as expected. In the PR / task notes, write the exact reload +
   observation steps you ran, not "tested manually". On Wayland you cannot
-  hot-reload JS in-session; use `make run` (nested shell) or a full relog.
+  hot-reload JS in-session; use `make run` (nested shell), `tools/headless.sh`,
+  or a full relog.
+- **Headless live checks (`tools/headless.sh`).** A gnome-shell with its own
+  HOME, dconf, cache and D-Bus session, a virtual 1920x1080 monitor, and this
+  checkout linked in; nothing touches the real session. Run it without
+  arguments for every subcommand. Typical loop:
+
+  ```bash
+  tools/headless.sh start --fake-pct 40           # --lang pt_BR, --fake-error zai,openai:stale, --fake-delay 3000
+  tools/headless.sh gsettings set org.gnome.shell.extensions.ai-usagebar panel-vendors "['anthropic','openai']"
+  tools/headless.sh probe                         # active vendor, poll set, segments, results (JSON)
+  tools/headless.sh click 900 16; tools/headless.sh keys Super_L u
+  tools/headless.sh eval 'Main.panel.statusArea["ai-usagebar@wilfison"]._pollIds'
+  tools/headless.sh shot popup 800 0 500 640      # tmp/screenshots/popup.png (delete when done)
+  tools/headless.sh log 'JS ERROR|ai-usagebar'; tools/headless.sh stop
+  ```
+
+  JS changes need `stop` + `start` (the shell loads them once). Read button and
+  segment geometry from `probe` before clicking: a click outside the button
+  hits the clock. `start` spends the first events of the virtual pointer, which
+  a fresh device drops. The dev overrides, also honored by `make run`:
+  - `AI_USAGEBAR_FAKE_PCT`: a synthetic snapshot from every adapter's
+    `fakeSnapshot(pct, now, config)`, the custom provider included.
+  - `AI_USAGEBAR_FAKE_ERROR=zai,openai:stale` (`*` for all): with FAKE_PCT, `id`
+    is an error result and `id:stale` the synthetic snapshot marked stale with
+    an HTTP 503 `lastError`. Without it, the real fetch runs against an HTTP
+    503, so its stale fallback and `.last_error` are the real ones (and land in
+    that cache, so prefer the headless shell's isolated one).
+  - `AI_USAGEBAR_FAKE_DELAY_MS`: every fetch waits first, to see loading states.
 - **Packaging:** before a release-ready change, run `make pack` and `make info`
   and confirm both succeed without warnings.
 - **Never fake a test result.** If something genuinely cannot be tested in the
   current environment (e.g. no live Claude/OpenRouter credentials), say so
   explicitly; do not claim "verified" based on code reading alone.
+
+## Upstream and GNOME Shell references
+
+- **Upstream sync.** `make upstream-diff FROM=<last synced tag>` clones or
+  fast-forwards `tmp/ai-usagebar-rust` and prints the CHANGELOG entries since
+  that tag, the commits and files touching code we port (our vendors, shared
+  pacing/format/notify logic, its `gnome-extension/`), and only counts the rest
+  (macOS, Windows, TUI, vendors we lack). Triage starts from that list.
+- **GNOME Shell sources per version.** The installed shell's JS is in a
+  gresource: `gresource extract /usr/lib/gnome-shell/libshell-*.so
+  /org/gnome/shell/ui/panelMenu.js` (`gresource list` on the same file shows
+  the paths). For other versions, fetch the tag from GitLab:
+  `curl -sS https://gitlab.gnome.org/GNOME/gnome-shell/-/raw/49.0/js/ui/panelMenu.js`.
+  Behavior that changed across 47 to 51 (the panel button's click moved from
+  `vfunc_event` to a `ClickGesture` in 50) is only checked live on the
+  installed version, so cite the source of the others.
