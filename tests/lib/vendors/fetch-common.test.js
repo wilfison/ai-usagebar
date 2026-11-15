@@ -1,9 +1,10 @@
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
-    redactingCache, redactResult, redactedFetch} from '../../../lib/vendors/fetch-common.js';
+    redactingCache, redactResult, redactedFetch, runFetch, errorResult, isSuccess, bodyText, CACHE_TTL_MS, HTTP_TIMEOUT_MS,
+} from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
-import {runSync} from '../../_harness.js';
+import {runSync, res, resTransport} from '../../_harness.js';
 
 function fakeCache({payload = null, lastError = null, ageMs = null, retryAfter = null} = {}) {
     return {
@@ -226,6 +227,211 @@ describe('redaction of the request secret', () => {
         const cache = {};
         const r = runSync(redactedFetch([null, ''], {cache}, async (deps) => ({same: deps.cache === cache})));
         assertEqual(r.same, true);
+    });
+});
+
+// A cache that keeps everything in memory and logs every write.
+function memCache({fresh = null, payload = null, ageMs = 0, lastError = null, retryAfter = null} = {}) {
+    const log = [];
+    return {
+        log,
+        freshPayload: ttl => {
+            log.push(['fresh?', ttl]);
+            return fresh;
+        },
+        maybePayload: () => payload,
+        payloadAgeMs: () => ageMs,
+        readLastError: () => lastError,
+        readRetryAfter: () => retryAfter,
+        markStale: () => log.push(['markStale']),
+        writeLastError: (code, msg) => log.push(['lastError', code, msg]),
+        writePayload: bytes => log.push(['payload', bytes]),
+    };
+}
+
+const NOW = new Date(1_800_000_000_000);
+const parseCached = text => ({from: 'cache', text: String(text)});
+const parseBody = r => ({from: 'net', body: bodyText(r)});
+const writes = cache => cache.log.filter(e => e[0] !== 'fresh?');
+
+function run(cache, opts = {}) {
+    return runSync(runFetch({
+        cache,
+        now: NOW,
+        parseCached,
+        request: () => Promise.resolve(res(200, 'live')),
+        parse: parseBody,
+        toCache: snap => `cached:${snap.body}`,
+        httpErrorMessage: status => `request failed (HTTP ${status})`,
+        ...opts,
+    }));
+}
+
+describe('helpers', () => {
+    it('isSuccess is 2xx only', () => assertDeepEqual([199, 200, 204, 299, 300, 404].map(isSuccess), [false, true, true, true, false, false]));
+    it('bodyText decodes the body, empty when absent', () => {
+        assertEqual(bodyText(res(500, 'oops')), 'oops');
+        assertEqual(bodyText({bodyBytes: null}), '');
+    });
+    it('errorResult carries the message of an Error or a string', () => {
+        assertDeepEqual(errorResult(new Error('no key')), {ok: false, kind: 'error', message: 'no key'});
+        assertDeepEqual(errorResult('plain'), {ok: false, kind: 'error', message: 'plain'});
+    });
+    it('the shared TTL and timeout', () => {
+        assertEqual(CACHE_TTL_MS, 60_000);
+        assertEqual(HTTP_TIMEOUT_MS, 10_000);
+    });
+});
+
+describe('runFetch: cache fast path', () => {
+    it('a fresh payload is served without a request', () => {
+        let asked = 0;
+        const cache = memCache({fresh: 'F', ageMs: 1234});
+        const r = run(cache, {request: () => {
+            asked++;
+            return Promise.resolve(res(200, 'live'));
+        }});
+        assertEqual(asked, 0);
+        assertDeepEqual(r, {ok: true, snapshot: {from: 'cache', text: 'F'}, stale: false, lastError: null, cacheAgeMs: 1234});
+        assertDeepEqual(cache.log[0], ['fresh?', CACHE_TTL_MS]);
+    });
+    it('uses the given TTL', () => {
+        const cache = memCache();
+        run(cache, {cacheTtlMs: 5});
+        assertDeepEqual(cache.log[0], ['fresh?', 5]);
+    });
+    it('a corrupt fresh payload falls through to the network', () => {
+        const r = run(memCache({fresh: 'F'}), {parseCached: () => {
+            throw new Error('corrupt');
+        }});
+        assertEqual(r.snapshot.from, 'net');
+    });
+});
+
+describe('runFetch: backoff', () => {
+    it('under a backoff no request is made and the cache is served stale', () => {
+        let asked = 0;
+        const cache = memCache({payload: 'P', ageMs: 10, retryAfter: NOW.getTime() + 60_000});
+        const r = run(cache, {request: () => {
+            asked++;
+            return Promise.resolve(res(200));
+        }});
+        assertEqual(asked, 0);
+        assertEqual(r.stale, true);
+        assertDeepEqual(r.lastError, {code: 'rate-limited', retryInMs: 60_000});
+    });
+    it('authorize is skipped under a backoff too', () => {
+        let authorized = 0;
+        run(memCache({retryAfter: NOW.getTime() + 1}), {authorize: () => {
+            authorized++;
+            return Promise.resolve(null);
+        }});
+        assertEqual(authorized, 0);
+    });
+});
+
+describe('runFetch: authorize', () => {
+    it('a null answer goes on to the request', () => {
+        const r = run(memCache(), {authorize: () => Promise.resolve(null)});
+        assertEqual(r.snapshot.from, 'net');
+    });
+    it('a result stops before the request and falls back to the cache', () => {
+        let asked = 0;
+        const r = run(memCache({payload: 'P', lastError: {code: 401}}), {
+            authorize: () => Promise.resolve({ok: false, kind: 'error', message: 'log in'}),
+            request: () => {
+                asked++;
+                return Promise.resolve(res(200));
+            },
+        });
+        assertEqual(asked, 0);
+        assertDeepEqual(r, {ok: true, snapshot: {from: 'cache', text: 'P'}, stale: true, lastError: {code: 401}, cacheAgeMs: 0});
+    });
+    it('without a cache the authorize result itself is returned', () => {
+        const blocked = {ok: false, kind: 'loading'};
+        assertEqual(run(memCache(), {authorize: () => Promise.resolve(blocked)}), blocked);
+    });
+});
+
+describe('runFetch: transport failure', () => {
+    it('is a silent loading fallback that records nothing', () => {
+        const cache = memCache();
+        const r = run(cache, {request: () => Promise.resolve(resTransport())});
+        assertDeepEqual(r, {ok: false, kind: 'loading'});
+        assertDeepEqual(writes(cache), []);
+    });
+    it('any failed response of a list counts', () => {
+        const r = run(memCache(), {request: () => Promise.resolve([res(200), resTransport()])});
+        assertEqual(r.kind, 'loading');
+    });
+});
+
+describe('runFetch: success', () => {
+    it('parses, caches the projection and answers fresh', () => {
+        const cache = memCache();
+        const r = run(cache);
+        assertDeepEqual(r, {ok: true, snapshot: {from: 'net', body: 'live'}, stale: false, lastError: null, cacheAgeMs: 0});
+        assertDeepEqual(writes(cache), [['payload', 'cached:live']]);
+    });
+    it('hands parse whatever request returned', () => {
+        const r = run(memCache(), {
+            request: () => Promise.resolve([res(200, 'a'), res(204, 'b')]),
+            parse: list => ({body: list.map(bodyText).join('+')}),
+        });
+        assertEqual(r.snapshot.body, 'a+b');
+    });
+    it('enrich runs after parse and before caching', () => {
+        const cache = memCache();
+        const r = run(cache, {enrich: snap => Promise.resolve({...snap, body: `${snap.body}!`})});
+        assertEqual(r.snapshot.body, 'live!');
+        assertDeepEqual(writes(cache), [['payload', 'cached:live!']]);
+    });
+    it('a parse failure is recorded, marks stale and falls back', () => {
+        const cache = memCache({payload: 'P'});
+        const r = run(cache, {parse: () => {
+            throw new Error('drift');
+        }});
+        assertDeepEqual(writes(cache), [['markStale'], ['lastError', 0, 'drift']]);
+        assertEqual(r.stale, true);
+        assertEqual(r.snapshot.text, 'P');
+    });
+    it('a parse failure with no cache is the error', () => {
+        const r = run(memCache(), {parse: () => {
+            throw new Error('drift');
+        }, errorExtras: {plan: 'Max'}});
+        assertDeepEqual(r, {ok: false, kind: 'error', message: 'drift', plan: 'Max'});
+    });
+});
+
+describe('runFetch: HTTP error', () => {
+    it('marks stale, records the body and names the status', () => {
+        const cache = memCache();
+        const r = run(cache, {request: () => Promise.resolve(res(503, 'busy'))});
+        assertDeepEqual(writes(cache), [['markStale'], ['lastError', 503, 'busy']]);
+        assertDeepEqual(r, {ok: false, kind: 'error', status: 503, message: 'request failed (HTTP 503)'});
+    });
+    it('a 401 keeps only the status', () => {
+        const cache = memCache();
+        const r = run(cache, {request: () => Promise.resolve(res(401, 'key sk-123 is bad'))});
+        assertDeepEqual(writes(cache), [['markStale'], ['lastError', 401, '']]);
+        assertEqual(r.code, 'auth-rejected');
+    });
+    it('the first failing response of a list is reported', () => {
+        const r = run(memCache(), {request: () => Promise.resolve([res(200), res(404, 'a'), res(500, 'b')])});
+        assertEqual(r.status, 404);
+    });
+    it('httpErrorBody replaces what is recorded', () => {
+        const cache = memCache();
+        run(cache, {request: () => Promise.resolve(res(500, 'raw')), httpErrorBody: () => 'generic'});
+        assertDeepEqual(writes(cache)[1], ['lastError', 500, 'generic']);
+    });
+    it('errorExtras ride on the error', () => {
+        const r = run(memCache(), {request: () => Promise.resolve(res(500)), errorExtras: {plan: 'Pro'}});
+        assertEqual(r.plan, 'Pro');
+    });
+    it('a cached payload is served stale instead', () => {
+        const r = run(memCache({payload: 'P'}), {request: () => Promise.resolve(res(500))});
+        assertEqual(r.stale, true);
     });
 });
 
