@@ -21,14 +21,14 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             panel: () => buildPanelPage(settings, cleanups),
             popup: () => buildPopupPage(settings, cleanups),
             display: () => buildDisplayPage(settings, cleanups),
-            behavior: () => buildBehaviorPage(settings, cleanups),
+            behavior: () => buildBehaviorPage(settings),
             custom: () => buildCustomPage(settings, cleanups),
         };
         const nav = prefsNav(_);
         const pages = new Map();
         for (const {id} of prefsNavItems(nav)) {
             const spec = vendorPageSpec(id, _);
-            const build = builders[id] ?? (spec && (() => specPage(settings, spec)));
+            const build = builders[id] ?? (spec && (() => specPage(settings, spec, cleanups)));
             if (!build)
                 throw new Error(`No preferences page for "${id}"`);
             pages.set(id, build());
@@ -38,7 +38,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         window.add(new Adw.PreferencesPage());
         window.set_default_size(860, 640);
         // Last: past this point the shell's own error page is no longer on screen.
-        window.set_content(this._buildSplitView(window, nav, pages, cleanups));
+        window.set_content(this._buildSplitView(window, nav, pages));
 
         window.connect('close-request', () => {
             for (const disconnect of cleanups)
@@ -47,7 +47,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         });
     }
 
-    _buildSplitView(window, nav, pages, cleanups) {
+    _buildSplitView(window, nav, pages) {
         const stack = new Gtk.Stack();
         for (const [id, page] of pages)
             stack.add_named(page, id);
@@ -57,25 +57,29 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         });
 
         const items = prefsNavItems(nav);
-        const sectionTitles = new Map();
+        // One heading per section, built once: the header func runs on every
+        // invalidation and must not create a widget each time.
+        const headings = new Map();
         const list = new Gtk.ListBox({
             selection_mode: Gtk.SelectionMode.SINGLE,
             css_classes: ['navigation-sidebar'],
         });
-        for (const section of nav)
-            sectionTitles.set(items.indexOf(section.items[0]), section.title);
-        for (const item of items)
-            list.append(this._navRow(item));
-        list.set_header_func(row => {
-            const title = sectionTitles.get(row.get_index());
-            row.set_header(title ? new Gtk.Label({
-                label: title,
+        for (const section of nav) {
+            headings.set(items.indexOf(section.items[0]), new Gtk.Label({
+                label: section.title,
                 xalign: 0,
                 margin_start: 12,
                 margin_top: 12,
                 margin_bottom: 6,
                 css_classes: ['caption-heading', 'dim-label'],
-            }) : null);
+            }));
+        }
+        for (const item of items)
+            list.append(this._navRow(item));
+        list.set_header_func(row => {
+            const heading = headings.get(row.get_index()) ?? null;
+            if (row.get_header() !== heading)
+                row.set_header(heading);
         });
         const sidebar = new Adw.NavigationPage({
             title: window.title,
@@ -86,19 +90,14 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         });
 
         const splitView = new Adw.NavigationSplitView({sidebar, content});
-        const selectedId = list.connect('row-selected', (_list, row) => {
+        list.connect('row-selected', (_list, row) => {
             if (!row)
                 return;
             const item = items[row.get_index()];
             stack.set_visible_child_name(item.id);
             content.set_title(item.title);
         });
-        const activatedId = list.connect('row-activated', () => splitView.set_show_content(true));
-        cleanups.push(() => {
-            list.disconnect(selectedId);
-            list.disconnect(activatedId);
-            list.set_header_func(null);
-        });
+        list.connect('row-activated', () => splitView.set_show_content(true));
         list.select_row(list.get_row_at_index(0));
 
         const narrow = new Adw.Breakpoint({

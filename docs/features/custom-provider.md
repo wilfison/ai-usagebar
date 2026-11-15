@@ -5,11 +5,14 @@ description: Turns any GET JSON endpoint into a vendor through a user mapping of
 tags: [vendors, errors]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:57:13Z
 sources:
   - id: parser
     title: lib/vendors/custom/parser.js
     resource: lib/vendors/custom/parser.js
+  - id: mapping
+    title: lib/vendors/custom/mapping.js
+    resource: lib/vendors/custom/mapping.js
   - id: pointer
     title: lib/json-pointer.js
     resource: lib/json-pointer.js
@@ -20,7 +23,7 @@ sources:
 
 # Overview
 
-The custom provider maps a user-chosen endpoint through `lib/json-pointer.js` (RFC 6901)[^pointer] and `lib/vendors/custom/parser.js` (`validateMapping`, `urlProblem`, `shortCode`).[^parser] Its display name comes from the config, so `vendorLabel(id, config)` takes an optional config.
+The custom provider maps a user-chosen endpoint through `lib/json-pointer.js` (RFC 6901)[^pointer] with its configuration checked in `lib/vendors/custom/mapping.js` (`validateMapping`, `urlProblem`, `parseExtraHeaders`, `authHeaderOf`)[^mapping] and the response projected in `lib/vendors/custom/parser.js` (`parseUsage`, `shortCode`).[^parser] Its display name comes from the config, so `vendorLabel(id, config)` takes an optional config.
 
 # Mapping
 
@@ -31,5 +34,6 @@ The user documentation of the mapping lives in the README.[^readme] The rules th
 - `currency` formats `used`/`limit` or a numeric text as money; not allowed on a `percent` metric.
 - Labels are 1 to 64 characters and unique. Prefs validate on focus-out and keep the last valid mapping.
 - A pointer that does not resolve fails the fetch with a schema error; the last good figures stay, marked stale ([cache](/architecture/cache.md)).
+- A used + limit metric keeps the raw `amount` (`used`, `limit`, `currency`) in the snapshot; the popup words it with a translated "%s of %s". Snapshot `CACHE_VERSION` is 2.
 - A mapping or extra headers that fail validation when the config is read give an error with code `invalid-mapping`, with no stale fallback.
 - The URL must be `https://` unless `custom-allow-http` is on (meant for a local service; any host is then accepted).

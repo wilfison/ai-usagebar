@@ -1,10 +1,11 @@
 import system from 'system';
 
 import {
-    parseUsage, kimiSeverity, kimiPeakUsage, placeholders, fakeSnapshot, pct,
+    parseUsage, kimiPeakUsage, placeholders, fakeSnapshot, pct,
     humanizeLevel, planLabelFromMe, snapshotToCacheJson, parseCacheJson,
-    WEEKLY_MS, WINDOW_MS, SchemaError, notifyRows, resetCredits,
+    WEEKLY_MS, WINDOW_MS, SchemaError, notifyRows, resetCredits, CACHE_VERSION,
 } from '../../../../lib/vendors/kimi/parser.js';
+import {kimiAdapter} from '../../../../lib/vendors/kimi/adapter.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
@@ -35,16 +36,12 @@ describe('parseUsage', () => {
         const s = parseUsage(STRING_NUMS);
         assertEqual(s.plan, 'Intermediate');
         assertEqual(s.monthly, null);
-        assertEqual(s.weekly.limit, 100);
-        assertEqual(s.weekly.used, 26);
-        assertEqual(s.weekly.remaining, 74);
-        assertEqual(s.weekly.resetAt instanceof Date, true);
-        assertEqual(s.window.limit, 100);
-        assertEqual(s.window.used, 15);
-        assertEqual(s.window.remaining, 85);
-        assertEqual(s.window.resetAt instanceof Date, true);
-        assertEqual(pct(s.weekly.used, s.weekly.limit), 26);
-        assertEqual(pct(s.window.used, s.window.limit), 15);
+        assertEqual(s.weekly.utilizationPct, 26);
+        assertEqual(s.weekly.resetsAt instanceof Date, true);
+        assertEqual(s.weekly.windowMs, WEEKLY_MS);
+        assertEqual(s.window.utilizationPct, 15);
+        assertEqual(s.window.resetsAt instanceof Date, true);
+        assertEqual(s.window.windowMs, WINDOW_MS);
     });
 
     it('accepts a Uint8Array body and numeric JSON numbers', () => {
@@ -54,37 +51,28 @@ describe('parseUsage', () => {
             limits: [{window: {duration: 300, timeUnit: 'TIME_UNIT_MINUTE'}, detail: {limit: 200, used: 50, remaining: 150}}],
         })));
         assertEqual(s.plan, 'Advanced');
-        assertEqual(s.weekly.used, 123);
-        assertEqual(s.window.used, 50);
+        assertEqual(s.weekly.utilizationPct, 25); // 123 of 500
+        assertEqual(s.window.utilizationPct, 25); // 50 of 200
     });
 
-    it('missing user + limits → plan null, window zeroed', () => {
+    it('missing user + limits → plan null, no window', () => {
         const s = parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"}}');
         assertEqual(s.plan, null);
-        assertEqual(s.weekly.used, 26);
-        assertEqual(s.weekly.resetAt, null);
-        assertEqual(s.window.limit, 0);
-        assertEqual(s.window.used, 0);
-        assertEqual(s.window.remaining, 0);
-        assertEqual(s.window.resetAt, null);
+        assertEqual(s.weekly.utilizationPct, 26);
+        assertEqual(s.weekly.resetsAt, null);
+        assertEqual(s.window, null);
     });
 
     it('derives used from limit - remaining', () => {
-        const s = parseUsage('{"usage":{"limit":"100","remaining":"74"}}');
-        assertEqual(s.weekly.used, 26);
-        assertEqual(s.weekly.remaining, 74);
+        assertEqual(parseUsage('{"usage":{"limit":"100","remaining":"74"}}').weekly.utilizationPct, 26);
     });
 
     it('derives remaining from limit - used', () => {
-        const s = parseUsage('{"usage":{"limit":"100","used":"26"}}');
-        assertEqual(s.weekly.used, 26);
-        assertEqual(s.weekly.remaining, 74);
+        assertEqual(parseUsage('{"usage":{"limit":"100","used":"26"}}').weekly.utilizationPct, 26);
     });
 
     it('zero counts are valid', () => {
-        const s = parseUsage('{"usage":{"limit":"100","used":"0","remaining":"100"}}');
-        assertEqual(s.weekly.used, 0);
-        assertEqual(pct(s.weekly.used, s.weekly.limit), 0);
+        assertEqual(parseUsage('{"usage":{"limit":"100","used":"0","remaining":"100"}}').weekly.utilizationPct, 0);
     });
 
     it('accepts reset + duration aliases (resetAt / reset_at, 5 HOUR)', () => {
@@ -92,10 +80,10 @@ describe('parseUsage', () => {
             usage: {limit: 100, used: 20, resetAt: '2026-02-11T17:32:50Z'},
             limits: [{window: {duration: 5, time_unit: 'TIME_UNIT_HOUR'}, detail: {limit: 100, remaining: 75, reset_at: '2026-02-07T12:32:50Z'}}],
         }));
-        assertEqual(s.weekly.used, 20);
-        assertEqual(s.window.used, 25);
-        assertEqual(s.weekly.resetAt instanceof Date, true);
-        assertEqual(s.window.resetAt instanceof Date, true);
+        assertEqual(s.weekly.utilizationPct, 20);
+        assertEqual(s.window.utilizationPct, 25);
+        assertEqual(s.weekly.resetsAt instanceof Date, true);
+        assertEqual(s.window.resetsAt instanceof Date, true);
     });
 
     it('selects the first 300-min window that has a detail block', () => {
@@ -106,18 +94,20 @@ describe('parseUsage', () => {
                 {window: {duration: 300, timeUnit: 'TIME_UNIT_MINUTE'}, detail: {limit: '100', used: '25', remaining: '75'}},
             ],
         }));
-        assertEqual(s.window.used, 25);
+        assertEqual(s.window.utilizationPct, 25);
     });
 
-    it('empty limits → zeroed window (no error)', () => {
-        const s = parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"},"limits":[]}');
-        assertEqual(s.window.limit, 0);
-    });
+    it('empty limits → no window (no error)', () =>
+        assertEqual(parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"},"limits":[]}').window, null));
 
-    it('null limits → zeroed window (no error)', () => {
-        const s = parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"},"limits":null}');
-        assertEqual(s.window.limit, 0);
-    });
+    it('a recognized 5h window with a zero limit is no window', () =>
+        assertEqual(parseUsage(JSON.stringify({
+            usage: {limit: 100, used: 26},
+            limits: [{window: {duration: 300, timeUnit: 'TIME_UNIT_MINUTE'}, detail: {limit: 0, used: 0}}],
+        })).window, null));
+
+    it('null limits → no window (no error)', () =>
+        assertEqual(parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"},"limits":null}').window, null));
 
     it('a non-empty limits with an unrecognized window → schema drift', () => {
         assertThrows(() => parseUsage(JSON.stringify({
@@ -137,7 +127,8 @@ describe('parseUsage', () => {
         assertEqual(s.weekly, null);
         assertEqual(s.monthly.utilizationPct, 43);
         assertEqual(s.monthly.resetsAt.toISOString(), '2026-10-15T00:00:00.000Z');
-        assertEqual(s.window.used, 15);
+        assertEqual(s.monthly.windowMs, null, 'the pool resets from the order date: no pace');
+        assertEqual(s.window.utilizationPct, 15);
     });
 
     it('accepts the reset aliases on limit_month_total', () => {
@@ -152,7 +143,7 @@ describe('parseUsage', () => {
             usage: {limit: 100, used: 10, remaining: 90},
             usages: {limit_month_total: {used_ratio: 0.9}},
         }));
-        assertEqual(s.weekly.used, 10);
+        assertEqual(s.weekly.utilizationPct, 10);
         assertEqual(s.monthly, null);
     });
 
@@ -213,6 +204,12 @@ describe('plan label', () => {
 
     it('a raw /usages body in the cache is treated as corrupt', () =>
         assertThrows(() => parseCacheJson(MONTHLY)));
+
+    it('a cache of the count-based shape is refused', () => {
+        assertEqual(CACHE_VERSION, 2);
+        assertThrows(() => parseCacheJson(JSON.stringify({cacheVersion: 1, snapshot: {plan: null, weekly: null, monthly: null,
+            window: {limit: 0, used: 0, remaining: 0, resetAt: null}}})));
+    });
 });
 
 describe('pct', () => {
@@ -227,16 +224,16 @@ describe('kimiSeverity / kimiPeakUsage', () => {
             usage: {limit: 100, used: 10, remaining: 90},
             limits: [{window: {duration: 300, timeUnit: 'MINUTE'}, detail: {limit: 100, used: 95, remaining: 5}}],
         }));
-        assertEqual(kimiSeverity(s), Severity.CRITICAL); // window 95
+        assertEqual(kimiAdapter.severity(s), Severity.CRITICAL); // window 95
         const p = kimiPeakUsage(s);
         assertEqual(p.percent, 95);
-        assertEqual(p.resetsAt, s.window.resetAt);
+        assertEqual(p.resetsAt, s.window.resetsAt);
     });
 
     it('weekly wins when higher', () => {
         const s = parseUsage('{"usage":{"limit":100,"used":80,"remaining":20}}');
         assertEqual(kimiPeakUsage(s).percent, 80);
-        assertEqual(kimiSeverity(s), Severity.HIGH);
+        assertEqual(kimiAdapter.severity(s), Severity.HIGH);
     });
 });
 
@@ -244,7 +241,7 @@ describe('kimiPeakUsage: monthly shape', () => {
     it('the monthly pool alone can drive severity', () => {
         const s = parseUsage('{"usages":{"limit_month_total":{"used_ratio":0.95}}}');
         assertEqual(kimiPeakUsage(s).percent, 95);
-        assertEqual(kimiSeverity(s), Severity.CRITICAL);
+        assertEqual(kimiAdapter.severity(s), Severity.CRITICAL);
     });
 
     it('the 5h window wins when higher than the monthly pool', () => {
@@ -314,10 +311,10 @@ describe('placeholders', () => {
 describe('fakeSnapshot', () => {
     it('sets weekly + window to the clamped percentage', () => {
         const s = fakeSnapshot(23);
-        assertEqual(pct(s.weekly.used, s.weekly.limit), 23);
-        assertEqual(pct(s.window.used, s.window.limit), 23);
+        assertEqual(s.weekly.utilizationPct, 23);
+        assertEqual(s.window.utilizationPct, 23);
         assertEqual(kimiPeakUsage(s).percent, 23);
-        assertEqual(s.weekly.resetAt instanceof Date, true);
+        assertEqual(s.weekly.resetsAt instanceof Date, true);
         assertEqual(WEEKLY_MS > WINDOW_MS, true);
     });
 });
@@ -326,7 +323,7 @@ const PACE_NOW = new Date('2026-06-05T12:00:00Z');
 const halfway = windowMs => new Date(PACE_NOW.getTime() + windowMs / 2);
 
 describe('placeholders: elapsed aliases', () => {
-    const block = windowMs => ({limit: 100, used: 30, remaining: 70, resetAt: halfway(windowMs)});
+    const block = windowMs => ({utilizationPct: 30, resetsAt: halfway(windowMs), windowMs});
 
     it('session_elapsed follows the 5h window, weekly_elapsed the weekly one', () => {
         const m = placeholders({plan: 'Moderato', window: block(WINDOW_MS), weekly: block(WEEKLY_MS), monthly: null}, PACE_NOW);
@@ -342,15 +339,15 @@ describe('placeholders: elapsed aliases', () => {
 
 describe('notifyRows / resetCredits', () => {
     it('window, weekly and monthly rows', () => {
-        const block = {limit: 100, used: 98, remaining: 2, resetAt: null};
-        const rows = notifyRows({plan: 'x', window: block, weekly: block, monthly: {utilizationPct: 5, resetsAt: null}});
+        const block = {utilizationPct: 98, resetsAt: null, windowMs: WINDOW_MS};
+        const rows = notifyRows({plan: 'x', window: block, weekly: block, monthly: {utilizationPct: 5, resetsAt: null, windowMs: null}});
         assertEqual(rows.map(r => r.key).join(','), 'window,weekly,monthly');
         assertEqual(rows[0].percent, 98);
         assertEqual(resetCredits({}).length, 0);
     });
 
-    it('a zero-limit window is skipped', () => {
-        const rows = notifyRows({plan: 'x', window: {limit: 0, used: 0, remaining: 0, resetAt: null}, weekly: null, monthly: null});
+    it('an absent window is skipped', () => {
+        const rows = notifyRows({plan: 'x', window: null, weekly: null, monthly: null});
         assertEqual(rows.length, 0);
     });
 });

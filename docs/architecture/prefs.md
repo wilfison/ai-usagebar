@@ -5,7 +5,7 @@ description: prefs.js runs in its own process with pure imports only and replace
 tags: [gnome-shell]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T12:00:00Z
+  at: 2026-11-15T18:40:34Z
 sources:
   - id: prefs
     title: prefs.js
@@ -20,11 +20,11 @@ sources:
 
 # Process boundary
 
-`prefs.js` runs in a separate process and cannot import the gi-bound adapter registry.[^prefs] The General pages (`prefs/general.js`) use `lib/vendors.js` (`VENDOR_LABELS`) for the primary-vendor combo, and the prefs code imports only pure modules otherwise (`prefs/custom.js` takes `validateMapping` and `parseExtraHeaders` from the custom provider's parser for its JSON editors).
+`prefs.js` runs in a separate process and cannot import the gi-bound adapter registry.[^prefs] The General pages (`prefs/general.js`) use `lib/vendors.js` (`VENDOR_LABELS`) for the primary-vendor combo, and the prefs code imports only pure modules otherwise (`prefs/custom.js` takes `validateMapping` and `parseExtraHeaders` from `lib/vendors/custom/mapping.js` for its JSON editors, which keeps the response parser out of the prefs process).
 
 # Pages
 
-Pages live in `prefs/` (`general.js`, `custom.js`) built from `prefs/widgets.js`. Built-in vendor pages are data: `vendorPageSpec` in `lib/prefs-pages.js`[^pages] rendered by `specPage()`. `make pack` ships `prefs/` through `--extra-source`, so a new top-level directory needs one too.
+Pages live in `prefs/` (`general.js`, `custom.js`) built from `prefs/widgets.js`. Built-in vendor pages are data: `vendorPageSpec` in `lib/prefs-pages.js`[^pages] rendered by `specPage()`; an entry with a `validate(text, _)` becomes an apply-button row saved only when that finds no problem. `make pack` ships `prefs/` through `--extra-source`, so a new top-level directory needs one too.
 
 # Sidebar
 

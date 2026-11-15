@@ -15,10 +15,14 @@ import {
     ICON_ERR_CLIENT,
     ICON_FOOTER,
     windowRow,
+    pacedWindowRow,
+    ICON_SESSION,
+    ICON_WEEKLY,
     closingRows,
     noWindowsRow,
 } from '../lib/vendors/section-common.js';
-import {localTimeHm} from '../lib/format.js';
+import {localTimeHm, PARTIAL_ECHO_NOTE} from '../lib/format.js';
+import {NO_ACCESS_TOKEN, TOKEN_REFRESH_FAILED} from '../lib/vendors/fetch-common.js';
 import {calc} from '../lib/pacing.js';
 import {localDateHm, format as formatCountdown, formatWithClock} from '../lib/countdown.js';
 import {defaultTheme} from '../lib/theme.js';
@@ -373,6 +377,25 @@ describe('errorText: invalid mapping', () => {
     });
 });
 
+describe('errorText / httpErrorRow: translated prose', () => {
+    it('the key-echo note is translated, as a message and as a body', () => {
+        assertEqual(errorText({ok: false, kind: 'error', message: PARTIAL_ECHO_NOTE}, bracket), `[${PARTIAL_ECHO_NOTE}]`);
+        const row = httpErrorRow({lastError: {code: 500, body: PARTIAL_ECHO_NOTE}}, theme, bracket);
+        assertEqual(row.lines.join(' '), `[${PARTIAL_ECHO_NOTE}]`);
+    });
+    it('a signed-out credentials file names the login command', () =>
+        assertEqual(errorText({ok: false, kind: 'error', code: NO_ACCESS_TOKEN, loginCommand: 'claude', message: 'x'}, bracket),
+            '[No access token: run %s to log in.]'.replace('%s', '`claude`')));
+    it('a rejected OAuth token names the login command', () => {
+        const text = errorText({ok: false, kind: 'error', code: 'auth-rejected', status: 401, loginCommand: 'claude', message: 'x'}, bracket);
+        assertEqual(text.endsWith('. [Run %s to sign in again.]'.replace('%s', '`claude`')), true, text);
+        assertEqual(errorText({ok: false, kind: 'error', code: 'auth-rejected', status: 401, message: 'x'}, bracket).includes('Run'), false);
+    });
+    it('a failed refresh names the login command', () =>
+        assertEqual(errorText({ok: false, kind: 'error', code: TOKEN_REFRESH_FAILED, loginCommand: 'codex login', message: 'x'}, bracket),
+            '[Token refresh failed: run %s to sign in again.]'.replace('%s', '`codex login`')));
+});
+
 describe('paceAlert: an early burst in a long window', () => {
     it('10% eight hours into a week reads as over pace, never a run-out time', () => {
         const now = new Date('2026-06-01T08:00:00Z');
@@ -430,6 +453,27 @@ describe('closingRows', () => {
 describe('noWindowsRow', () => {
     it('is a dim text row, translated', () => {
         assertDeepEqual(noWindowsRow(bracket), {kind: 'text', text: '[no usage windows reported]', tone: 'dim'});
+    });
+});
+
+describe('pacedWindowRow', () => {
+    const t = defaultTheme();
+    const now = new Date(Date.UTC(2026, 4, 1, 12));
+    const resetsAt = new Date(now.getTime() + 3 * 3600 * 1000);
+    const windowMs = 5 * 3600 * 1000;
+
+    it('paces the window against its length', () => {
+        const r = pacedWindowRow({icon: ICON_SESSION, title: 'S', pct: 60, resetsAt, windowMs, now, theme: t});
+        const pace = calc({usagePct: 60, reset: resetsAt, now, windowMs});
+        assertDeepEqual(r, windowRow({icon: ICON_SESSION, title: 'S', pct: 60, resetsAt, pace, now, theme: t}));
+    });
+    it('a null window length is no pace', () => {
+        const r = pacedWindowRow({icon: ICON_WEEKLY, title: 'M', pct: 10, resetsAt, windowMs: null, now, theme: t});
+        assertDeepEqual(r, windowRow({icon: ICON_WEEKLY, title: 'M', pct: 10, resetsAt, pace: null, now, theme: t}));
+    });
+    it('passes the row options through', () => {
+        const r = pacedWindowRow({icon: 'x', title: 'W', pct: 60, resetsAt, windowMs, now, theme: t, footnote: false});
+        assertEqual('paceAlert' in r, false);
     });
 });
 

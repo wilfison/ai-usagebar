@@ -47,7 +47,7 @@ describe('fetchSnapshot (ollama)', () => {
     }));
 
     it('a fresh cache skips the network and shows the current plan pref', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         const http = httpStub(res(200, LIVE));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k', plan: 'Max'}));
         assertEqual(http.calls.length, 0);
@@ -65,7 +65,7 @@ describe('fetchSnapshot (ollama)', () => {
     }));
 
     it('HTTP 401 with a cache → stale, lastError 401 with no body', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(401, 'do-not-leak')), apiKey: 'k'}));
         assertEqual(r.ok, true);
@@ -75,7 +75,7 @@ describe('fetchSnapshot (ollama)', () => {
     }));
 
     it('after a 429 the next poll makes no request', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const first = runSync(fetchSnapshot({cache, http: httpStub(res(429, 'slow down')), apiKey: 'k'}));
         assertEqual(first.stale, true);
@@ -114,7 +114,7 @@ describe('fetchSnapshot (ollama)', () => {
     }));
 
     it('a cache from the old /api/usage format is refetched, not served', withTemp(({cache}) => {
-        cache.writePayload(JSON.stringify({cacheVersion: 1, snapshot: {plan: null, session: {utilizationPct: 5, resetsAt: null}}}));
+        runSync(cache.writePayload(JSON.stringify({cacheVersion: 1, snapshot: {plan: null, session: {utilizationPct: 5, resetsAt: null}}})));
         const http = httpStub(res(200, LIVE));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
         assertEqual(http.calls.length, 1);

@@ -1,10 +1,12 @@
 import system from 'system';
 
 import {
-    parseUsage, validateMapping, placeholders, customPeakUsage, customSeverity, formatNumber, SchemaError,
-    shortCode, providerName, urlProblem, parseExtraHeaders, parseMapping, requestHeaders, notifyRows, resetCredits,
-    snapshotToCacheJson, parseCacheJson, fakeSnapshot,
+    parseUsage, placeholders, customPeakUsage, formatNumber, SchemaError,
+    shortCode, notifyRows, resetCredits, snapshotToCacheJson, parseCacheJson, fakeSnapshot, CACHE_VERSION,
 } from '../../../../lib/vendors/custom/parser.js';
+import {validateMapping} from '../../../../lib/vendors/custom/mapping.js';
+import {amountText} from '../../../../lib/vendors/custom/section.js';
+import {customAdapter} from '../../../../lib/vendors/custom/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../../_assert.js';
 
@@ -33,10 +35,10 @@ function schemaError(fn) {
 const metric = (extra) => ({metrics: [Object.assign({label: 'Requests'}, extra)]});
 
 describe('parseUsage: metrics', () => {
-    it('used + limit → rounded, clamped percent with an "X of Y" footnote', () => {
+    it('used + limit → rounded, clamped percent, keeping the raw amount', () => {
         const m = parse(metric({used: '/usage/used', limit: '/usage/limit'})).metrics[0];
         assertEqual(m.pct, 12);
-        assertEqual(m.footnote, '12 of 100');
+        assertDeepEqual(m.amount, {used: 12, limit: 100, currency: null});
         assertEqual(parse(metric({used: '/a', limit: '/b'}), '{"a":2,"b":3}').metrics[0].pct, 67);
         assertEqual(parse(metric({used: '/a', limit: '/b'}), '{"a":250,"b":100}').metrics[0].pct, 100);
     });
@@ -46,10 +48,10 @@ describe('parseUsage: metrics', () => {
         assertEqual(schemaError(() => parse(metric({used: '/a', limit: '/b'}), '{"a":1,"b":-5}')) !== null, true);
     });
 
-    it('percent alone is used directly (numeric strings accepted), with no footnote', () => {
+    it('percent alone is used directly (numeric strings accepted), with no amount', () => {
         const m = parse(metric({percent: '/usage/pct'})).metrics[0];
         assertEqual(m.pct, 43);
-        assertEqual(m.footnote, '');
+        assertEqual(m.amount, null);
     });
 
     it('rejects number-like strings that are not plain numbers', () => {
@@ -128,43 +130,6 @@ describe('parseUsage: plan and texts', () => {
         assertEqual(schemaError(() => parse(metric({percent: '/p'}), 'not json')) !== null, true));
 });
 
-describe('validateMapping', () => {
-    const valid = {metrics: [{label: 'Requests', used: '/u', limit: '/l', windowSecs: 3600}], texts: [{label: 'Region', value: '/r'}]};
-
-    it('accepts a valid mapping', () => assertDeepEqual(validateMapping(valid), []));
-
-    it('needs at least one metric or text', () => {
-        assertEqual(validateMapping({}).length, 1);
-        assertEqual(validateMapping({metrics: [], texts: []}).length, 1);
-        assertEqual(validateMapping(null).length, 1);
-    });
-
-    it('rejects invalid pointers', () => {
-        assertEqual(validateMapping({metrics: [{label: 'A', percent: 'p'}]}).length > 0, true);
-        assertEqual(validateMapping({planPath: '', texts: [{label: 'A', value: '/v'}]}).length > 0, true);
-        assertEqual(validateMapping({texts: [{label: 'A', value: ''}]}).length > 0, true);
-    });
-
-    it('percent cannot coexist with used/limit, and one of them is required', () => {
-        assertEqual(validateMapping({metrics: [{label: 'A', percent: '/p', used: '/u', limit: '/l'}]}).length > 0, true);
-        assertEqual(validateMapping({metrics: [{label: 'A', used: '/u'}]}).length > 0, true);
-    });
-
-    it('labels are 1–64 characters, without controls, and unique', () => {
-        assertEqual(validateMapping({texts: [{label: '', value: '/v'}]}).length > 0, true);
-        assertEqual(validateMapping({texts: [{label: 'x'.repeat(65), value: '/v'}]}).length > 0, true);
-        assertEqual(validateMapping({texts: [{label: 'a\tb', value: '/v'}]}).length > 0, true);
-        const dup = validateMapping({metrics: [{label: 'Same', percent: '/p'}], texts: [{label: 'Same', value: '/v'}]});
-        assertEqual(dup.some(e => e.includes('used twice')), true);
-    });
-
-    it('windowSecs must be an integer of at least 60', () => {
-        assertEqual(validateMapping({metrics: [{label: 'A', percent: '/p', windowSecs: 59}]}).length > 0, true);
-        assertEqual(validateMapping({metrics: [{label: 'A', percent: '/p', windowSecs: 90.5}]}).length > 0, true);
-        assertDeepEqual(validateMapping({metrics: [{label: 'A', percent: '/p', windowSecs: 60}]}), []);
-    });
-});
-
 describe('placeholders / peak / severity', () => {
     const s = parse({planPath: '/account/tier', metrics: [
         {label: 'A', used: '/usage/used', limit: '/usage/limit', resetsAfterSeconds: '/usage/left'},
@@ -198,7 +163,7 @@ describe('placeholders / peak / severity', () => {
 
     it('peak and severity follow the highest metric', () => {
         assertEqual(customPeakUsage(s).percent, 43);
-        assertEqual(customSeverity(s), Severity.LOW);
+        assertEqual(customAdapter.severity(s), Severity.LOW);
         assertEqual(customPeakUsage({metrics: []}).percent, null);
     });
 });
@@ -226,66 +191,6 @@ describe('shortCode', () => {
     });
 });
 
-describe('providerName', () => {
-    it('trims, defaults to Custom, caps at 48', () => {
-        assertEqual(providerName('  Team API  '), 'Team API');
-        assertEqual(providerName(''), 'Custom');
-        assertEqual(providerName('é'.repeat(50)).length, 48);
-    });
-});
-
-describe('urlProblem', () => {
-    it('accepts https', () => assertEqual(urlProblem('https://api.example.com/usage', false), null));
-    it('refuses http unless allowed', () => {
-        assertEqual(urlProblem('http://localhost:8765/usage', false).includes('http://'), true);
-        assertEqual(urlProblem('http://localhost:8765/usage', true), null);
-    });
-    it('refuses other schemes, user:pass@ and a missing host', () => {
-        assertEqual(urlProblem('ftp://example.com', true) !== null, true);
-        assertEqual(urlProblem('https://user:pass@example.com/x', false).includes('user name'), true);
-        assertEqual(urlProblem('https://token@example.com/x', false) !== null, true);
-        assertEqual(urlProblem('https:///usage', false).includes('host'), true);
-        assertEqual(urlProblem('https://:443/usage', false).includes('host'), true);
-    });
-    it('refuses a relative or empty URL', () => {
-        assertEqual(urlProblem('', false) !== null, true);
-        assertEqual(urlProblem('example.com/usage', false) !== null, true);
-    });
-    it('never echoes the URL', () => {
-        assertEqual(urlProblem('https://secret:pw@example.com', false).includes('secret'), false);
-    });
-});
-
-describe('parseExtraHeaders', () => {
-    it('empty is none', () => assertDeepEqual(parseExtraHeaders('  ', 'Authorization'), {}));
-    it('an object of strings', () => assertDeepEqual(parseExtraHeaders('{"X-Team":"core"}', 'Authorization'), {'X-Team': 'core'}));
-    it('invalid JSON, a non-object, non-string values or bad names → null', () => {
-        for (const bad of ['{', '[]', '"x"', '{"X":1}', '{"Bad Name":"x"}', '{"X":"a\\nb"}'])
-            assertEqual(parseExtraHeaders(bad, 'Authorization'), null, bad);
-    });
-    it('repeating the auth header (any case) → null', () => {
-        assertEqual(parseExtraHeaders('{"authorization":"x"}', 'Authorization'), null);
-        assertEqual(parseExtraHeaders('{"X-Api-Key":"x"}', 'x-api-key'), null);
-    });
-});
-
-describe('parseMapping', () => {
-    it('a valid mapping', () => assertEqual(parseMapping('{"texts":[{"label":"R","value":"/r"}]}').texts.length, 1));
-    it('empty, invalid JSON or an invalid mapping → null', () => {
-        for (const bad of ['', '{', '[]', '{"metrics":[]}', '{"metrics":[{"label":"A","percent":"x"}]}'])
-            assertEqual(parseMapping(bad), null, bad);
-    });
-});
-
-describe('requestHeaders', () => {
-    const cfg = {authHeader: 'Authorization', authScheme: 'Bearer', extraHeaders: {'X-Team': 'core'}};
-    it('Accept, the extras and the scheme-prefixed key', () =>
-        assertDeepEqual(requestHeaders(cfg, 'k'), {Accept: 'application/json', 'X-Team': 'core', Authorization: 'Bearer k'}));
-    it('an empty scheme sends the key bare, in the chosen header', () =>
-        assertEqual(requestHeaders({...cfg, authHeader: 'X-Api-Key', authScheme: ''}, 'k')['X-Api-Key'], 'k'));
-    it('no key → no auth header', () => assertEqual('Authorization' in requestHeaders(cfg, null), false));
-});
-
 describe('notifyRows / resetCredits / cache / vendor_short', () => {
     const s = {...parse({metrics: [{label: 'A', percent: '/usage/pct'}]}), name: 'My Tool'};
 
@@ -309,14 +214,26 @@ describe('currency', () => {
     const now = new Date('2026-10-01T00:00:00Z');
     const metric = extra => ({label: 'Spend', used: '/spend/used', limit: '/spend/limit', ...extra});
 
-    it('formats used and limit as money', () =>
-        assertEqual(parseUsage(body, {metrics: [metric({currency: 'USD'})]}, now).metrics[0].footnote, '$12.50 of $60.00'));
+    const text = extra => amountText(parseUsage(body, {metrics: [metric(extra)]}, now).metrics[0].amount);
+
+    it('formats used and limit as money', () => assertEqual(text({currency: 'USD'}), '$12.50 of $60.00'));
     it('uses the currency\'s own symbol, or the code after an unknown one', () => {
-        assertEqual(parseUsage(body, {metrics: [metric({currency: 'EUR'})]}, now).metrics[0].footnote, '€12.50 of €60.00');
-        assertEqual(parseUsage(body, {metrics: [metric({currency: 'CHF'})]}, now).metrics[0].footnote, '12.50 CHF of 60.00 CHF');
+        assertEqual(text({currency: 'EUR'}), '€12.50 of €60.00');
+        assertEqual(text({currency: 'CHF'}), '12.50 CHF of 60.00 CHF');
     });
-    it('without currency the bare numbers stay', () =>
-        assertEqual(parseUsage(body, {metrics: [metric()]}, now).metrics[0].footnote, '12.5 of 60'));
+    it('without currency the bare numbers stay', () => assertEqual(text({}), '12.5 of 60'));
+    it('the "of" is translated', () =>
+        assertEqual(amountText({used: 1, limit: 2, currency: null}, s => s.replace('of', 'de')), '1 de 2'));
+    it('a cache from before the raw amount is refused', () => {
+        assertEqual(CACHE_VERSION, 2);
+        let threw = false;
+        try {
+            parseCacheJson(JSON.stringify({cacheVersion: 1, snapshot: {metrics: [], texts: []}}));
+        } catch (_) {
+            threw = true;
+        }
+        assertEqual(threw, true);
+    });
     it('a text with currency is money', () =>
         assertEqual(parseUsage(body, {texts: [{label: 'Wallet', value: '/wallet', currency: 'USD'}]}, now).texts[0].value, '$7.00'));
     it('a text with currency must be numeric', () => {
@@ -343,8 +260,9 @@ describe('currency', () => {
 describe('fakeSnapshot', () => {
     const s = fakeSnapshot(84.4, NOW);
     it('both metrics at the rounded percentage', () => assertDeepEqual(s.metrics.map(m => m.pct), [84, 84]));
-    it('the same shape as a parsed metric (empty footnote, no name)', () => {
-        assertEqual(s.metrics[0].footnote, '');
+    it('the same shape as a parsed metric (no amount on the paced one, no name)', () => {
+        assertEqual(s.metrics[0].amount, null);
+        assertDeepEqual(s.metrics[1].amount, {used: s.metrics[1].pct / 2, limit: 50, currency: 'USD'});
         assertEqual('name' in s, false);
     });
     it('a non-numeric percentage reads as 0', () => assertEqual(fakeSnapshot('x', NOW).metrics[0].pct, 0));
@@ -356,7 +274,7 @@ describe('fakeSnapshot', () => {
         assertDeepEqual(parseCacheJson(snapshotToCacheJson(s)).metrics.map(m => m.label), ['Requests', 'Budget']));
     it('feeds placeholders and severity', () => {
         assertEqual(placeholders(s, NOW).get('session_pct'), '84');
-        assertEqual(customSeverity(fakeSnapshot(95, NOW)), Severity.CRITICAL);
+        assertEqual(customAdapter.severity(fakeSnapshot(95, NOW)), Severity.CRITICAL);
     });
 });
 

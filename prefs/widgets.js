@@ -6,10 +6,15 @@ import Gtk from 'gi://Gtk';
 import {gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import {rgbToHex} from '../lib/color.js';
-import {RowType} from '../lib/prefs-pages.js';
+import {RowType, schemaRange} from '../lib/prefs-pages.js';
 
-// Every helper that connects a signal pushes its disconnect onto `cleanups`,
-// which the window runs on close-request.
+// Only a GSettings handler outlives the window (the settings object is the
+// extension's), so each one goes through onSetting, whose disconnect the
+// window runs on close-request. Signals on widgets die with them.
+export function onSetting(settings, key, fn, cleanups) {
+    const id = settings.connect(`changed::${key}`, fn);
+    cleanups.push(() => settings.disconnect(id));
+}
 
 export function switchRow(settings, key, title, subtitle = null) {
     const row = new Adw.SwitchRow(subtitle ? {title, subtitle} : {title});
@@ -20,6 +25,33 @@ export function switchRow(settings, key, title, subtitle = null) {
 export function entryRow(settings, key, title) {
     const row = new Adw.EntryRow({title});
     settings.bind(key, row, 'text', Gio.SettingsBindFlags.DEFAULT);
+    return row;
+}
+
+// An entry saved through its apply button, and only when `validate(text, _)`
+// finds no problem; the problems mark the row and fill its tooltip.
+export function validatedEntryRow(settings, key, title, validate, cleanups) {
+    const row = new Adw.EntryRow({title, show_apply_button: true, text: settings.get_string(key)});
+    const check = () => {
+        const problems = validate(row.text.trim(), _);
+        row.tooltip_text = problems.length > 0 ? problems.join('\n') : null;
+        if (problems.length > 0)
+            row.add_css_class('error');
+        else
+            row.remove_css_class('error');
+        return problems;
+    };
+    row.connect('changed', check);
+    row.connect('apply', () => {
+        const text = row.text.trim();
+        if (check().length === 0 && settings.get_string(key) !== text)
+            settings.set_string(key, text);
+    });
+    onSetting(settings, key, () => {
+        if (row.text.trim() !== settings.get_string(key))
+            row.text = settings.get_string(key);
+    }, cleanups);
+    check();
     return row;
 }
 
@@ -39,31 +71,10 @@ function spinWidget({title, subtitle, lower, upper, step, page}) {
 }
 
 // An integer key bound straight to a spin row.
+// The bounds come from the key's schema range.
 export function boundSpinRow(settings, key, opts) {
-    const row = spinWidget(opts);
+    const row = spinWidget({...schemaRange(settings.settings_schema, key), ...opts});
     settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
-    return row;
-}
-
-// An integer key kept in step with a spin row by hand, writing only whole
-// values that differ from the stored one.
-export function syncedSpinRow(settings, key, opts, cleanups) {
-    const row = spinWidget(opts);
-    row.set_value(settings.get_int(key));
-    const notifyId = row.connect('notify::value', () => {
-        const v = Math.round(row.get_value());
-        if (settings.get_int(key) !== v)
-            settings.set_int(key, v);
-    });
-    const resyncId = settings.connect(`changed::${key}`, () => {
-        const v = settings.get_int(key);
-        if (Math.round(row.get_value()) !== v)
-            row.set_value(v);
-    });
-    cleanups.push(() => {
-        row.disconnect(notifyId);
-        settings.disconnect(resyncId);
-    });
     return row;
 }
 
@@ -75,41 +86,39 @@ export function comboRow(settings, key, {title, subtitle, labels, read, write}, 
         model.append(label);
     const row = new Adw.ComboRow({title, ...subtitle ? {subtitle} : {}, model});
     row.selected = Math.max(0, read());
-    const notifyId = row.connect('notify::selected', () => {
+    row.connect('notify::selected', () => {
         // No selection (Gtk.INVALID_LIST_POSITION) writes nothing.
         if (row.selected < labels.length && read() !== row.selected)
             write(row.selected);
     });
-    const resyncId = settings.connect(`changed::${key}`, () => {
+    onSetting(settings, key, () => {
         const i = read();
         if (i >= 0 && row.selected !== i)
             row.selected = i;
-    });
-    cleanups.push(() => {
-        row.disconnect(notifyId);
-        settings.disconnect(resyncId);
-    });
+    }, cleanups);
     return row;
 }
 
 // The rows of a lib/prefs-pages.js spec, built into Adw.PreferencesGroups.
-export function specPage(settings, spec) {
+export function specPage(settings, spec, cleanups) {
     const page = new Adw.PreferencesPage();
     for (const g of spec.groups) {
         const group = new Adw.PreferencesGroup(g.description ? {title: g.title, description: g.description} : {title: g.title});
         for (const r of g.rows)
-            group.add(specRow(settings, r));
+            group.add(specRow(settings, r, cleanups));
         page.add(group);
     }
     return page;
 }
 
-function specRow(settings, row) {
+function specRow(settings, row, cleanups) {
     switch (row.type) {
     case RowType.SWITCH:
         return switchRow(settings, row.key, row.title);
     case RowType.ENTRY:
-        return entryRow(settings, row.key, row.title);
+        return row.validate
+            ? validatedEntryRow(settings, row.key, row.title, row.validate, cleanups)
+            : entryRow(settings, row.key, row.title);
     case RowType.PASSWORD:
         return passwordRow(settings, row.key, row.title);
     case RowType.SPIN:
@@ -144,7 +153,7 @@ export function colorRow(settings, key, title, defaultHex, cleanups) {
         reset.sensitive = value !== '';
     };
 
-    const pickId = button.connect('notify::rgba', () => {
+    button.connect('notify::rgba', () => {
         if (syncing)
             return;
         const {red, green, blue} = button.get_rgba();
@@ -152,13 +161,8 @@ export function colorRow(settings, key, title, defaultHex, cleanups) {
         if (settings.get_string(key) !== hex)
             settings.set_string(key, hex);
     });
-    const resetId = reset.connect('clicked', () => settings.set_string(key, ''));
-    const changedId = settings.connect(`changed::${key}`, resync);
-    cleanups.push(() => {
-        button.disconnect(pickId);
-        reset.disconnect(resetId);
-        settings.disconnect(changedId);
-    });
+    reset.connect('clicked', () => settings.set_string(key, ''));
+    onSetting(settings, key, resync, cleanups);
 
     resync();
     row.add_suffix(button);
@@ -176,14 +180,9 @@ export function shortcutRow(settings, key, title, cleanups) {
         reset.sensitive = settings.get_user_value(key) !== null;
     };
 
-    const activatedId = row.connect('activated', () => captureShortcut(settings, key, row.get_root()));
-    const resetId = reset.connect('clicked', () => settings.reset(key));
-    const changedId = settings.connect(`changed::${key}`, resync);
-    cleanups.push(() => {
-        row.disconnect(activatedId);
-        reset.disconnect(resetId);
-        settings.disconnect(changedId);
-    });
+    row.connect('activated', () => captureShortcut(settings, key, row.get_root()));
+    reset.connect('clicked', () => settings.reset(key));
+    onSetting(settings, key, resync, cleanups);
 
     resync();
     row.add_suffix(label);
@@ -266,10 +265,9 @@ export function jsonEditor(settings, key, validate, cleanups) {
     });
     view.add_controller(focus);
 
-    const syncId = settings.connect(`changed::${key}`, () => {
+    onSetting(settings, key, () => {
         if (!view.has_focus && view.buffer.text.trim() !== settings.get_string(key))
             view.buffer.text = settings.get_string(key);
-    });
-    cleanups.push(() => settings.disconnect(syncId));
+    }, cleanups);
     return box;
 }

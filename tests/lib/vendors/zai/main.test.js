@@ -42,7 +42,7 @@ describe('fetchSnapshot (zai)', () => {
     }));
 
     it('HTTP 401 falls back to stale cache with lastError.code 401', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const http = httpStub(res(401, '{"code":401,"msg":"Unauthorized"}'));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
@@ -53,7 +53,7 @@ describe('fetchSnapshot (zai)', () => {
     }));
 
     it('a 200 with success:false is not cached and falls back to the good cache', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const http = httpStub(res(200, '{"code":1001,"msg":"Token expired","success":false,"data":null}'));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
@@ -72,7 +72,7 @@ describe('fetchSnapshot (zai)', () => {
     }));
 
     it('an invalid envelope already in the cache is never served', withTemp(({cache}) => {
-        cache.writePayload('{"code":500,"success":false}');
+        runSync(cache.writePayload('{"code":500,"success":false}'));
         const http = httpStub(res(200, LIVE));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
         assertEqual(http.calls.length, 1);
@@ -115,7 +115,7 @@ describe('fetchSnapshot (zai): a failure that quotes the key', () => {
     }));
 
     it('a stale fallback shows the redacted error too', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const r = runSync(fetchSnapshot({cache, http: httpStub(res(200, ECHO)), apiKey: KEY}));
         assertEqual(r.ok, true);

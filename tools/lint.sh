@@ -23,12 +23,12 @@ for f in $files; do
     fi
 done
 
-if grep -RnE --include='*.js' '(^|[^a-zA-Z_.])imports\.' lib prefs tests tools ui "${root_files[@]}" 2>/dev/null; then
+if grep -RnE --include='*.js' '(^|[^a-zA-Z_.])imports\.' "${scan_dirs[@]}" "${root_files[@]}" 2>/dev/null; then
     echo "FOUND LEGACY imports.* USAGE (see above)"
     fail=1
 fi
 
-if grep -RnE --include='*.js' 'SPDX-License-Identifier' lib prefs tests tools ui "${root_files[@]}" 2>/dev/null; then
+if grep -RnE --include='*.js' 'SPDX-License-Identifier' "${scan_dirs[@]}" "${root_files[@]}" 2>/dev/null; then
     echo "FOUND SPDX HEADER (see above)"
     fail=1
 fi

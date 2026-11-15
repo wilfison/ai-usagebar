@@ -1,8 +1,9 @@
 import system from 'system';
 
 import {
-    parseEnvelope, validateEnvelope, snapshotToCacheJson, parseCacheJson, SchemaError, zaiSeverity, zaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS, MCP_MS, notifyRows, resetCredits,
+    parseEnvelope, validateEnvelope, snapshotToCacheJson, parseCacheJson, SchemaError, zaiPeakUsage, placeholders, fakeSnapshot, SESSION_MS, WEEKLY_MS, MCP_MS, notifyRows, resetCredits,
 } from '../../../../lib/vendors/zai/parser.js';
+import {zaiAdapter} from '../../../../lib/vendors/zai/adapter.js';
 import {substitute} from '../../../../lib/format.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
@@ -172,11 +173,11 @@ describe('validateEnvelope', () => {
 describe('zaiSeverity', () => {
     it('picks the worst present window', () => {
         const s = parseEnvelope(env([{type: 'TOKENS_LIMIT', unit: 3, percentage: 10}, {type: 'TOKENS_LIMIT', unit: 6, percentage: 95}]), null);
-        assertEqual(zaiSeverity(s), Severity.CRITICAL);
+        assertEqual(zaiAdapter.severity(s), Severity.CRITICAL);
     });
 
     it('all windows absent → low', () =>
-        assertEqual(zaiSeverity(parseEnvelope(env([]), null)), Severity.LOW));
+        assertEqual(zaiAdapter.severity(parseEnvelope(env([]), null)), Severity.LOW));
 });
 
 describe('zaiPeakUsage', () => {

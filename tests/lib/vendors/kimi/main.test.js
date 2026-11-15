@@ -30,8 +30,8 @@ describe('fetchSnapshot (kimi)', () => {
         assertEqual(http.calls[0].headers.Accept, 'application/json');
         assertEqual(r.ok, true);
         assertEqual(r.snapshot.plan, 'Pro'); // /me stub returns the same body → no tier name
-        assertEqual(r.snapshot.weekly.used, 42);
-        assertEqual(r.snapshot.window.used, 15);
+        assertEqual(r.snapshot.weekly.utilizationPct, 42);
+        assertEqual(r.snapshot.window.utilizationPct, 15);
     }));
 
     it('/me runs alongside /usages and its tier name is the plan, kept through the cache', withTemp(({cache}) => {
@@ -58,18 +58,18 @@ describe('fetchSnapshot (kimi)', () => {
             const r = runSync(fetchSnapshot({cache, http, apiKey: 'k', cacheTtlMs: 0}));
             assertEqual(r.ok, true);
             assertEqual(r.snapshot.plan, 'Pro');
-            assertEqual(r.snapshot.weekly.used, 42);
+            assertEqual(r.snapshot.weekly.utilizationPct, 42);
         }
     }));
 
     it('HTTP 401 falls back to stale cache with lastError.code 401', withTemp(({cache}) => {
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const http = httpStub(res(401, '{"secret":"do-not-leak"}'));
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));
         assertEqual(r.ok, true);
         assertEqual(r.stale, true);
-        assertEqual(r.snapshot.weekly.used, 10);
+        assertEqual(r.snapshot.weekly.utilizationPct, 10);
         assertEqual(r.lastError.code, 401);
         // The persisted diagnostic never echoes the upstream body.
         assertEqual(r.lastError.body, '');

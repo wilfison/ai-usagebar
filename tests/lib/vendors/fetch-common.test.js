@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
-    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh,
+    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh, authorizeOAuth, vendorFetch, httpGet, optionalRequest,
 } from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 import {runSync, res, resTransport} from '../../_harness.js';
@@ -144,12 +144,12 @@ describe('redactHttpError / recordHttpError', () => {
     it('records the redacted pair and returns the matching result', () => {
         const written = [];
         const cache = {writeLastError: (code, msg) => written.push([code, msg])};
-        const r = recordHttpError(cache, 401, TOKEN_BODY, 'usage request failed (HTTP 401)');
+        const r = runSync(recordHttpError(cache, 401, TOKEN_BODY, 'usage request failed (HTTP 401)'));
         assertDeepEqual(written, [[401, '']]);
         assertEqual(r.code, 'auth-rejected');
         assertEqual(JSON.stringify(r).includes('sk-ant-secret-123'), false);
 
-        const r500 = recordHttpError(cache, 500, 'down', 'usage request failed (HTTP 500)');
+        const r500 = runSync(recordHttpError(cache, 500, 'down', 'usage request failed (HTTP 500)'));
         assertDeepEqual(written[1], [500, 'down']);
         assertEqual(r500.message, 'usage request failed (HTTP 500)');
         assertEqual(r500.status, 500);
@@ -194,7 +194,7 @@ describe('redaction of the request secret', () => {
         const writes = [];
         const cache = {dir: '/c', writeLastError: (status, body) => writes.push([status, body]), readLastError: () => 'x'};
         const wrapped = redactingCache(cache, [KEY]);
-        wrapped.writeLastError(0, `zai: API reported failure: bad key ${KEY}`);
+        runSync(wrapped.writeLastError(0, `zai: API reported failure: bad key ${KEY}`));
         assertDeepEqual(writes, [[0, 'zai: API reported failure: bad key [key]']]);
         assertEqual(wrapped.dir, '/c');
         assertEqual(wrapped.readLastError(), 'x');
@@ -211,7 +211,7 @@ describe('redaction of the request secret', () => {
         const writes = [];
         const cache = {writeLastError: (s, b) => writes.push(b)};
         const r = runSync(redactedFetch([KEY, null], {cache}, async (deps) => {
-            deps.cache.writeLastError(0, `echo ${KEY}`);
+            await deps.cache.writeLastError(0, `echo ${KEY}`);
             return {ok: false, kind: 'error', message: `echo ${KEY}`};
         }));
         assertEqual(r.message, 'echo [key]');
@@ -461,13 +461,13 @@ describe('settleRefresh', () => {
         const r = settle({ok: true}, cache, () => Promise.resolve({rotated: true, saved: {ok: false, message: 'EACCES'}}));
         assertDeepEqual(writes(cache), [['lastError', 0,
             'refreshed token could not be saved (EACCES); the rotated refresh token is lost; re-run `claude`']]);
-        assertDeepEqual(r, {ok: false, kind: 'error', message: 'token refresh failed; run `claude` to re-authenticate'});
+        assertDeepEqual(r, {ok: false, kind: 'error', code: 'token-refresh-failed', loginCommand: 'claude', message: 'token refresh failed; run `claude` to re-authenticate'});
     });
     it('an HTTP refusal records its status', () => {
         const cache = memCache();
         const r = settle({ok: false, kind: 'http', status: 400, body: 'invalid_grant'}, cache);
         assertDeepEqual(writes(cache), [['lastError', 400, 'invalid_grant']]);
-        assertDeepEqual(r, {ok: false, kind: 'error', message: 'token refresh failed; run `claude` to re-authenticate', status: 400});
+        assertDeepEqual(r, {ok: false, kind: 'error', code: 'token-refresh-failed', loginCommand: 'claude', message: 'token refresh failed; run `claude` to re-authenticate', status: 400});
     });
     it('a 401 refusal keeps no body', () => {
         const cache = memCache();
@@ -488,6 +488,119 @@ describe('settleRefresh', () => {
         assertEqual(r.kind, 'error');
         assertEqual('status' in r, false);
     });
+});
+
+describe('authorizeOAuth', () => {
+    const NOW = 1_000_000;
+    const run = ({accessToken = 'AT', refreshToken = 'RT', expiresAtSecs = NOW + 3600, rr = {ok: true, accessToken: 'NEW'}} = {}) => {
+        const tokens = {accessToken, refreshToken};
+        const calls = [];
+        const r = runSync(authorizeOAuth({
+            tokens,
+            expiresAtSecs,
+            nowSecs: NOW,
+            cache: memCache(),
+            loginCommand: 'claude',
+            extras: {plan: 'Pro'},
+            refresh: token => {
+                calls.push(token);
+                return Promise.resolve(rr);
+            },
+            apply: got => {
+                tokens.accessToken = got.accessToken;
+                return Promise.resolve({rotated: false, saved: {ok: true}});
+            },
+        }));
+        return {r, calls, tokens};
+    };
+
+    it('a valid token needs nothing', () => {
+        const {r, calls} = run();
+        assertEqual(r, null);
+        assertEqual(calls.length, 0);
+    });
+    it('an expiring token is refreshed and applied', () => {
+        const {r, calls, tokens} = run({expiresAtSecs: NOW});
+        assertEqual(r, null);
+        assertDeepEqual(calls, ['RT']);
+        assertEqual(tokens.accessToken, 'NEW');
+    });
+    it('an empty refresh token is never sent', () => {
+        const {r, calls} = run({expiresAtSecs: NOW, refreshToken: '  '});
+        assertEqual(r, null);
+        assertEqual(calls.length, 0);
+    });
+    it('a blank access token asks to log in, with the extras', () => {
+        const {r} = run({accessToken: ' '});
+        assertEqual(r.kind, 'error');
+        assertEqual(r.code, 'no-access-token');
+        assertEqual(r.loginCommand, 'claude');
+        assertEqual(r.message, 'no access token; run `claude` to log in');
+        assertEqual(r.plan, 'Pro');
+    });
+    it('a failed refresh stops the fetch with the extras', () => {
+        const {r} = run({expiresAtSecs: NOW, rr: {ok: false, kind: 'other', message: 'nope'}});
+        assertEqual(r.kind, 'error');
+        assertEqual(r.code, 'token-refresh-failed');
+        assertEqual(r.loginCommand, 'claude');
+        assertEqual(r.plan, 'Pro');
+    });
+    it('a transport failure is loading, without extras', () => {
+        const {r} = run({expiresAtSecs: NOW, rr: {ok: false, kind: 'transport'}});
+        assertEqual(r.kind, 'loading');
+        assertEqual(r.plan, undefined);
+    });
+});
+
+describe('vendorFetch', () => {
+    const KEY = 'sk-abcdefgh12345678';
+
+    it('serializes on the cache dir and redacts the named secrets', () => {
+        const order = [];
+        const doFetch = async deps => {
+            order.push('start');
+            await Promise.resolve();
+            order.push('end');
+            await deps.cache.writeLastError(500, `echo ${deps.apiKey}`);
+            return {ok: false, kind: 'error', message: `bad ${deps.apiKey}`};
+        };
+        const fetch = vendorFetch('zz', deps => [deps.apiKey], doFetch);
+        const cache = memCache();
+        const [a] = runSync(Promise.all([fetch({cache, apiKey: KEY}), fetch({cache, apiKey: KEY})]));
+        assertDeepEqual(order, ['start', 'end', 'start', 'end']);
+        assertEqual(a.message.includes(KEY), false);
+        assertEqual(cache.log.some(([, , msg]) => String(msg).includes(KEY)), false);
+    });
+});
+
+describe('httpGet', () => {
+    it('sends a GET with the shared timeout and the fetch signal', () => {
+        const calls = [];
+        const deps = {http: req => calls.push(req), signal: 'S'};
+        httpGet(deps, 'https://x', {A: '1'});
+        assertDeepEqual(calls, [{method: 'GET', url: 'https://x', headers: {A: '1'}, timeoutMs: HTTP_TIMEOUT_MS, cancellable: 'S'}]);
+    });
+    it('no signal is undefined, not null', () => {
+        const calls = [];
+        httpGet({http: req => calls.push(req), signal: null}, 'u', {});
+        assertEqual(calls[0].cancellable, undefined);
+    });
+});
+
+describe('optionalRequest', () => {
+    const ok = {status: 200, bodyBytes: 'b'};
+    const parse = res => `parsed ${res.bodyBytes}`;
+
+    it('parses a successful response', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve(ok), parse, 'fb')), 'parsed b'));
+    it('a transport error is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve({error: 'x'}), parse, 'fb')), 'fb'));
+    it('an HTTP error is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve({status: 500}), parse, 'fb')), 'fb'));
+    it('a parse error is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.resolve(ok), () => { throw new Error('no'); }, 'fb')), 'fb'));
+    it('a rejected request is the fallback', () =>
+        assertEqual(runSync(optionalRequest(Promise.reject(new Error('x')), parse, 'fb')), 'fb'));
 });
 
 system.exit(summary());

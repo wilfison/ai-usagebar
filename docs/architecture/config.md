@@ -5,7 +5,7 @@ description: GSettings is the single source of truth, snapshotted by readConfig(
 tags: [pure-modules]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:57:13Z
 sources:
   - id: config
     title: lib/config.js
@@ -22,7 +22,7 @@ All settings live in the gschema `org.gnome.shell.extensions.ai-usagebar`.[^sche
 # active-vendor vs primary-vendor
 
 - `primary-vendor` is the configured default.
-- `active-vendor` is the scroll-selected or segment-clicked one whose popup section is expanded; it is mirrored to disk by `lib/active-vendor.js`.
+- `active-vendor` is the scroll-selected or segment-clicked one whose popup section is expanded; it is mirrored to disk by `lib/active-vendor.js`, whose async writes run in call order so the newest id lands last.
 - Changing `primary-vendor` forces `active := primary`.
 
 The pure resolution helpers live in `lib/config-resolve.js`: `normalizeActive`, `enabledVendors`, `cycleVendor`, `panelVendors`, `pollVendors`, `withPinned`, `resolveApiKey`. Their use is described in [panel and popup](/architecture/panel-and-popup.md).

@@ -125,7 +125,7 @@ export function withCacheHome(vendor, fn, {setup = () => ({})} = {}) {
         const prev = GLib.getenv('XDG_CACHE_HOME');
         GLib.setenv('XDG_CACHE_HOME', dir, true);
         try {
-            return fn({cache: vendor ? Cache.forVendor(vendor) : null, dir, ...setup(dir)});
+            return fn({cache: vendor ? new Cache(vendor) : null, dir, ...setup(dir)});
         } finally {
             if (prev !== null && prev !== undefined)
                 GLib.setenv('XDG_CACHE_HOME', prev, true);
@@ -134,6 +134,10 @@ export function withCacheHome(vendor, fn, {setup = () => ({})} = {}) {
             rmRf(dir);
         }
     };
+}
+
+export function isStale(cache) {
+    return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.stale'])).query_exists(null);
 }
 
 export function retryArmed(cache) {
@@ -168,4 +172,26 @@ export function backdate(cache, secs) {
     const f = Gio.File.new_for_path(cache.payloadPath);
     f.set_attribute_uint64('time::modified', Math.floor(Date.now() / 1000) - secs, Gio.FileQueryInfoFlags.NONE, null);
     f.set_attribute_uint32('time::modified-usec', 0, Gio.FileQueryInfoFlags.NONE, null);
+}
+
+const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
+
+// The extension's schema, compiled from this checkout's schemas/ (`make test`
+// runs `make schemas` first).
+export function extensionSchema() {
+    const tests = GLib.path_get_dirname(import.meta.url.replace(/^file:\/\//u, ''));
+    const source = Gio.SettingsSchemaSource.new_from_directory(
+        GLib.build_filenamev([GLib.path_get_dirname(tests), 'schemas']), Gio.SettingsSchemaSource.get_default(), false);
+    return source.lookup(SCHEMA_ID, false);
+}
+
+// Settings on a memory backend of their own, so nothing reaches the user's
+// dconf and each call starts from the defaults; `overrides` maps keys to
+// plain values, typed from the schema.
+export function testSettings(overrides = {}) {
+    const schema = extensionSchema();
+    const settings = Gio.Settings.new_full(schema, Gio.memory_settings_backend_new(), null);
+    for (const [key, value] of Object.entries(overrides))
+        settings.set_value(key, new GLib.Variant(schema.get_key(key).get_value_type().dup_string(), value));
+    return settings;
 }

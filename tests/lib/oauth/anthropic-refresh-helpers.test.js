@@ -8,6 +8,7 @@ import {
     BETA_HEADER,
     USER_AGENT,
     REFRESH_BUFFER_SECS,
+    applyRefresh,
 } from '../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, summary} from '../../_assert.js';
 
@@ -64,6 +65,27 @@ describe('constants', () => {
         assertEqual(BETA_HEADER, 'oauth-2025-04-20');
         assertEqual(USER_AGENT, 'claude-cli/1.0');
         assertEqual(REFRESH_BUFFER_SECS, 300);
+    });
+});
+
+describe('applyRefresh', () => {
+    const NOW_MS = 1_800_000_000_000;
+    const oauth = () => ({accessToken: 'AT', refreshToken: 'RT', expiresAtMs: 0});
+
+    it('a new access token alone keeps the refresh token and is not a rotation', () => {
+        const o = oauth();
+        const r = applyRefresh(o, {accessToken: 'NEW', refreshToken: null, expiresIn: 3600}, NOW_MS);
+        assertEqual(r.rotated, false);
+        assertEqual(o.accessToken, 'NEW');
+        assertEqual(o.refreshToken, 'RT');
+        assertEqual(o.expiresAtMs, NOW_MS + 3_600_000);
+    });
+
+    it('a new refresh token is a rotation', () => {
+        const o = oauth();
+        const r = applyRefresh(o, {accessToken: 'NEW', refreshToken: 'RT2', expiresIn: 60}, NOW_MS);
+        assertEqual(r.rotated, true);
+        assertEqual(o.refreshToken, 'RT2');
     });
 });
 

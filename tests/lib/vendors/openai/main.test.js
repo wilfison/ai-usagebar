@@ -63,7 +63,7 @@ describe('fetchSnapshot (openai)', () => {
     }));
 
     it('a raw body cached by an older release is refetched, not served', withTemp(({cache, credsPath}) => {
-        cache.writePayload(USAGE);
+        runSync(cache.writePayload(USAGE));
         const http = httpStub(res(200, USAGE));
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
         assertEqual(http.calls.length, 1);
@@ -72,7 +72,7 @@ describe('fetchSnapshot (openai)', () => {
     }));
 
     it('fresh cache skips the network', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(USAGE));
+        runSync(cache.writePayload(cached(USAGE)));
         const http = httpStub(res(200, USAGE));
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
         assertEqual(http.calls.length, 0);
@@ -81,7 +81,7 @@ describe('fetchSnapshot (openai)', () => {
     }));
 
     it('HTTP 500 falls back to stale cache with lastError.code 500', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(CACHED));
+        runSync(cache.writePayload(cached(CACHED)));
         backdate(cache, 120);
         const http = httpStub(res(500, '{"error":{"message":"upstream"}}'));
         const r = runSync(fetchSnapshot({cache, http, credsPath}));
@@ -92,7 +92,7 @@ describe('fetchSnapshot (openai)', () => {
     }));
 
     it('transient failure with cache → silent stale', withTemp(({cache, credsPath}) => {
-        cache.writePayload(cached(CACHED));
+        runSync(cache.writePayload(cached(CACHED)));
         backdate(cache, 120);
         const r = runSync(fetchSnapshot({cache, http: httpStub(resTransport()), credsPath}));
         assertEqual(r.ok, true);
@@ -117,7 +117,7 @@ describe('fetchSnapshot (openai)', () => {
     }));
 
     it('an unsaved rotated refresh token is an auth error with stale fallback', withTemp(({cache, dir}) => {
-        cache.writePayload(cached(CACHED));
+        runSync(cache.writePayload(cached(CACHED)));
         backdate(cache, 120);
         const credsPath = expiredCreds(dir, 'ro/auth.json');
         chmod(GLib.path_get_dirname(credsPath), 0o555);
@@ -257,6 +257,23 @@ describe('fetchSnapshot (openai): a signed-out credentials file', () => {
         assertEqual(http.calls.length, 0);
         assertEqual(r.message, 'no access token; run `codex login` to log in');
         assertEqual(retryArmed(cache), false);
+    }));
+});
+
+describe('fetchSnapshot (openai): a failure that quotes the token', () => {
+    const TOKEN = 'eyJ-access-abcdefgh12345678';
+
+    it('neither the result nor .last_error carries the access token', withCacheHome('openai', ({cache, dir}) => {
+        const credsPath = writeAuth(GLib.build_filenamev([dir, 'auth.json']), {
+            accessToken: TOKEN,
+            idToken: fakeJwt({exp: Math.trunc(Date.now() / 1000) + 3600}),
+        });
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(500, `bad token ${TOKEN}`)), credsPath}));
+        assertEqual(r.ok, false);
+        assertEqual(JSON.stringify(r).includes(TOKEN), false);
+        const onDisk = runSync(cache.readLastError());
+        assertEqual(onDisk.body.includes(TOKEN), false);
+        assertEqual(onDisk.body.includes('[key]'), true);
     }));
 });
 

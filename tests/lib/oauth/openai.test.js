@@ -132,7 +132,7 @@ describe('writeBack', () => {
         writeText(path, JSON.stringify({tokens: {access_token: 'AT', refresh_token: 'RT', id_token: 'ID', expires_at: '2020-01-01T00:00:00Z'}}));
         const auth = runSync(readAuth(path));
         applyRefresh(auth.tokens, {accessToken: 'NEW', refreshToken: null, idToken: null, expiresIn: 600}, 1_800_000_000);
-        assertEqual(writeBack(path, auth).ok, true);
+        assertEqual(runSync(writeBack(path, auth)).ok, true);
         const round = JSON.parse(readText(path));
         assertEqual(round.tokens.expires_at, new Date((1_800_000_000 + 600) * 1000).toISOString());
         assertEqual(round.tokens.access_token, 'NEW');
@@ -140,7 +140,7 @@ describe('writeBack', () => {
 
     it('reports kind:io when the file cannot be written', withTempDir(({dir}) => {
         const auth = {tokens: {accessToken: 'A', refreshToken: 'R', idToken: 'I', accountId: null, expiresAt: null}, raw: {}};
-        const r = writeBack(GLib.build_filenamev([dir, 'missing-dir', 'auth.json']), auth);
+        const r = runSync(writeBack(GLib.build_filenamev([dir, 'missing-dir', 'auth.json']), auth));
         assertEqual(r.ok, false);
         assertEqual(r.kind, 'io');
     }));
@@ -154,7 +154,7 @@ describe('writeBack', () => {
         }));
         const auth = runSync(readAuth(path));
         auth.tokens.accessToken = 'NEW';
-        const r = writeBack(path, auth);
+        const r = runSync(writeBack(path, auth));
         assertEqual(r.ok, true);
 
         const round = JSON.parse(readText(path));

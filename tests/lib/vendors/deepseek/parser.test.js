@@ -2,7 +2,7 @@ import system from 'system';
 
 import {
     parseBalance, deepseekSeverity, deepseekPeakUsage, placeholders, SchemaError,
-    snapshotToCacheJson, parseCacheJson, fakeSnapshot, notifyRows, resetCredits,
+    snapshotToCacheJson, parseCacheJson, CACHE_VERSION, fakeSnapshot, notifyRows, resetCredits,
 } from '../../../../lib/vendors/deepseek/parser.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
@@ -83,10 +83,17 @@ describe('corrupt payloads throw instead of coining a zero balance', () => {
     });
 
     it('parseCacheJson rejects a corrupt cache', () => {
+        const v = snapshot => JSON.stringify({cacheVersion: CACHE_VERSION, snapshot});
         assertThrows(() => parseCacheJson('{'));
         assertThrows(() => parseCacheJson('null'));
-        assertThrows(() => parseCacheJson('{"is_available":true,"balance":"5","granted":0,"topped_up":0,"currency":"USD"}'));
-        assertThrows(() => parseCacheJson('{"is_available":true,"balance":5,"granted":0,"topped_up":0,"currency":""}'));
+        assertThrows(() => parseCacheJson(v({isAvailable: true, balance: '5', granted: 0, toppedUp: 0, currency: 'USD'})));
+        assertThrows(() => parseCacheJson(v({isAvailable: true, balance: 5, granted: 0, toppedUp: 0, currency: ''})));
+    });
+
+    it('the cache is versioned; an unversioned one from an older release is refused', () => {
+        const snap = {isAvailable: true, balance: 5, granted: 5, toppedUp: 0, currency: 'USD'};
+        assertEqual(JSON.parse(snapshotToCacheJson(snap)).cacheVersion, CACHE_VERSION);
+        assertThrows(() => parseCacheJson('{"is_available":true,"balance":3,"granted":3,"topped_up":0,"currency":"USD"}'));
     });
 });
 

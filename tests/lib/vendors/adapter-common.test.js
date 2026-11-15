@@ -91,6 +91,11 @@ describe('apiKeyFetch', () => {
         assertEqual(r.ok, false);
         assertEqual(r.message.startsWith('ZZ: no API key; export ZZ_KEY'), true, r.message);
     });
+    it('without a label the error names the vendor by its display label', () => {
+        const ctx = {...CTX, config: {vendors: {zai: {apiKeyEnv: null, apiKey: null}}}};
+        const r = runSync(apiKeyFetch({vendor: 'zai', fetchSnapshot: recorder(), getenv: () => null})(ctx));
+        assertEqual(r.message.startsWith('Z.AI: no API key'), true, r.message);
+    });
     it('adds what extra derives from the vendor config', () => {
         const fetch = recorder();
         const getenv = () => 'k';
@@ -101,6 +106,20 @@ describe('apiKeyFetch', () => {
         assertEqual(fetch.calls[0].plan, 'Pro');
         assertEqual(fetch.calls[0].sawGetenv, true);
         assertEqual(fetch.calls[0].cache, 'C');
+    });
+});
+
+describe('vendorAdapter: default severity', () => {
+    const make = peak => vendorAdapter({id: 'zz', parser, peakUsage: () => peak, buildSection, fetchSnapshot: () => null});
+
+    it('derives the severity from the peak usage', () => {
+        assertEqual(make({percent: 95, resetsAt: null}).severity({}), 'critical');
+        assertEqual(make({percent: 10, resetsAt: null}).severity({}), 'low');
+    });
+    it('no peak reads as low', () => assertEqual(make({percent: null, resetsAt: null}).severity({}), 'low'));
+    it('an explicit severity wins', () => {
+        const a = vendorAdapter({id: 'zz', parser, severity, peakUsage: () => ({percent: 99}), buildSection, fetchSnapshot: () => null});
+        assertEqual(a.severity({}), 'low');
     });
 });
 

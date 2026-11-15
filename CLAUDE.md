@@ -47,7 +47,7 @@ CI runs schemas, test, lint, eslint, validate and i18n-check. New tests mirror t
   resolution helpers in `lib/config-resolve.js`. `primary-vendor` is the default, `active-vendor` the
   scroll/click selected one.
 - **Cache.** `lib/cache.js`: per-vendor dir with payload + `.stale` / `.last_error` / `.retry_after`.
-  Payload is always the projected snapshot; bump the vendor's `CACHE_VERSION` (where it has one) when
+  Payload is always the projected snapshot; bump the vendor's `CACHE_VERSION` when
   its shape changes.
 - **HTTP.** `lib/http.js` is the only Soup user, async. Never block the main loop.
 - **Prefs** run in a separate process: `prefs.js` + `prefs/`, pure modules only (no adapter registry).

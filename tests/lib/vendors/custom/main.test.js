@@ -1,6 +1,7 @@
 import system from 'system';
 
-import {parseUsage, snapshotToCacheJson, requestHeaders} from '../../../../lib/vendors/custom/parser.js';
+import {parseUsage, snapshotToCacheJson} from '../../../../lib/vendors/custom/parser.js';
+import {requestHeaders} from '../../../../lib/vendors/custom/mapping.js';
 import {fetchSnapshot} from '../../../../lib/vendors/custom/main.js';
 import {customAdapter} from '../../../../lib/vendors/custom/adapter.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
@@ -69,7 +70,7 @@ describe('fetchSnapshot (custom)', () => {
         const r = runSync(fetchSnapshot(deps(cache, httpStub(res(200, '{"usage":{}}')))));
         assertEqual(r.ok, false);
         assertEqual(r.message.includes('/account/tier is missing'), true);
-        cache.writePayload(cached(SEED));
+        runSync(cache.writePayload(cached(SEED)));
         backdate(cache, 120);
         const stale = runSync(fetchSnapshot(deps(cache, httpStub(res(200, '{"usage":{}}')))));
         assertEqual(stale.ok, true);

@@ -1,22 +1,11 @@
-import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
-import {vendorPageSpec, RowType} from '../../lib/prefs-pages.js';
+import {vendorPageSpec, RowType, schemaRange, schemaChoices} from '../../lib/prefs-pages.js';
 import {VENDOR_IDS} from '../../lib/vendors.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../_assert.js';
+import {extensionSchema} from '../_harness.js';
 
-const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
-
-function schema() {
-    const path = import.meta.url.replace(/^file:\/\//u, '');
-    const root = GLib.path_get_dirname(GLib.path_get_dirname(GLib.path_get_dirname(path)));
-    const source = Gio.SettingsSchemaSource.new_from_directory(
-        GLib.build_filenamev([root, 'schemas']), Gio.SettingsSchemaSource.get_default(), false);
-    return source.lookup(SCHEMA_ID, false);
-}
-
-const SCHEMA = schema();
+const SCHEMA = extensionSchema();
 const TYPE_OF_ROW = {[RowType.SWITCH]: 'b', [RowType.ENTRY]: 's', [RowType.PASSWORD]: 's', [RowType.SPIN]: 'i'};
 const fake = s => `<${s}>`;
 const rowsOf = spec => spec.groups.flatMap(g => g.rows);
@@ -89,16 +78,45 @@ describe('vendorPageSpec: details', () => {
             ],
         }]});
     });
-    it('the context window spin keeps its range and subtitle', () => {
+    it('the context window spin keeps its subtitle; its range is the schema\'s', () => {
         const spin = rowsOf(vendorPageSpec('anthropic')).find(r => r.type === 'spin');
         assertDeepEqual(spin, {
             type: 'spin', key: 'context-window-tokens', title: 'Default context window (tokens)',
             subtitle: '0 shows raw token counts instead of a percentage',
-            lower: 0, upper: 100000000, step: 1000, page: 100000,
+            step: 1000, page: 100000,
         });
     });
     it('OpenRouter has a second group for the management key', () => {
         assertDeepEqual(vendorPageSpec('openrouter').groups.map(g => g.title), ['OpenRouter', 'Recent models']);
+    });
+});
+
+describe('validated entries', () => {
+    it('the model windows entry is checked before it is saved', () => {
+        const row = rowsOf(vendorPageSpec('anthropic', fake)).find(r => r.key === 'context-model-windows');
+        assertEqual(typeof row.validate, 'function');
+        assertDeepEqual(row.validate('{"m": 1}', fake), []);
+        assertEqual(row.validate('{"m": 0}', fake).length, 1);
+    });
+});
+
+describe('schemaRange / schemaChoices', () => {
+    it('reads an integer key\'s bounds from the schema', () => {
+        assertDeepEqual(schemaRange(SCHEMA, 'refresh-interval'), {lower: 300, upper: 86400});
+        assertDeepEqual(schemaRange(SCHEMA, 'panel-index'), {lower: 0, upper: 20});
+    });
+    it('a key without a range has no bounds', () => assertDeepEqual(schemaRange(SCHEMA, 'bar-format'), {}));
+    it('reads the choices of a string or enum key', () => {
+        assertDeepEqual(schemaChoices(SCHEMA, 'panel-box'), ['left', 'center', 'right']);
+        assertDeepEqual(schemaChoices(SCHEMA, 'bar-format'), []);
+    });
+    it('the primary-vendor combo index is its enum value: the nicks follow VENDOR_IDS', () =>
+        assertDeepEqual(schemaChoices(SCHEMA, 'primary-vendor'), VENDOR_IDS));
+    it('no spin row hard-codes the bounds the schema already has', () => {
+        for (const id of VENDOR_IDS) {
+            for (const row of rowsOf(vendorPageSpec(id, fake) ?? {groups: []}).filter(r => r.type === RowType.SPIN))
+                assertEqual('lower' in row || 'upper' in row, false, row.key);
+        }
     });
 });
 

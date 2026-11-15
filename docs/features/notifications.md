@@ -5,7 +5,7 @@ description: lib/notify.js decide() fires each usage window once at the threshol
 tags: [pure-modules, cache]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:57:13Z
 sources:
   - id: notify
     title: lib/notify.js
@@ -25,4 +25,4 @@ sources:
 
 # State
 
-The dedupe state is JSON (`version: 2`) in the vendor's `.notified` sidecar in the [cache](/architecture/cache.md), saved **before** delivery. Delivery is `ui/notifier.js`. A vendor notifies only while it is polled or when "Refresh all" fetched it ([panel and popup](/architecture/panel-and-popup.md)), only with `notify-enabled` on, and only for a fresh (not stale, not cached) result.
+The dedupe state is JSON (`version: 2`) in the vendor's `.notified` sidecar in the [cache](/architecture/cache.md), saved **before** delivery. Delivery is `ui/notifier.js`, owned by the extension rather than the indicator, so a panel move keeps delivered notifications; nothing is delivered once it is destroyed, even mid-write. A vendor notifies only while it is polled or when "Refresh all" fetched it ([panel and popup](/architecture/panel-and-popup.md)), only with `notify-enabled` on, and only for a fresh (not stale, not cached) result.

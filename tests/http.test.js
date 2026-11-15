@@ -2,9 +2,9 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import system from 'system';
 
-import {request, getSession, disposeSession, _debug} from '../lib/http.js';
+import {request, getSession, disposeSession, setUserAgent, _debug} from '../lib/http.js';
 import {startServer} from './_http-server.js';
-import {describe, it, assertEqual, summary} from './_assert.js';
+import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
 function runSync(promiseOrThunk) {
     const loop = GLib.MainLoop.new(null, false);
@@ -152,6 +152,24 @@ describe('http.request', () => {
                 throw new Error('expected a fresh session after disposeSession');
         }
     ));
+
+    it('the default User-Agent carries the version set at enable', () => {
+        const agents = [];
+        const {url, stop} = runSync(startServer((req) => {
+            agents.push(req.headers['user-agent']);
+            return {status: 200, body: 'ok'};
+        }));
+        try {
+            setUserAgent('ai-usagebar/9.9.9');
+            runSync(request({url, timeoutMs: 1000}));
+            runSync(request({url, headers: {'User-Agent': 'own/1'}, timeoutMs: 1000}));
+            disposeSession();
+            runSync(request({url, timeoutMs: 1000}));
+            assertDeepEqual(agents, ['ai-usagebar/9.9.9', 'own/1', 'ai-usagebar/9.9.9']);
+        } finally {
+            stop();
+        }
+    });
 
     it('Timeout source cleanup on success (no leaked GLib.Sources)', withServer(
         () => ({status: 200, body: 'ok'}),

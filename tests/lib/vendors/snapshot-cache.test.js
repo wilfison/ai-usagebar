@@ -1,9 +1,8 @@
 import system from 'system';
 
 import {encodeSnapshot, decodeSnapshot} from '../../../lib/vendors/snapshot-cache.js';
+import {SchemaError} from '../../../lib/vendors/parse-common.js';
 import {describe, it, assertEqual, assertDeepEqual, assertThrows, summary} from '../../_assert.js';
-
-class SchemaError extends Error {}
 
 const SNAP = {
     plan: 'Pro',
@@ -14,7 +13,7 @@ const SNAP = {
 
 describe('encodeSnapshot / decodeSnapshot', () => {
     it('round-trips a snapshot, reviving dates', () => {
-        const back = decodeSnapshot(encodeSnapshot(SNAP, 1), 1, SchemaError);
+        const back = decodeSnapshot(encodeSnapshot(SNAP, 1), 1);
         assertEqual(back.session.resetsAt instanceof Date, true);
         assertEqual(back.session.resetsAt.getTime(), SNAP.session.resetsAt.getTime());
         assertDeepEqual(back.scoped, SNAP.scoped);
@@ -23,13 +22,13 @@ describe('encodeSnapshot / decodeSnapshot', () => {
 
     it('accepts Uint8Array bytes', () => {
         const bytes = new TextEncoder().encode(encodeSnapshot(SNAP, 3));
-        assertEqual(decodeSnapshot(bytes, 3, SchemaError).plan, 'Pro');
+        assertEqual(decodeSnapshot(bytes, 3).plan, 'Pro');
     });
 
     it('rejects another version, a missing version and a raw body', () => {
         const thrown = (text) => {
             try {
-                decodeSnapshot(text, 2, SchemaError);
+                decodeSnapshot(text, 2);
             } catch (e) {
                 return e instanceof SchemaError;
             }
@@ -43,9 +42,9 @@ describe('encodeSnapshot / decodeSnapshot', () => {
     });
 
     it('leaves ordinary objects alone', () =>
-        assertDeepEqual(decodeSnapshot(encodeSnapshot({a: {b: 1}}, 1), 1, SchemaError), {a: {b: 1}}));
+        assertDeepEqual(decodeSnapshot(encodeSnapshot({a: {b: 1}}, 1), 1), {a: {b: 1}}));
 
-    it('throws on unparseable text', () => assertThrows(() => decodeSnapshot('{', 1, SchemaError)));
+    it('throws on unparseable text', () => assertThrows(() => decodeSnapshot('{', 1)));
 });
 
 system.exit(summary());

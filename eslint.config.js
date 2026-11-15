@@ -58,6 +58,20 @@ const rules = {
     'no-multiple-empty-lines': ['error', {max: 2, maxBOF: 0, maxEOF: 0}],
 };
 
+// lib/ is pure (no gi://, so it runs under plain gjs tests) except these,
+// which own the Gio, Soup and GLib edges.
+const GI_BOUND_LIB = [
+    'lib/active-vendor.js',
+    'lib/cache.js',
+    'lib/context/scan.js',
+    'lib/http.js',
+    'lib/oauth/anthropic.js',
+    'lib/oauth/creds-file.js',
+    'lib/oauth/openai.js',
+    'lib/update-store.js',
+    'lib/vendors/*/adapter.js',
+];
+
 export default [
     {
         // tmp/ holds local scratch (the upstream Rust clone among it), never shipped.
@@ -71,5 +85,28 @@ export default [
             globals: gjsGlobals,
         },
         rules,
+    },
+    {
+        files: ['lib/**/*.js'],
+        ignores: GI_BOUND_LIB,
+        rules: {
+            'no-restricted-imports': ['error', {patterns: [{
+                group: ['gi://*', 'resource:///*'],
+                message: 'lib/ modules stay pure: inject what needs gi (see CLAUDE.md), or list the file in GI_BOUND_LIB.',
+            }]}],
+        },
+    },
+    {
+        // The prefs process has no Shell: no adapters (they reach Soup and the
+        // shell's modules), no ui/.
+        files: ['prefs.js', 'prefs/**/*.js'],
+        rules: {
+            'no-restricted-imports': ['error', {patterns: [{
+                // Case matters: org/gnome/Shell/Extensions is the prefs side.
+                caseSensitive: true,
+                group: ['**/vendors/registry.js', '**/vendors/*/adapter.js', '**/ui/*', 'resource:///org/gnome/shell/*'],
+                message: 'prefs runs in its own process: import only pure lib/ modules.',
+            }]}],
+        },
     },
 ];

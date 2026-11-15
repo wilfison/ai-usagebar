@@ -9,31 +9,26 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {Cache} from '../lib/cache.js';
 import {readConfig} from '../lib/config.js';
-import {FetchGuard} from '../lib/fetch-guard.js';
+import {VendorPoller} from '../lib/vendor-poller.js';
 import {
     normalizeActive, cycleVendor, enabledVendors, isPinnedMode, pollVendors,
 } from '../lib/config-resolve.js';
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
-import {request, disposeSession} from '../lib/http.js';
+import {request} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
-import {vendorLabel, vendorIconName, GENERIC_ICON, VENDOR_IDS} from '../lib/vendors.js';
+import {vendorLabel, vendorIconName, GENERIC_ICON} from '../lib/vendors.js';
 import {VendorCard} from './vendorSection.js';
 import {ActionBar} from './actionBar.js';
 import {Tooltip} from './tooltip.js';
 import {PanelSegments, badgeSignature} from './panelSegments.js';
-import {Notifier} from './notifier.js';
 import {UpdateItem} from './updateItem.js';
+import {DevFetch} from './devFetch.js';
 import {errorText, footerRow} from '../lib/vendors/section-common.js';
-import {loading} from '../lib/vendors/fetch-common.js';
 import {scanSessions} from '../lib/context/scan.js';
 import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
-import {settingsEffect, Effect} from '../lib/settings-effect.js';
-import {
-    parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, fakeResult, fakeHttpFailure,
-    FAKE_PCT_ENV, FAKE_ERROR_ENV, FAKE_DELAY_ENV,
-} from '../lib/debug.js';
+import {settingsEffects} from '../lib/settings-effect.js';
 
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
@@ -46,7 +41,8 @@ function warnOnFailure(what) {
 
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    _init(settings, openPreferences, extensionPath, version) {
+    // `notifier` belongs to the extension and outlives a rebuild.
+    _init(settings, openPreferences, extensionPath, version, notifier) {
         const config = readConfig(settings);
         // Centered like the clock's menu when beside it; _place() rebuilds on a box change.
         super._init(config.panel.box === 'center' ? 0.5 : 0.0, 'ai-usagebar');
@@ -62,35 +58,34 @@ class Indicator extends PanelMenu.Button {
         this._config = config;
 
         this._cancellable = new Gio.Cancellable();
-        this._guards = new Map();       // vendorId -> FetchGuard
         this._activeId = normalizeActive(this._config);
         this._pollIds = pollVendors(this._config);
-        this._theme = defaultTheme();
         this._rebuildTheme();
         this._timeoutId = null;
         this._renderTimeoutId = null;
-        this._openStateId = null;
-        this._scrollId = null;
-        this._settingsChangedId = null;
+        this._settingsIdleId = null;
+        this._pendingKeys = new Set();
         this._destroyed = false;
         this._darkPopup = true;
 
-        this._readDevOverrides();
+        this._devFetch = new DevFetch();
 
         // Lazy per-vendor data: only the poll set (panel segments + the active
-        // vendor) is polled; other sub-sections render from whatever is already
-        // here. `_fetchedAt` pins each vendor's timestamp to its real fetch
-        // instant across live re-renders.
-        this._results = new Map();      // vendorId -> FetchResult
+        // vendor) is polled; other sub-sections render from whatever the
+        // poller already holds.
+        this._poller = new VendorPoller({
+            run: id => this._fetchVendor(id),
+            isPolled: id => this._pollIds.includes(id),
+            onStart: id => this._vendorItems.get(id)?.setBusy(true),
+            onResult: (id, out, {all}) => this._onVendorResult(id, out, all),
+        });
         this._sessions = null;          // last context scan for CONTEXT_VENDOR
-        this._fetchedAt = new Map();    // vendorId -> Date
         this._vendorItems = new Map();  // vendorId -> VendorCard
         this._enabledSig = '';
-        this._pendingAll = new Set();   // vendorIds whose coalesced rerun came from "Refresh all"
 
         this._segments = new PanelSegments(id => this._vendorGicon(id));
         this.add_child(this._segments.actor);
-        this._notifier = new Notifier(() => this._vendorGicon());
+        this._notifier = notifier;
 
         this._tooltip = new Tooltip();
 
@@ -107,94 +102,99 @@ class Indicator extends PanelMenu.Button {
         // Seed the polled vendors with a Loading… state so their cards (and an
         // immediately-opened popup) are never empty before the first fetch lands.
         for (const id of this._pollIds)
-            this._results.set(id, loading());
+            this._poller.seed(id);
         this._rebuildVendorSections(this._config);
         this._rebuildSegments(this._config);
 
         // Live countdowns: re-render the cards only while open.
-        this._openStateId = this.menu.connect('open-state-changed', (_m, open) => {
+        this.menu.connectObject('open-state-changed', (_m, open) => {
             if (this._destroyed)
                 return;
             if (open)
                 this._onPopupOpen();
             else
                 this._onPopupClose();
-        });
-
-        this._scrollId = this.connect('scroll-event', (actor, event) => this._onScroll(actor, event));
+        }, this);
 
         // React to settings changes (prefs / gsettings / scroll write) immediately.
-        this._settingsChangedId = this._settings.connect('changed', (s, key) => this._onSettingsChanged(s, key));
+        this._settings.connectObject('changed', (s, key) => this._onSettingsChanged(s, key), this);
 
         this._refresh().catch(warnOnFailure('refresh'));
         this._rearmPollTimer(this._config.refreshIntervalSecs);
-        this._update.check(this._config.updateCheck.enabled);
+        this._checkForUpdate();
     }
 
-    // AI_USAGEBAR_FAKE_PCT=<0..100> answers every fetch with a synthetic
-    // snapshot; AI_USAGEBAR_FAKE_ERROR=<id[:stale]|*,...> fails those vendors'
-    // fetches; AI_USAGEBAR_FAKE_DELAY_MS=<ms> holds every fetch that long first.
-    _readDevOverrides() {
-        this._fakePct = parseFakePct(GLib.getenv(FAKE_PCT_ENV));
-        if (this._fakePct !== null)
-            log(`ai-usagebar: ${FAKE_PCT_ENV}=${this._fakePct}, overriding usage fetch`);
-        this._fakeErrors = parseFakeErrorVendors(GLib.getenv(FAKE_ERROR_ENV), VENDOR_IDS);
-        this._fakeDelayMs = parseFakeDelayMs(GLib.getenv(FAKE_DELAY_ENV));
-        if (this._fakeErrors !== null)
-            log(`ai-usagebar: ${FAKE_ERROR_ENV}=${[...this._fakeErrors].map(([id, f]) => `${id}:${f}`).join(',')}, failing those fetches`);
-        if (this._fakeDelayMs !== null)
-            log(`ai-usagebar: ${FAKE_DELAY_ENV}=${this._fakeDelayMs}, delaying every fetch`);
-        this._fakeDelayIds = new Set();
+    // Removes the GLib source stored in `this[field]`, if any.
+    _clearSource(field) {
+        if (this[field]) {
+            GLib.Source.remove(this[field]);
+            this[field] = null;
+        }
+    }
+
+    // Fire-and-forget on each poll tick: a rejection is only logged.
+    _checkForUpdate() {
+        this._update.check(this._config.updateCheck.enabled).catch(warnOnFailure('update check'));
     }
 
     _rearmPollTimer(secs) {
-        if (this._timeoutId) {
-            GLib.Source.remove(this._timeoutId);
-            this._timeoutId = null;
-        }
+        this._clearSource('_timeoutId');
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, secs, () => {
             this._refresh().catch(warnOnFailure('refresh'));
-            this._update.check(this._config.updateCheck.enabled);
+            this._checkForUpdate();
             return GLib.SOURCE_CONTINUE;
         });
     }
 
+    // Keys changed in one main-loop turn (a reset writes every key) are applied
+    // once, from an idle.
     _onSettingsChanged(settings, key) {
         if (this._destroyed)
             return;
 
         // A primary-vendor change forces active := primary. The set_string re-enters
         // this handler as key='active-vendor'; GSettings emits nothing for an
-        // unchanged value, so there is no recursion. Return so the active-vendor
-        // re-entry does the re-resolve/fetch below exactly once.
+        // unchanged value, so there is no recursion.
         if (key === 'primary-vendor') {
             const primary = settings.get_string('primary-vendor');
-            if (settings.get_string('active-vendor') !== primary) {
-                settings.set_string('active-vendor', primary);
-                writeActiveVendorMirror(primary);
-                return;
-            }
+            if (settings.get_string('active-vendor') !== primary)
+                this._setActiveVendor(primary);
         }
 
+        this._pendingKeys.add(key);
+        this._settingsIdleId ??= GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._settingsIdleId = null;
+            this._applySettings();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _applySettings() {
+        const effects = settingsEffects([...this._pendingKeys]);
+        this._pendingKeys.clear();
         this._config = readConfig(this._settings);
-        const effect = settingsEffect(key);
-        if (effect.kind === Effect.INTERVAL) {
+        if (effects.interval)
             this._rearmPollTimer(this._config.refreshIntervalSecs);
+        if (effects.updateCheck)
+            this._checkForUpdate();
+        if (!effects.sync)
             return;
-        }
-        if (effect.kind === Effect.UPDATE_CHECK) {
-            this._update.check(this._config.updateCheck.enabled);
-            return;
-        }
 
         // A vendor that joined the poll set (scroll write, primary sync, a pin, or a
         // disable that bumped the fallback) is fetched now; a cache-warm revisit
         // skips the network via the 60s TTL.
         for (const id of this._syncTargets(this._config))
-            this._refreshVendor(id).catch(warnOnFailure('refresh'));
-        if (effect.rebuildTheme)
+            this._poller.refresh(id).catch(warnOnFailure('refresh'));
+        if (effects.rebuildTheme)
             this._rebuildTheme();
         this._reRenderFromCache();
+    }
+
+    // The mirror is for out-of-shell readers; the settings change comes back
+    // through _onSettingsChanged.
+    _setActiveVendor(id) {
+        this._settings.set_string('active-vendor', id);
+        writeActiveVendorMirror(id).catch(warnOnFailure('active vendor mirror'));
     }
 
     // The custom provider's name is its card title and the logos toggle swaps
@@ -219,7 +219,7 @@ class Indicator extends PanelMenu.Button {
                 name: vendorLabel(id, config),
                 tooltip: this._tooltip,
                 refreshLabel: _('Refresh now'),
-                onRefresh: () => this._refreshVendor(id, {all: true}).catch(warnOnFailure('refresh')),
+                onRefresh: () => this._poller.refresh(id, {all: true}).catch(warnOnFailure('refresh')),
             });
             this.menu.addMenuItem(card.item, idx);
             this._vendorItems.set(id, card);
@@ -234,14 +234,14 @@ class Indicator extends PanelMenu.Button {
         const card = this._vendorItems.get(id);
         if (!card)
             return;
-        const res = this._results.get(id);
+        const res = this._poller.result(id);
         if (!res) {
             card.setMessage(_('No data: use "Refresh all"'), {dim: true});
             return;
         }
         if (res.ok) {
             const now = new Date();
-            const fetchedAt = this._fetchedAt.get(id) ?? new Date(Date.now() - res.cacheAgeMs);
+            const fetchedAt = this._poller.fetchedAt(id) ?? new Date(Date.now() - res.cacheAgeMs);
             const adapter = getAdapter(id);
             const model = adapter.buildSection(
                 res.snapshot,
@@ -278,7 +278,7 @@ class Indicator extends PanelMenu.Button {
     _updateStatus() {
         let latest = null;
         for (const id of this._vendorItems.keys()) {
-            const at = this._results.get(id)?.ok ? this._fetchedAt.get(id) : null;
+            const at = this._poller.result(id)?.ok ? this._poller.fetchedAt(id) : null;
             if (at && (latest === null || at > latest))
                 latest = at;
         }
@@ -316,10 +316,8 @@ class Indicator extends PanelMenu.Button {
         this._pollIds = pollVendors(config);
 
         const added = this._pollIds.filter(id => !before.includes(id));
-        for (const id of added) {
-            if (!this._results.has(id))
-                this._results.set(id, loading());
-        }
+        for (const id of added)
+            this._poller.seed(id);
 
         this._maybeRebuildVendorSections(config);
         if (this._segments.maybeRebuild(config))
@@ -338,55 +336,31 @@ class Indicator extends PanelMenu.Button {
 
     async _refresh() {
         this._reloadConfig();
-        await Promise.all(this._pollIds.map(id => this._refreshVendor(id)));
+        await Promise.all(this._pollIds.map(id => this._poller.refresh(id)));
     }
 
     async _refreshAll() {
         this._reloadConfig();
-        await Promise.all(enabledVendors(this._config).map(id => this._refreshVendor(id, {all: true})));
+        await Promise.all(enabledVendors(this._config).map(id => this._poller.refresh(id, {all: true})));
     }
 
-    _guardFor(id) {
-        let guard = this._guards.get(id);
-        if (!guard) {
-            guard = new FetchGuard();
-            this._guards.set(id, guard);
-        }
-        return guard;
-    }
-
-    // One fetch for `id`, coalesced with any already in flight for it. A fresh
-    // result notifies only while `id` is still polled (or when "Refresh all"
-    // asked for it), so a vendor scrolled away from mid-fetch stays quiet.
-    async _refreshVendor(id, {all = false} = {}) {
-        const guard = this._guardFor(id);
-        const token = guard.begin();
-        if (token === null) {
-            if (all)
-                this._pendingAll.add(id);
-            return;
-        }
-
-        this._vendorItems.get(id)?.setBusy(true);
+    _fetchVendor(id) {
         const adapter = getAdapter(id);
-        const cache = Cache.forVendor(adapter.cacheId);
+        const cache = new Cache(adapter.cacheId);
         const config = this._config;
-        let res;
-        try {
-            res = await this._runFetch(adapter, {config, cache, http: request, signal: this._cancellable});
-        } catch (e) {
-            res = {ok: false, kind: 'error', message: e?.message ?? String(e)};
-        }
-        if (this._destroyed)
-            return;
+        return this._devFetch.run(adapter, {config, cache, http: request, signal: this._cancellable})
+            .then(res => ({res, adapter, cache, config}));
+    }
 
-        const again = guard.end(token);
+    // A fresh result notifies only while its vendor is still polled (or when
+    // "Refresh all" asked for it), so one scrolled away from mid-fetch stays quiet.
+    _onVendorResult(id, {res, adapter, cache, config}, all) {
         this._vendorItems.get(id)?.setBusy(false);
-        this._storeResult(id, res);
-        this._maybeScanContext(id, res, config);
+        // A run that threw carries only `res`.
+        this._maybeScanContext(id, res, config ?? this._config).catch(warnOnFailure('context scan'));
         const polled = this._pollIds.includes(id);
-        if (all || polled)
-            this._notifier.maybeNotify(adapter, cache, res, config);
+        if (adapter && (all || polled))
+            this._notifier.maybeNotify(adapter, cache, res, config).catch(warnOnFailure('notification'));
         if ((all || polled) && !res.ok && res.kind === 'error')
             console.warn(`ai-usagebar: ${errorText(res)}`);
         try {
@@ -395,41 +369,6 @@ class Indicator extends PanelMenu.Button {
         } catch (e) {
             console.warn(`ai-usagebar: render failed: ${e}`);
         }
-        // A rerun for a vendor no longer polled could only repaint from the TTL cache.
-        const rerunAll = this._pendingAll.delete(id);
-        if (again && (rerunAll || this._pollIds.includes(id)))
-            await this._refreshVendor(id, {all: rerunAll});
-    }
-
-    // The real fetch, reshaped by the dev overrides when set (see
-    // _readDevOverrides). Without FAKE_PCT a failed vendor's real fetch runs
-    // against an HTTP 503, so its own stale fallback and sidecars are exercised.
-    async _runFetch(adapter, ctx) {
-        if (this._fakeDelayMs !== null)
-            await this._fakeDelay(this._fakeDelayMs);
-        const failure = this._fakeErrors?.get(adapter.id) ?? null;
-        if (this._fakePct !== null && typeof adapter.fakeSnapshot === 'function')
-            return fakeResult(failure, () => adapter.fakeSnapshot(this._fakePct, new Date(), ctx.config));
-        if (failure !== null)
-            return adapter.fetchSnapshot({...ctx, http: () => Promise.resolve(fakeHttpFailure())});
-        return adapter.fetchSnapshot(ctx);
-    }
-
-    _fakeDelay(ms) {
-        return new Promise(resolve => {
-            const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
-                this._fakeDelayIds.delete(id);
-                resolve();
-                return GLib.SOURCE_REMOVE;
-            });
-            this._fakeDelayIds.add(id);
-        });
-    }
-
-    _storeResult(id, res) {
-        this._results.set(id, res);
-        if (res.ok)
-            this._fetchedAt.set(id, new Date(Date.now() - res.cacheAgeMs));
     }
 
     // Turning the option off hides the sessions at once, before any refresh.
@@ -480,7 +419,7 @@ class Indicator extends PanelMenu.Button {
         this._theme = withOverrides(defaultTheme(), this._config.colors);
     }
 
-    _onScroll(_actor, event) {
+    vfunc_scroll_event(event) {
         if (this._destroyed)
             return Clutter.EVENT_PROPAGATE;
 
@@ -503,10 +442,9 @@ class Indicator extends PanelMenu.Button {
         if (next === active)
             return Clutter.EVENT_PROPAGATE;
 
-        this._settings.set_string('active-vendor', next);
-        writeActiveVendorMirror(next);
-        // Expand synchronously for instant feedback; the reactive settings handler
-        // (fired by the active-vendor write) re-resolves + fetches the new vendor.
+        this._setActiveVendor(next);
+        // Expand synchronously for instant feedback; the settings handler (fired by
+        // the active-vendor write) re-resolves and fetches the new vendor.
         this._setActiveExpansion(next);
         return Clutter.EVENT_STOP;
     }
@@ -522,7 +460,7 @@ class Indicator extends PanelMenu.Button {
     }
 
     _paintSegment(id) {
-        this._segments.paint(id, this._results.get(id), {config: this._config, theme: this._theme});
+        this._segments.paint(id, this._poller.result(id), {config: this._config, theme: this._theme});
     }
 
     // A click or tap on the button focuses the nearest segment's vendor. The
@@ -540,8 +478,7 @@ class Indicator extends PanelMenu.Button {
         if (id === null || id === this._activeId)
             return;
         this._activeId = id;
-        this._settings.set_string('active-vendor', id);
-        writeActiveVendorMirror(id);
+        this._setActiveVendor(id);
     }
 
     _onPopupOpen() {
@@ -558,10 +495,7 @@ class Indicator extends PanelMenu.Button {
     }
 
     _onPopupClose() {
-        if (this._renderTimeoutId) {
-            GLib.Source.remove(this._renderTimeoutId);
-            this._renderTimeoutId = null;
-        }
+        this._clearSource('_renderTimeoutId');
     }
 
     // Symbolic name (-symbolic.svg) so St recolors it to the menu foreground;
@@ -572,51 +506,27 @@ class Indicator extends PanelMenu.Button {
         return new Gio.FileIcon({file: f});
     }
 
-    destroy() {
+    // Runs on any destroy, from JS or from the shell tearing the panel down,
+    // so nothing here may outlive the actor.
+    _onDestroy() {
         this._destroyed = true;
 
-        if (this._timeoutId) {
-            GLib.Source.remove(this._timeoutId);
-            this._timeoutId = null;
-        }
-        if (this._renderTimeoutId) {
-            GLib.Source.remove(this._renderTimeoutId);
-            this._renderTimeoutId = null;
-        }
-        for (const id of this._fakeDelayIds)
-            GLib.Source.remove(id);
-        this._fakeDelayIds.clear();
+        this._clearSource('_timeoutId');
+        this._clearSource('_renderTimeoutId');
+        this._clearSource('_settingsIdleId');
+        this._devFetch.destroy();
+        this.menu.disconnectObject(this);
+        this._settings.disconnectObject(this);
+        this._cancellable.cancel();
         this._tooltip.destroy();
         this._update.destroy();
-        if (this._openStateId) {
-            this.menu.disconnect(this._openStateId);
-            this._openStateId = null;
-        }
-        if (this._scrollId) {
-            this.disconnect(this._scrollId);
-            this._scrollId = null;
-        }
-        if (this._settingsChangedId) {
-            this._settings.disconnect(this._settingsChangedId);
-            this._settingsChangedId = null;
-        }
-        if (this._cancellable) {
-            this._cancellable.cancel();
-            this._cancellable = null;
-        }
-        disposeSession();
-        this._notifier.destroy();
-        this._settings = null;
-
-        this._vendorItems.clear();
         this._segments.destroy();
-        this._guards.clear();
-        this._pendingAll.clear();
-        this._results.clear();
-        this._fetchedAt.clear();
 
-        this.menu?.removeAll();
+        this._settings = null;
+        this._notifier = null;
+        this._vendorItems.clear();
+        this._poller.destroy();
 
-        super.destroy();
+        super._onDestroy();
     }
 });

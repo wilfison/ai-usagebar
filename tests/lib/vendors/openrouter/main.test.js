@@ -1,16 +1,16 @@
 import system from 'system';
 
 import {fetchSnapshot} from '../../../../lib/vendors/openrouter/main.js';
-import {balance} from '../../../../lib/vendors/openrouter/parser.js';
+import {balance, snapshotToCacheJson} from '../../../../lib/vendors/openrouter/parser.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
 import {runSync, httpStub, res, backdate, routeStub, withCacheHome} from '../../../_harness.js';
 
 const CREDITS = '{"data":{"total_credits":100.0,"total_usage":25.5}}';
 const KEY = '{"data":{"label":"prod","limit":50.0,"limit_remaining":24.5,"usage":25.5,"usage_daily":1.0,"usage_weekly":7.0,"usage_monthly":25.5,"is_free_tier":false}}';
-const SEED = JSON.stringify({snapshot: {
-    label: 'OpenRouter - seed', total_credits: 50, total_usage: 10,
-    usage_daily: 1, usage_weekly: 3, usage_monthly: 10, is_free_tier: false, limit: null, limit_remaining: null,
-}});
+const SEED = snapshotToCacheJson({
+    label: 'OpenRouter - seed', totalCredits: 50, totalUsage: 10,
+    usageDaily: 1, usageWeekly: 3, usageMonthly: 10, isFreeTier: false, limit: null, limitRemaining: null, recentModels: [],
+});
 
 const withTemp = fn => withCacheHome('openrouter', fn);
 
@@ -28,7 +28,7 @@ describe('fetchSnapshot (openrouter)', () => {
     }));
 
     it('401 on /credits falls back to seeded cache with lastError.code 401', withTemp(({cache}) => {
-        cache.writePayload(SEED);
+        runSync(cache.writePayload(SEED));
         backdate(cache, 120);
         const http = httpStub([res(401, '{"error":"unauthorized"}'), res(200, KEY)]);
         const r = runSync(fetchSnapshot({cache, http, apiKey: 'k'}));

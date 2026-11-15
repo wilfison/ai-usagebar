@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 13:48-0300\n"
+"POT-Creation-Date: 2026-11-15 15:53-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: French\n"
@@ -14,6 +14,27 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: lib/context/parser.js prefs/custom.js
+#, javascript-format
+msgid "Not valid JSON: %s"
+msgstr "JSON non valide : %s"
+
+#: lib/context/parser.js
+msgid "Not a JSON object of model names to token counts."
+msgstr ""
+"Ce n’est pas un objet JSON associant des noms de modèle à des nombres de "
+"jetons."
+
+#: lib/context/parser.js
+msgid "A model name cannot be empty."
+msgstr "Le nom du modèle ne peut pas être vide."
+
+#. Translators: %s is a model name, e.g. claude-opus-5.
+#: lib/context/parser.js
+#, javascript-format
+msgid "%s: the token count must be a whole number above 0."
+msgstr "%s : le nombre de jetons doit être un entier supérieur à 0."
 
 #. Translators: compact duration, s = seconds.
 #: lib/countdown.js
@@ -143,6 +164,18 @@ msgstr "Variable d’environnement de la clé d’API"
 msgid "API key (inline)"
 msgstr "Clé d’API (en ligne)"
 
+#: lib/prefs-pages.js
+msgid "Disabled by default; requires an API key (env var or inline)."
+msgstr ""
+"Désactivé par défaut ; nécessite une clé d’API (variable d’environnement ou "
+"en ligne)."
+
+#: lib/prefs-pages.js
+msgid "Set the API key inline or via the environment variable (env wins)."
+msgstr ""
+"Définissez la clé d’API en ligne ou via la variable d’environnement "
+"(l’environnement l’emporte)."
+
 #. Translators: "Anthropic" is a brand name, usually keep untranslated.
 #: lib/prefs-pages.js
 msgid "Anthropic"
@@ -208,12 +241,6 @@ msgid "Z.AI"
 msgstr "Z.AI"
 
 #: lib/prefs-pages.js
-msgid "Set the API key inline or via the environment variable (env wins)."
-msgstr ""
-"Définissez la clé d’API en ligne ou via la variable d’environnement "
-"(l’environnement l’emporte)."
-
-#: lib/prefs-pages.js
 msgid "Plan tier (lite/pro/max)"
 msgstr "Niveau du forfait (lite/pro/max)"
 
@@ -248,12 +275,6 @@ msgstr "Clé de gestion (en ligne)"
 msgid "DeepSeek"
 msgstr "DeepSeek"
 
-#: lib/prefs-pages.js
-msgid "Disabled by default; requires an API key (env var or inline)."
-msgstr ""
-"Désactivé par défaut ; nécessite une clé d’API (variable d’environnement ou "
-"en ligne)."
-
 #. Translators: "Kimi" is a brand name, usually keep untranslated.
 #: lib/prefs-pages.js
 msgid "Kimi"
@@ -267,6 +288,12 @@ msgstr "Ollama Cloud"
 #: lib/prefs-pages.js
 msgid "Plan name (optional)"
 msgstr "Nom de l’offre (facultatif)"
+
+#. Translators: "14157 minor units BRL": an amount in the currency's smallest unit.
+#: lib/vendors/anthropic/parser.js
+#, javascript-format
+msgid "%s minor units %s"
+msgstr "%s unités mineures %s"
 
 #: lib/vendors/anthropic/parser.js lib/vendors/anthropic/section.js
 #: lib/vendors/ollama/parser.js lib/vendors/ollama/section.js
@@ -408,6 +435,12 @@ msgstr "recharge automatique : désactivée"
 #, javascript-format
 msgid "Claude %s"
 msgstr "Claude %s"
+
+#. Translators: "12 of 100": the used amount of a limit; both may be money.
+#: lib/vendors/custom/section.js
+#, javascript-format
+msgid "%s of %s"
+msgstr "%s sur %s"
 
 #: lib/vendors/custom/section.js prefs/custom.js
 msgid "Custom provider"
@@ -569,12 +602,34 @@ msgstr ""
 "absents, expirés ou invalides"
 
 #: lib/vendors/section-common.js
+msgid "The provider's answer quoted the key, so it is not shown."
+msgstr "La réponse du fournisseur citait la clé, elle n’est donc pas affichée."
+
+#. Translators: %s is a command to run in a terminal, e.g. `claude`.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "Run %s to sign in again."
+msgstr "Exécutez %s pour vous reconnecter."
+
+#: lib/vendors/section-common.js
 msgid ""
 "The custom provider mapping or extra headers are not valid; fix them in the "
 "preferences."
 msgstr ""
 "Le mappage ou les en-têtes supplémentaires du fournisseur personnalisé ne "
 "sont pas valides ; corrigez-les dans les préférences."
+
+#. Translators: %s is a command to run in a terminal, e.g. `claude`.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "No access token: run %s to log in."
+msgstr "Aucun jeton d’accès : exécutez %s pour vous connecter."
+
+#. Translators: %s is a command to run in a terminal, e.g. `codex login`.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "Token refresh failed: run %s to sign in again."
+msgstr "Échec du renouvellement du jeton : exécutez %s pour vous reconnecter."
 
 #: lib/vendors/section-common.js
 #, javascript-format
@@ -735,11 +790,6 @@ msgstr ""
 "réponse par JSON Pointer ; une devise facultative (p. ex. « USD ») affiche "
 "utilisé + limite ou un texte comme montant. Enregistré quand l’éditeur perd "
 "le focus et que le mappage est valide."
-
-#: prefs/custom.js
-#, javascript-format
-msgid "Not valid JSON: %s"
-msgstr "JSON non valide : %s"
 
 #: prefs/general.js
 msgid "Panel position"

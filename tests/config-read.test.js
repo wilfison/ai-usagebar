@@ -1,32 +1,8 @@
-import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
-
-// Isolate from the user's real dconf store: select the memory backend before
-// any Gio.Settings is constructed.
-GLib.setenv('GSETTINGS_BACKEND', 'memory', true);
 
 import {readConfig, anthropicCredsPath, codexAuthPath} from '../lib/config.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
-
-const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
-
-function schemasDir() {
-    const url = import.meta.url;
-    const path = url.startsWith('file://') ? url.slice('file://'.length) : url;
-    const tests = GLib.path_get_dirname(path);
-    return GLib.build_filenamev([GLib.path_get_dirname(tests), 'schemas']);
-}
-
-function makeSettings() {
-    const source = Gio.SettingsSchemaSource.new_from_directory(
-        schemasDir(),
-        Gio.SettingsSchemaSource.get_default(),
-        false
-    );
-    const schema = source.lookup(SCHEMA_ID, false);
-    return Gio.Settings.new_full(schema, null, null);
-}
+import {testSettings as makeSettings} from './_harness.js';
 
 describe('readConfig: schema defaults', () => {
     const cfg = readConfig(makeSettings());
@@ -193,6 +169,29 @@ describe('readConfig: panel vendors', () => {
         const settings = makeSettings();
         settings.set_strv('panel-vendors', ['openai', 'nope', 'anthropic', 'openai']);
         assertDeepEqual(readConfig(settings).panelVendors, ['openai', 'anthropic']);
+    });
+});
+
+describe('readConfig: cleared fields', () => {
+    const KEYED = ['zai', 'openrouter', 'deepseek', 'kimi', 'ollama', 'custom'];
+
+    it('a cleared env var name is null for every keyed vendor', () => {
+        const settings = makeSettings();
+        for (const id of KEYED)
+            settings.set_string(`${id}-api-key-env`, '');
+        const cfg = readConfig(settings);
+        for (const id of KEYED)
+            assertEqual(cfg.vendors[id].apiKeyEnv, null, id);
+    });
+    it('a cleared management key env is null', () => {
+        const settings = makeSettings();
+        settings.set_string('openrouter-management-key-env', '');
+        assertEqual(readConfig(settings).vendors.openrouter.managementKeyEnv, null);
+    });
+    it('a blank custom auth header falls back to Authorization', () => {
+        const settings = makeSettings();
+        settings.set_string('custom-auth-header', '  ');
+        assertEqual(readConfig(settings).vendors.custom.authHeader, 'Authorization');
     });
 });
 
