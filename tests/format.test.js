@@ -13,6 +13,7 @@ import {
     withPaceArrow,
     panelLabel,
     PARTIAL_ECHO_NOTE,
+    pluralEn,
 } from '../lib/format.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
 
@@ -244,6 +245,14 @@ describe('panelLabel', () => {
         assertEqual(panelLabel('{or_balance}', new Map([['or_balance', '$5.00']]), {paceArrows: true}), '$5.00'));
     it('no second arrow when the format already has one', () =>
         assertEqual(panelLabel('{session_pct}% {session_pace}', values, {paceArrows: true}), '86% ↑'));
+});
+
+describe('pluralEn', () => {
+    it('picks the singular for exactly one', () => assertEqual(pluralEn('%d req', '%d reqs', 1), '%d req'));
+    it('picks the plural otherwise', () => {
+        assertEqual(pluralEn('a', 'b', 0), 'b');
+        assertEqual(pluralEn('a', 'b', 2), 'b');
+    });
 });
 
 system.exit(summary());
