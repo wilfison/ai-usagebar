@@ -100,6 +100,12 @@ describe('parseUsage', () => {
     it('empty limits → no window (no error)', () =>
         assertEqual(parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"},"limits":[]}').window, null));
 
+    it('a recognized 5h window with a zero limit is no window', () =>
+        assertEqual(parseUsage(JSON.stringify({
+            usage: {limit: 100, used: 26},
+            limits: [{window: {duration: 300, timeUnit: 'TIME_UNIT_MINUTE'}, detail: {limit: 0, used: 0}}],
+        })).window, null));
+
     it('null limits → no window (no error)', () =>
         assertEqual(parseUsage('{"usage":{"limit":"100","used":"26","remaining":"74"},"limits":null}').window, null));
 
