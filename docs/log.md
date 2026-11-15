@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Vendors are one `VENDORS` table in `lib/vendors.js` (id, label, generic icon, user-given name); `apiKeyFetch` names a vendor by that label. Updated vendor adapters.
 - The update check reads its deadline from disk once per indicator and keeps it in memory; any 2xx answer is parsed. Updated update check.
 - The default User-Agent carries the extension's `version-name` (it was a fixed `ai-usagebar/0.1`), and `disposeSession()` aborts the Soup session. Updated HTTP layer.
 - ESLint now enforces the module boundaries: no `gi://` in pure `lib/` modules, no adapters, `ui/` or Shell modules in the prefs. Updated conventions.

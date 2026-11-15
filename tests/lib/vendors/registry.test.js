@@ -3,7 +3,7 @@ import system from 'system';
 import {ADAPTERS, getAdapter} from '../../../lib/vendors/registry.js';
 import GLib from 'gi://GLib';
 
-import {VENDOR_IDS, GENERIC_ICON_VENDORS, vendorIconName} from '../../../lib/vendors.js';
+import {VENDORS, VENDOR_IDS, vendorIconName} from '../../../lib/vendors.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 
 const SHAPE = {
@@ -92,7 +92,7 @@ describe('vendor marks', () => {
 
         it(`${id} has its own mark or is an explicit fallback`, () => {
             const own = GLib.file_test(GLib.build_filenamev([iconsDir(), `${id}-symbolic.svg`]), GLib.FileTest.IS_REGULAR);
-            assertEqual(own !== GENERIC_ICON_VENDORS.includes(id), true, id);
+            assertEqual(own !== Boolean(VENDORS.find(v => v.id === id).genericIcon), true, id);
         });
     }
 });

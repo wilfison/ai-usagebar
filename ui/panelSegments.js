@@ -5,7 +5,7 @@ import {gettext as _, ngettext} from 'resource:///org/gnome/shell/extensions/ext
 
 import {panelVendors} from '../lib/config-resolve.js';
 import {getAdapter} from '../lib/vendors/registry.js';
-import {vendorIconName, GENERIC_ICON} from '../lib/vendors.js';
+import {vendorIconName, GENERIC_ICON, configuredNames} from '../lib/vendors.js';
 import {segmentModel, nearestSegment, Tone} from '../lib/panel-segments.js';
 import {severityColor} from '../lib/severity.js';
 
@@ -18,7 +18,7 @@ function vendorTag(id, config) {
 
 // What the vendor badges (popup headers and panel segments) are drawn from.
 export function badgeSignature(config) {
-    return `${config.vendors.custom.name}|${config.showVendorIcons}`;
+    return `${configuredNames(config).join('|')}|${config.showVendorIcons}`;
 }
 
 // One badge + label per panel vendor, inside the indicator's button.

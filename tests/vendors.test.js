@@ -1,6 +1,6 @@
 import system from 'system';
 
-import {VENDOR_IDS, VENDOR_LABELS, isVendorId, vendorLabel, vendorIconName} from '../lib/vendors.js';
+import {VENDORS, VENDOR_IDS, VENDOR_LABELS, isVendorId, vendorLabel, vendorIconName, configuredNames} from '../lib/vendors.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
 describe('VENDOR_IDS: canonical order', () => {
@@ -49,6 +49,19 @@ describe('vendorIconName', () => {
     it('a vendor with a mark', () => assertEqual(vendorIconName('ollama'), 'ollama-symbolic'));
     it('the custom provider falls back to the generic mark', () => assertEqual(vendorIconName('custom'), 'ai-symbolic'));
     it('an unknown id falls back too', () => assertEqual(vendorIconName('gemini'), 'ai-symbolic'));
+});
+
+describe('VENDORS: the one table', () => {
+    it('ids and labels are read from it', () => {
+        assertDeepEqual(VENDORS.map(v => v.id), [...VENDOR_IDS]);
+        assertDeepEqual(VENDORS.map(v => v.label), [...VENDOR_LABELS]);
+    });
+    it('is frozen, rows included', () => assertEqual(VENDORS.every(Object.isFrozen) && Object.isFrozen(VENDORS), true));
+});
+
+describe('configuredNames', () => {
+    it('lists the names users gave their vendors', () =>
+        assertDeepEqual(configuredNames({vendors: {custom: {name: 'My Tool'}}}), ['My Tool']));
 });
 
 system.exit(summary());

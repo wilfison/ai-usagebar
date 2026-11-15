@@ -5,7 +5,7 @@ description: The indicator drives every vendor through one uniform Adapter; each
 tags: [vendors, pure-modules]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T18:03:45Z
+  at: 2026-11-15T18:30:19Z
 sources:
   - id: registry
     title: lib/vendors/registry.js
@@ -40,7 +40,7 @@ The pure `section.js` builders produce already-translated rows; the renderer `ui
 # Adding a vendor
 
 1. Create `lib/vendors/<vendor>/` with the quad and register the adapter in `ADAPTERS`.
-2. Append its id and label to `VENDOR_IDS` / `VENDOR_LABELS` in `lib/vendors.js`:[^vendors-js] **append last**, because the gschema enum ordinal and the prefs combo index follow that order.
-3. Add the gschema keys, a prefs page (a `vendorPageSpec` entry, see [preferences](/architecture/prefs.md)), and `icons/<id>-symbolic.svg` or list the id in `GENERIC_ICON_VENDORS`. `tests/lib/vendors/registry.test.js` checks the shape and the icon.
+2. Append a row (`id`, `label`) to `VENDORS` in `lib/vendors.js`,[^vendors-js] which `VENDOR_IDS` / `VENDOR_LABELS` are read from: **append last**, because the gschema enum ordinal and the prefs combo index follow that order.
+3. Add the gschema keys, a prefs page (a `vendorPageSpec` entry, see [preferences](/architecture/prefs.md)), and `icons/<id>-symbolic.svg` or set `genericIcon: true` on its row. A vendor the user names gets a `named(config)` reader there, which labels it and rebuilds its badges. `tests/lib/vendors/registry.test.js` checks the shape and the icon.
 
 The current vendors are listed in [vendors](/vendors/).
