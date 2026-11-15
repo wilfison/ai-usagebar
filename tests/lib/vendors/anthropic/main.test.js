@@ -5,7 +5,7 @@ import {parseUsage, snapshotToCacheJson} from '../../../../lib/vendors/anthropic
 import {fetchSnapshot, USAGE_URL, USAGE_BETA_HEADER, USAGE_USER_AGENT} from '../../../../lib/vendors/anthropic/main.js';
 import {readCreds, TOKEN_URL} from '../../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
-import {runSync, httpStub, res, resTransport, chmod, backdate, writeText, withCacheHome, retryArmed} from '../../../_harness.js';
+import {runSync, httpStub, res, resTransport, chmod, backdate, writeText, withCacheHome, retryArmed, isStale} from '../../../_harness.js';
 
 const USAGE = JSON.stringify({
     five_hour: {utilization: 42, resets_at: '2026-05-23T17:30:00Z'},
@@ -187,7 +187,7 @@ describe('fetchSnapshot', () => {
         assertEqual(r.ok, false);
         assertEqual(r.kind, 'error');
         assertEqual(runSync(cache.maybePayload()), null, 'unparseable 2xx body is never cached');
-        assertEqual(runSync(cache.isStale()), true);
+        assertEqual(isStale(cache), true);
         assertEqual(runSync(cache.readLastError()).code, 0);
     }));
 });

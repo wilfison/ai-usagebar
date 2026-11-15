@@ -136,6 +136,10 @@ export function withCacheHome(vendor, fn, {setup = () => ({})} = {}) {
     };
 }
 
+export function isStale(cache) {
+    return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.stale'])).query_exists(null);
+}
+
 export function retryArmed(cache) {
     return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.retry_after'])).query_exists(null);
 }

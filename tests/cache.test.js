@@ -4,7 +4,7 @@ import system from 'system';
 
 import {Cache, atomicWrite, isNotFound} from '../lib/cache.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
-import {runSync, withCacheHome} from './_harness.js';
+import {runSync, withCacheHome, isStale} from './_harness.js';
 
 const withTempCache = fn => withCacheHome(null, ({dir}) => fn(dir));
 
@@ -63,11 +63,11 @@ describe('Cache', () => {
 
     it('markStale / isStale / writePayload clears .stale', withTempCache(() => {
         const c = new Cache('test');
-        assertEqual(runSync(c.isStale()), false);
+        assertEqual(isStale(c), false);
         runSync(c.markStale());
-        assertEqual(runSync(c.isStale()), true);
+        assertEqual(isStale(c), true);
         runSync(c.writePayload('{}'));
-        assertEqual(runSync(c.isStale()), false);
+        assertEqual(isStale(c), false);
     }));
 
     it('writeLastError / readLastError; on-disk format is first-line code + body; writePayload clears .last_error', withTempCache((dir) => {
@@ -205,7 +205,6 @@ describe('Cache writes never block the main loop', () => {
             () => c.writeNotified({version: 2, entries: {}}),
             () => c.clearLastError(),
             () => c.clearRetryAfter(),
-            () => c.isStale(),
         ]) {
             const p = write();
             assertEqual(p instanceof Promise, true, String(write));
