@@ -124,7 +124,7 @@ class Indicator extends PanelMenu.Button {
 
         this._refresh().catch(warnOnFailure('refresh'));
         this._rearmPollTimer(this._config.refreshIntervalSecs);
-        this._update.check(this._config.updateCheck.enabled);
+        this._checkForUpdate();
     }
 
     // AI_USAGEBAR_FAKE_PCT=<0..100> answers every fetch with a synthetic
@@ -151,11 +151,16 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
+    // Fire-and-forget on each poll tick: a rejection is only logged.
+    _checkForUpdate() {
+        this._update.check(this._config.updateCheck.enabled).catch(warnOnFailure('update check'));
+    }
+
     _rearmPollTimer(secs) {
         this._clearSource('_timeoutId');
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, secs, () => {
             this._refresh().catch(warnOnFailure('refresh'));
-            this._update.check(this._config.updateCheck.enabled);
+            this._checkForUpdate();
             return GLib.SOURCE_CONTINUE;
         });
     }
@@ -190,7 +195,7 @@ class Indicator extends PanelMenu.Button {
         if (effects.interval)
             this._rearmPollTimer(this._config.refreshIntervalSecs);
         if (effects.updateCheck)
-            this._update.check(this._config.updateCheck.enabled);
+            this._checkForUpdate();
         if (!effects.sync)
             return;
 
@@ -208,7 +213,7 @@ class Indicator extends PanelMenu.Button {
     // through _onSettingsChanged.
     _setActiveVendor(id) {
         this._settings.set_string('active-vendor', id);
-        writeActiveVendorMirror(id);
+        writeActiveVendorMirror(id).catch(warnOnFailure('active vendor mirror'));
     }
 
     // The custom provider's name is its card title and the logos toggle swaps
@@ -397,10 +402,10 @@ class Indicator extends PanelMenu.Button {
         const again = guard.end(token);
         this._vendorItems.get(id)?.setBusy(false);
         this._storeResult(id, res);
-        this._maybeScanContext(id, res, config);
+        this._maybeScanContext(id, res, config).catch(warnOnFailure('context scan'));
         const polled = this._pollIds.includes(id);
         if (all || polled)
-            this._notifier.maybeNotify(adapter, cache, res, config);
+            this._notifier.maybeNotify(adapter, cache, res, config).catch(warnOnFailure('notification'));
         if ((all || polled) && !res.ok && res.kind === 'error')
             console.warn(`ai-usagebar: ${errorText(res)}`);
         try {
