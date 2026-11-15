@@ -112,7 +112,7 @@ PROBE='(() => {
         expanded: [...i._vendorItems].filter(([, card]) => card.item.menu.isOpen).map(([id]) => id),
         button: geometry(i),
         segments: [...i._segments.entries()].map(([id, {box, label}]) => ({id, text: label.text, style: label.get_style(), geometry: geometry(box)})),
-        results: Object.fromEntries([...i._results].map(([id, r]) => [id, r.ok ? (r.stale ? "stale" : "ok") : r.kind])),
+        results: Object.fromEntries(i._poller.entries().map(([id, r]) => [id, r.ok ? (r.stale ? "stale" : "ok") : r.kind])),
     };
 })()'
 

@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- The indicator's fetch slots, results and fetch instants moved to the pure `VendorPoller` (`lib/vendor-poller.js`), now unit-tested. Updated fetch pipeline.
 - The per-model context windows entry is validated in the preferences and saved only when valid. Updated context monitor and preferences.
 - Tests get GSettings from `testSettings(overrides)` in the harness (checkout schema, private memory backend). Updated testing.
 - The dev fetch overrides moved out of the indicator into `DevFetch` (`ui/devFetch.js`). Updated headless.

@@ -5,7 +5,7 @@ description: runFetch() is the shared fetch state machine; every vendor resolves
 tags: [cache, errors, polling]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-15T18:05:11Z
+  at: 2026-11-15T18:44:09Z
 sources:
   - id: fetch-common
     title: lib/vendors/fetch-common.js
@@ -13,6 +13,9 @@ sources:
   - id: fetch-guard
     title: lib/fetch-guard.js
     resource: lib/fetch-guard.js
+  - id: vendor-poller
+    title: lib/vendor-poller.js
+    resource: lib/vendor-poller.js
 ---
 
 # Overview
@@ -43,4 +46,4 @@ An implicit discriminated union (there is no types module):
 
 # One fetch per vendor
 
-`lib/fetch-guard.js` gives each vendor one slot in the indicator: one fetch in flight, requests made meanwhile coalesced into one rerun.[^fetch-guard] The rerun is dropped if the vendor left the poll set and "Refresh all" did not ask for it. How results reach the screen is in [panel and popup](/architecture/panel-and-popup.md).
+`lib/fetch-guard.js` gives each vendor one slot: one fetch in flight, requests made meanwhile coalesced into one rerun.[^fetch-guard] `VendorPoller` in `lib/vendor-poller.js` owns those slots for the indicator, with each vendor's last result and real fetch instant; the fetch and what a result triggers are injected, so it is unit-tested.[^vendor-poller] The rerun is dropped if the vendor left the poll set and "Refresh all" did not ask for it. How results reach the screen is in [panel and popup](/architecture/panel-and-popup.md).

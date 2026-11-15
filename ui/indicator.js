@@ -9,7 +9,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {Cache} from '../lib/cache.js';
 import {readConfig} from '../lib/config.js';
-import {FetchGuard} from '../lib/fetch-guard.js';
+import {VendorPoller} from '../lib/vendor-poller.js';
 import {
     normalizeActive, cycleVendor, enabledVendors, isPinnedMode, pollVendors,
 } from '../lib/config-resolve.js';
@@ -24,7 +24,6 @@ import {PanelSegments, badgeSignature} from './panelSegments.js';
 import {UpdateItem} from './updateItem.js';
 import {DevFetch} from './devFetch.js';
 import {errorText, footerRow} from '../lib/vendors/section-common.js';
-import {loading} from '../lib/vendors/fetch-common.js';
 import {scanSessions} from '../lib/context/scan.js';
 import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
@@ -59,7 +58,6 @@ class Indicator extends PanelMenu.Button {
         this._config = config;
 
         this._cancellable = new Gio.Cancellable();
-        this._guards = new Map();       // vendorId -> FetchGuard
         this._activeId = normalizeActive(this._config);
         this._pollIds = pollVendors(this._config);
         this._rebuildTheme();
@@ -73,15 +71,17 @@ class Indicator extends PanelMenu.Button {
         this._devFetch = new DevFetch();
 
         // Lazy per-vendor data: only the poll set (panel segments + the active
-        // vendor) is polled; other sub-sections render from whatever is already
-        // here. `_fetchedAt` pins each vendor's timestamp to its real fetch
-        // instant across live re-renders.
-        this._results = new Map();      // vendorId -> FetchResult
+        // vendor) is polled; other sub-sections render from whatever the
+        // poller already holds.
+        this._poller = new VendorPoller({
+            run: id => this._fetchVendor(id),
+            isPolled: id => this._pollIds.includes(id),
+            onStart: id => this._vendorItems.get(id)?.setBusy(true),
+            onResult: (id, out, {all}) => this._onVendorResult(id, out, all),
+        });
         this._sessions = null;          // last context scan for CONTEXT_VENDOR
-        this._fetchedAt = new Map();    // vendorId -> Date
         this._vendorItems = new Map();  // vendorId -> VendorCard
         this._enabledSig = '';
-        this._pendingAll = new Set();   // vendorIds whose coalesced rerun came from "Refresh all"
 
         this._segments = new PanelSegments(id => this._vendorGicon(id));
         this.add_child(this._segments.actor);
@@ -102,7 +102,7 @@ class Indicator extends PanelMenu.Button {
         // Seed the polled vendors with a Loading… state so their cards (and an
         // immediately-opened popup) are never empty before the first fetch lands.
         for (const id of this._pollIds)
-            this._results.set(id, loading());
+            this._poller.seed(id);
         this._rebuildVendorSections(this._config);
         this._rebuildSegments(this._config);
 
@@ -184,7 +184,7 @@ class Indicator extends PanelMenu.Button {
         // disable that bumped the fallback) is fetched now; a cache-warm revisit
         // skips the network via the 60s TTL.
         for (const id of this._syncTargets(this._config))
-            this._refreshVendor(id).catch(warnOnFailure('refresh'));
+            this._poller.refresh(id).catch(warnOnFailure('refresh'));
         if (effects.rebuildTheme)
             this._rebuildTheme();
         this._reRenderFromCache();
@@ -219,7 +219,7 @@ class Indicator extends PanelMenu.Button {
                 name: vendorLabel(id, config),
                 tooltip: this._tooltip,
                 refreshLabel: _('Refresh now'),
-                onRefresh: () => this._refreshVendor(id, {all: true}).catch(warnOnFailure('refresh')),
+                onRefresh: () => this._poller.refresh(id, {all: true}).catch(warnOnFailure('refresh')),
             });
             this.menu.addMenuItem(card.item, idx);
             this._vendorItems.set(id, card);
@@ -234,14 +234,14 @@ class Indicator extends PanelMenu.Button {
         const card = this._vendorItems.get(id);
         if (!card)
             return;
-        const res = this._results.get(id);
+        const res = this._poller.result(id);
         if (!res) {
             card.setMessage(_('No data: use "Refresh all"'), {dim: true});
             return;
         }
         if (res.ok) {
             const now = new Date();
-            const fetchedAt = this._fetchedAt.get(id) ?? new Date(Date.now() - res.cacheAgeMs);
+            const fetchedAt = this._poller.fetchedAt(id) ?? new Date(Date.now() - res.cacheAgeMs);
             const adapter = getAdapter(id);
             const model = adapter.buildSection(
                 res.snapshot,
@@ -278,7 +278,7 @@ class Indicator extends PanelMenu.Button {
     _updateStatus() {
         let latest = null;
         for (const id of this._vendorItems.keys()) {
-            const at = this._results.get(id)?.ok ? this._fetchedAt.get(id) : null;
+            const at = this._poller.result(id)?.ok ? this._poller.fetchedAt(id) : null;
             if (at && (latest === null || at > latest))
                 latest = at;
         }
@@ -316,10 +316,8 @@ class Indicator extends PanelMenu.Button {
         this._pollIds = pollVendors(config);
 
         const added = this._pollIds.filter(id => !before.includes(id));
-        for (const id of added) {
-            if (!this._results.has(id))
-                this._results.set(id, loading());
-        }
+        for (const id of added)
+            this._poller.seed(id);
 
         this._maybeRebuildVendorSections(config);
         if (this._segments.maybeRebuild(config))
@@ -338,54 +336,30 @@ class Indicator extends PanelMenu.Button {
 
     async _refresh() {
         this._reloadConfig();
-        await Promise.all(this._pollIds.map(id => this._refreshVendor(id)));
+        await Promise.all(this._pollIds.map(id => this._poller.refresh(id)));
     }
 
     async _refreshAll() {
         this._reloadConfig();
-        await Promise.all(enabledVendors(this._config).map(id => this._refreshVendor(id, {all: true})));
+        await Promise.all(enabledVendors(this._config).map(id => this._poller.refresh(id, {all: true})));
     }
 
-    _guardFor(id) {
-        let guard = this._guards.get(id);
-        if (!guard) {
-            guard = new FetchGuard();
-            this._guards.set(id, guard);
-        }
-        return guard;
-    }
-
-    // One fetch for `id`, coalesced with any already in flight for it. A fresh
-    // result notifies only while `id` is still polled (or when "Refresh all"
-    // asked for it), so a vendor scrolled away from mid-fetch stays quiet.
-    async _refreshVendor(id, {all = false} = {}) {
-        const guard = this._guardFor(id);
-        const token = guard.begin();
-        if (token === null) {
-            if (all)
-                this._pendingAll.add(id);
-            return;
-        }
-
-        this._vendorItems.get(id)?.setBusy(true);
+    _fetchVendor(id) {
         const adapter = getAdapter(id);
         const cache = new Cache(adapter.cacheId);
         const config = this._config;
-        let res;
-        try {
-            res = await this._devFetch.run(adapter, {config, cache, http: request, signal: this._cancellable});
-        } catch (e) {
-            res = {ok: false, kind: 'error', message: e?.message ?? String(e)};
-        }
-        if (this._destroyed)
-            return;
+        return this._devFetch.run(adapter, {config, cache, http: request, signal: this._cancellable})
+            .then(res => ({res, adapter, cache, config}));
+    }
 
-        const again = guard.end(token);
+    // A fresh result notifies only while its vendor is still polled (or when
+    // "Refresh all" asked for it), so one scrolled away from mid-fetch stays quiet.
+    _onVendorResult(id, {res, adapter, cache, config}, all) {
         this._vendorItems.get(id)?.setBusy(false);
-        this._storeResult(id, res);
-        this._maybeScanContext(id, res, config).catch(warnOnFailure('context scan'));
+        // A run that threw carries only `res`.
+        this._maybeScanContext(id, res, config ?? this._config).catch(warnOnFailure('context scan'));
         const polled = this._pollIds.includes(id);
-        if (all || polled)
+        if (adapter && (all || polled))
             this._notifier.maybeNotify(adapter, cache, res, config).catch(warnOnFailure('notification'));
         if ((all || polled) && !res.ok && res.kind === 'error')
             console.warn(`ai-usagebar: ${errorText(res)}`);
@@ -395,16 +369,6 @@ class Indicator extends PanelMenu.Button {
         } catch (e) {
             console.warn(`ai-usagebar: render failed: ${e}`);
         }
-        // A rerun for a vendor no longer polled could only repaint from the TTL cache.
-        const rerunAll = this._pendingAll.delete(id);
-        if (again && (rerunAll || this._pollIds.includes(id)))
-            await this._refreshVendor(id, {all: rerunAll});
-    }
-
-    _storeResult(id, res) {
-        this._results.set(id, res);
-        if (res.ok)
-            this._fetchedAt.set(id, new Date(Date.now() - res.cacheAgeMs));
     }
 
     // Turning the option off hides the sessions at once, before any refresh.
@@ -496,7 +460,7 @@ class Indicator extends PanelMenu.Button {
     }
 
     _paintSegment(id) {
-        this._segments.paint(id, this._results.get(id), {config: this._config, theme: this._theme});
+        this._segments.paint(id, this._poller.result(id), {config: this._config, theme: this._theme});
     }
 
     // A click or tap on the button focuses the nearest segment's vendor. The
@@ -561,10 +525,7 @@ class Indicator extends PanelMenu.Button {
         this._settings = null;
         this._notifier = null;
         this._vendorItems.clear();
-        this._guards.clear();
-        this._pendingAll.clear();
-        this._results.clear();
-        this._fetchedAt.clear();
+        this._poller.destroy();
 
         super._onDestroy();
     }
