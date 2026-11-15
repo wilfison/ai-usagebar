@@ -99,6 +99,18 @@ describe('VendorPoller', () => {
         assertDeepEqual(events, [['start', 'a']]);
     });
 
+    it('a refresh after destroy starts nothing', () => {
+        let runs = 0;
+        const {p, events} = poller({run: () => {
+            runs++;
+            return Promise.resolve({res: ok()});
+        }});
+        p.destroy();
+        runSync(p.refresh('a'));
+        assertEqual(runs, 0);
+        assertDeepEqual(events, []);
+    });
+
     it('seed marks a vendor loading only when it has nothing yet', () => {
         const {p} = poller({run: () => Promise.resolve({res: ok()})});
         p.seed('a');
