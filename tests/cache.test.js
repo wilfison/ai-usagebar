@@ -2,7 +2,7 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import system from 'system';
 
-import {Cache, atomicWrite} from '../lib/cache.js';
+import {Cache, atomicWrite, isNotFound} from '../lib/cache.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 import {runSync, withCacheHome} from './_harness.js';
 
@@ -192,6 +192,15 @@ describe('Cache retry_after sidecar', () => {
         assertEqual(runSync(c.readRetryAfter()), null);
         assertEqual(runSync(c.readLastError()), null);
     }));
+});
+
+describe('isNotFound', () => {
+    it('matches a Gio NOT_FOUND error only', () => {
+        assertEqual(isNotFound(new GLib.Error(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND, 'gone')), true);
+        assertEqual(isNotFound(new GLib.Error(Gio.IOErrorEnum, Gio.IOErrorEnum.PERMISSION_DENIED, 'no')), false);
+        assertEqual(isNotFound(new Error('plain')), false);
+        assertEqual(isNotFound(null), false);
+    });
 });
 
 system.exit(summary());

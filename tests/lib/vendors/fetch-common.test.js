@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
-    redactingCache, redactResult, redactedFetch, runFetch, errorResult, isSuccess, bodyText, CACHE_TTL_MS, HTTP_TIMEOUT_MS,
+    redactingCache, redactResult, redactedFetch, runFetch, errorResult, isSuccess, bodyText, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh,
 } from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 import {runSync, res, resTransport} from '../../_harness.js';
@@ -432,6 +432,56 @@ describe('runFetch: HTTP error', () => {
     it('a cached payload is served stale instead', () => {
         const r = run(memCache({payload: 'P'}), {request: () => Promise.resolve(res(500))});
         assertEqual(r.stale, true);
+    });
+});
+
+describe('settleRefresh', () => {
+    const settle = (rr, cache, apply = () => Promise.resolve({rotated: false, saved: {ok: true}})) =>
+        runSync(settleRefresh(rr, cache, {loginCommand: 'claude', apply}));
+
+    it('a saved refresh is no failure', () => {
+        const cache = memCache();
+        let applied = null;
+        const r = settle({ok: true, accessToken: 'n'}, cache, rr => {
+            applied = rr;
+            return Promise.resolve({rotated: true, saved: {ok: true}});
+        });
+        assertEqual(r, null);
+        assertEqual(applied.accessToken, 'n');
+        assertDeepEqual(writes(cache), []);
+    });
+    it('an unsaved access token alone is best-effort', () => {
+        assertEqual(settle({ok: true}, memCache(), () => Promise.resolve({rotated: false, saved: {ok: false, message: 'ro'}})), null);
+    });
+    it('an unsaved rotated refresh token fails and says so', () => {
+        const cache = memCache();
+        const r = settle({ok: true}, cache, () => Promise.resolve({rotated: true, saved: {ok: false, message: 'EACCES'}}));
+        assertDeepEqual(writes(cache), [['lastError', 0,
+            'refreshed token could not be saved (EACCES); the rotated refresh token is lost; re-run `claude`']]);
+        assertDeepEqual(r, {ok: false, kind: 'error', message: 'token refresh failed; run `claude` to re-authenticate'});
+    });
+    it('an HTTP refusal records its status', () => {
+        const cache = memCache();
+        const r = settle({ok: false, kind: 'http', status: 400, body: 'invalid_grant'}, cache);
+        assertDeepEqual(writes(cache), [['lastError', 400, 'invalid_grant']]);
+        assertDeepEqual(r, {ok: false, kind: 'error', message: 'token refresh failed; run `claude` to re-authenticate', status: 400});
+    });
+    it('a 401 refusal keeps no body', () => {
+        const cache = memCache();
+        settle({ok: false, kind: 'http', status: 401, body: 'secret'}, cache);
+        assertDeepEqual(writes(cache), [['lastError', 401, '']]);
+    });
+    it('a transport failure is silent loading', () => {
+        const cache = memCache();
+        assertDeepEqual(settle({ok: false, kind: 'transport', message: 'x'}, cache), {ok: false, kind: 'loading'});
+        assertDeepEqual(writes(cache), []);
+    });
+    it('a schema failure records its message', () => {
+        const cache = memCache();
+        const r = settle({ok: false, kind: 'schema', message: 'missing access_token'}, cache);
+        assertDeepEqual(writes(cache), [['lastError', 0, 'missing access_token']]);
+        assertEqual(r.kind, 'error');
+        assertEqual('status' in r, false);
     });
 });
 
