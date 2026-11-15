@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
-    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh,
+    redactingCache, redactResult, redactedFetch, runFetch, errorResult, loading, CACHE_TTL_MS, HTTP_TIMEOUT_MS, settleRefresh, authorizeOAuth,
 } from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
 import {runSync, res, resTransport} from '../../_harness.js';
@@ -487,6 +487,64 @@ describe('settleRefresh', () => {
         assertDeepEqual(writes(cache), [['lastError', 0, 'missing access_token']]);
         assertEqual(r.kind, 'error');
         assertEqual('status' in r, false);
+    });
+});
+
+describe('authorizeOAuth', () => {
+    const NOW = 1_000_000;
+    const run = ({accessToken = 'AT', refreshToken = 'RT', expiresAtSecs = NOW + 3600, rr = {ok: true, accessToken: 'NEW'}} = {}) => {
+        const tokens = {accessToken, refreshToken};
+        const calls = [];
+        const r = runSync(authorizeOAuth({
+            tokens,
+            expiresAtSecs,
+            nowSecs: NOW,
+            cache: memCache(),
+            loginCommand: 'claude',
+            extras: {plan: 'Pro'},
+            refresh: token => {
+                calls.push(token);
+                return Promise.resolve(rr);
+            },
+            apply: got => {
+                tokens.accessToken = got.accessToken;
+                return Promise.resolve({rotated: false, saved: {ok: true}});
+            },
+        }));
+        return {r, calls, tokens};
+    };
+
+    it('a valid token needs nothing', () => {
+        const {r, calls} = run();
+        assertEqual(r, null);
+        assertEqual(calls.length, 0);
+    });
+    it('an expiring token is refreshed and applied', () => {
+        const {r, calls, tokens} = run({expiresAtSecs: NOW});
+        assertEqual(r, null);
+        assertDeepEqual(calls, ['RT']);
+        assertEqual(tokens.accessToken, 'NEW');
+    });
+    it('an empty refresh token is never sent', () => {
+        const {r, calls} = run({expiresAtSecs: NOW, refreshToken: '  '});
+        assertEqual(r, null);
+        assertEqual(calls.length, 0);
+    });
+    it('a blank access token asks to log in, with the extras', () => {
+        const {r} = run({accessToken: ' '});
+        assertEqual(r.kind, 'error');
+        assertEqual(r.message, 'no access token; run `claude` to log in');
+        assertEqual(r.plan, 'Pro');
+    });
+    it('a failed refresh stops the fetch with the extras', () => {
+        const {r} = run({expiresAtSecs: NOW, rr: {ok: false, kind: 'other', message: 'nope'}});
+        assertEqual(r.kind, 'error');
+        assertEqual(r.plan, 'Pro');
+    });
+    it('a transport failure is loading, without extras', () => {
+        const {r} = run({expiresAtSecs: NOW, rr: {ok: false, kind: 'transport'}});
+        assertEqual(r.kind, 'loading');
+        assertEqual(r.plan, undefined);
     });
 });
 

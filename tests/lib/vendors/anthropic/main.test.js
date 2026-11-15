@@ -224,6 +224,22 @@ describe('fetchSnapshot: a signed-out credentials file', () => {
         assertEqual(http.calls[1].headers.Authorization, 'Bearer new-at');
         assertEqual(r.ok, true);
     }));
+
+    it('an expired token with an empty refresh token is never POSTed', withTemp(({cache, dir}) => {
+        const http = httpStub(res(200, USAGE));
+        const r = runSync(fetchSnapshot({cache, http, credsPath: blankCreds(dir, {accessToken: 'at', refreshToken: '  ', expiresAt: 0})}));
+        assertEqual(http.calls.length, 1);
+        assertEqual(http.calls[0].url, USAGE_URL);
+        assertEqual(r.ok, true);
+    }));
+
+    it('both tokens blank: no POST, no GET, the login hint', withTemp(({cache, dir}) => {
+        const http = httpStub(res(200, USAGE));
+        const r = runSync(fetchSnapshot({cache, http, credsPath: blankCreds(dir, {accessToken: '', refreshToken: '', expiresAt: 0})}));
+        assertEqual(http.calls.length, 0);
+        assertEqual(r.message, 'no access token; run `claude` to log in');
+        assertEqual(retryArmed(cache), false);
+    }));
 });
 
 describe('fetchSnapshot: a failure that quotes the token', () => {

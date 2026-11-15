@@ -5,7 +5,7 @@ description: runFetch() is the shared fetch state machine; every vendor resolves
 tags: [cache, errors, polling]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-15T17:57:27Z
+  at: 2026-11-15T17:59:13Z
 sources:
   - id: fetch-common
     title: lib/vendors/fetch-common.js
@@ -21,7 +21,7 @@ Each vendor's `fetchSnapshot` is a call to `runFetch()`.[^fetch-common] Before i
 
 1. **Fresh cache**: a payload under 60 s old is returned without HTTP (a corrupt one falls through).
 2. **Backoff**: inside a 429 window no request is made ([snapshot cache](/architecture/cache.md)).
-3. **`authorize`** hook: the OAuth refresh, settled by `settleRefresh()`; a refusal returns stale-or-error (stale-or-`loading` when the refresh itself hit a transport error).
+3. **`authorize`** hook: the OAuth refresh (`authorizeOAuth()`, shared by both OAuth vendors: an empty refresh token is never sent, a blank access token stops with a login hint), settled by `settleRefresh()`; a refusal returns stale-or-error (stale-or-`loading` when the refresh itself hit a transport error).
 4. **Request**: a transport error (network down, timeout, cancel) returns stale-or-`loading`.
 5. **Non-2xx**: marks the cache stale, records the HTTP error in `.last_error`, returns stale-or-error with the vendor's `errorExtras`.
 6. **Parse** (before any cache write): a parse error also marks stale and writes `.last_error` with code 0.
