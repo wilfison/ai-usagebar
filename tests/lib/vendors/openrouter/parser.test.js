@@ -2,7 +2,7 @@ import system from 'system';
 
 import {
     parseCredits, parseKey, combine, balance, consumedPct,
-    snapshotToCacheJson, parseCacheJson, openrouterSeverity, openrouterPeakUsage, placeholders,
+    snapshotToCacheJson, parseCacheJson, CACHE_VERSION, openrouterSeverity, openrouterPeakUsage, placeholders,
     fakeSnapshot, notifyRows, resetCredits, parseActivity, recentModels, shortenModelId,
 } from '../../../../lib/vendors/openrouter/parser.js';
 import {substitute} from '../../../../lib/format.js';
@@ -210,10 +210,11 @@ describe('recent models from /activity', () => {
     it('names are sanitized', () =>
         assertEqual(parse([item('2026-10-01', 'x/a‮b', 0, 1)])[0].name, 'ab'));
 
-    it('the cache keeps the models; an older cache without them reads as none', () => {
+    it('the cache keeps the models; an unversioned cache from an older release is refused', () => {
         const s = combine({totalCredits: 10, totalUsage: 1}, parseKey('{"data":{}}'), [{name: 'm', costUsd: 0.5, requests: 3}]);
+        assertEqual(JSON.parse(snapshotToCacheJson(s)).cacheVersion, CACHE_VERSION);
         assertEqual(parseCacheJson(snapshotToCacheJson(s)).recentModels[0].requests, 3);
-        assertEqual(parseCacheJson('{"snapshot":{"total_credits":1}}').recentModels.length, 0);
+        assertThrows(() => parseCacheJson('{"snapshot":{"total_credits":1}}'));
     });
 });
 

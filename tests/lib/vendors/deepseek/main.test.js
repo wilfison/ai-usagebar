@@ -1,6 +1,7 @@
 import system from 'system';
 
 import {fetchSnapshot, BALANCE_URL} from '../../../../lib/vendors/deepseek/main.js';
+import {snapshotToCacheJson} from '../../../../lib/vendors/deepseek/parser.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
 import {runSync, httpStub, res, backdate, withCacheHome} from '../../../_harness.js';
 
@@ -8,7 +9,7 @@ const LIVE = JSON.stringify({
     is_available: true,
     balance_infos: [{currency: 'USD', total_balance: '5.00', granted_balance: '5.00', topped_up_balance: '0.00'}],
 });
-const SEED = JSON.stringify({is_available: true, balance: 3.0, granted: 3.0, topped_up: 0.0, currency: 'USD'});
+const SEED = snapshotToCacheJson({isAvailable: true, balance: 3.0, granted: 3.0, toppedUp: 0.0, currency: 'USD'});
 
 const withTemp = fn => withCacheHome('deepseek', fn);
 

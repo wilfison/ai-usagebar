@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- DeepSeek and OpenRouter cache their snapshot through `encodeSnapshot` with a `CACHE_VERSION` like the other vendors; their old unversioned caches are refetched. Updated snapshot cache.
 - The Indicator releases its timers, signals and cancellable in `_onDestroy()`, so a destroy from the shell side cleans up too; signals use `connectObject`. Updated lifecycle.
 - The Notifier and the Soup session belong to the extension, so a panel move keeps delivered notifications; both panel keys changing together rebuild the indicator once. Updated lifecycle and HTTP layer.
 - Settings changes are coalesced into one idle pass (`settingsEffects`), so a reset no longer repaints once per key; the active vendor write goes through `_setActiveVendor`. Updated lifecycle.
