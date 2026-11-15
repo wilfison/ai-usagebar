@@ -29,7 +29,7 @@ import {scanSessions} from '../lib/context/scan.js';
 import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
-import {settingsEffect, Effect} from '../lib/settings-effect.js';
+import {settingsEffects} from '../lib/settings-effect.js';
 import {
     parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, fakeResult, fakeHttpFailure,
     FAKE_PCT_ENV, FAKE_ERROR_ENV, FAKE_DELAY_ENV,
@@ -72,6 +72,8 @@ class Indicator extends PanelMenu.Button {
         this._openStateId = null;
         this._scrollId = null;
         this._settingsChangedId = null;
+        this._settingsIdleId = null;
+        this._pendingKeys = new Set();
         this._destroyed = false;
         this._darkPopup = true;
 
@@ -159,42 +161,55 @@ class Indicator extends PanelMenu.Button {
         });
     }
 
+    // Keys changed in one main-loop turn (a reset writes every key) are applied
+    // once, from an idle.
     _onSettingsChanged(settings, key) {
         if (this._destroyed)
             return;
 
         // A primary-vendor change forces active := primary. The set_string re-enters
         // this handler as key='active-vendor'; GSettings emits nothing for an
-        // unchanged value, so there is no recursion. Return so the active-vendor
-        // re-entry does the re-resolve/fetch below exactly once.
+        // unchanged value, so there is no recursion.
         if (key === 'primary-vendor') {
             const primary = settings.get_string('primary-vendor');
-            if (settings.get_string('active-vendor') !== primary) {
-                settings.set_string('active-vendor', primary);
-                writeActiveVendorMirror(primary);
-                return;
-            }
+            if (settings.get_string('active-vendor') !== primary)
+                this._setActiveVendor(primary);
         }
 
+        this._pendingKeys.add(key);
+        this._settingsIdleId ??= GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._settingsIdleId = null;
+            this._applySettings();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _applySettings() {
+        const effects = settingsEffects([...this._pendingKeys]);
+        this._pendingKeys.clear();
         this._config = readConfig(this._settings);
-        const effect = settingsEffect(key);
-        if (effect.kind === Effect.INTERVAL) {
+        if (effects.interval)
             this._rearmPollTimer(this._config.refreshIntervalSecs);
-            return;
-        }
-        if (effect.kind === Effect.UPDATE_CHECK) {
+        if (effects.updateCheck)
             this._update.check(this._config.updateCheck.enabled);
+        if (!effects.sync)
             return;
-        }
 
         // A vendor that joined the poll set (scroll write, primary sync, a pin, or a
         // disable that bumped the fallback) is fetched now; a cache-warm revisit
         // skips the network via the 60s TTL.
         for (const id of this._syncTargets(this._config))
             this._refreshVendor(id).catch(warnOnFailure('refresh'));
-        if (effect.rebuildTheme)
+        if (effects.rebuildTheme)
             this._rebuildTheme();
         this._reRenderFromCache();
+    }
+
+    // The mirror is for out-of-shell readers; the settings change comes back
+    // through _onSettingsChanged.
+    _setActiveVendor(id) {
+        this._settings.set_string('active-vendor', id);
+        writeActiveVendorMirror(id);
     }
 
     // The custom provider's name is its card title and the logos toggle swaps
@@ -503,10 +518,9 @@ class Indicator extends PanelMenu.Button {
         if (next === active)
             return Clutter.EVENT_PROPAGATE;
 
-        this._settings.set_string('active-vendor', next);
-        writeActiveVendorMirror(next);
-        // Expand synchronously for instant feedback; the reactive settings handler
-        // (fired by the active-vendor write) re-resolves + fetches the new vendor.
+        this._setActiveVendor(next);
+        // Expand synchronously for instant feedback; the settings handler (fired by
+        // the active-vendor write) re-resolves and fetches the new vendor.
         this._setActiveExpansion(next);
         return Clutter.EVENT_STOP;
     }
@@ -540,8 +554,7 @@ class Indicator extends PanelMenu.Button {
         if (id === null || id === this._activeId)
             return;
         this._activeId = id;
-        this._settings.set_string('active-vendor', id);
-        writeActiveVendorMirror(id);
+        this._setActiveVendor(id);
     }
 
     _onPopupOpen() {
@@ -595,6 +608,10 @@ class Indicator extends PanelMenu.Button {
         if (this._scrollId) {
             this.disconnect(this._scrollId);
             this._scrollId = null;
+        }
+        if (this._settingsIdleId) {
+            GLib.Source.remove(this._settingsIdleId);
+            this._settingsIdleId = null;
         }
         if (this._settingsChangedId) {
             this._settings.disconnect(this._settingsChangedId);

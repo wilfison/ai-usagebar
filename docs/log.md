@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Settings changes are coalesced into one idle pass (`settingsEffects`), so a reset no longer repaints once per key; the active vendor write goes through `_setActiveVendor`. Updated lifecycle.
 - Cache writes (`writePayload`, sidecars, `atomicWrite`) are async Gio calls; the credential write-backs, update state and active vendor mirror await them. Updated snapshot cache.
 - Every vendor `fetchSnapshot` is built by `vendorFetch()`; GETs and optional side requests share `httpGet()` and `optionalRequest()`. Updated fetch pipeline.
 - `vendorAdapter()` derives `severity` from `peakUsage` by default; only OpenRouter and DeepSeek keep their own. Updated vendor adapters.

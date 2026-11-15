@@ -5,7 +5,7 @@ description: enable() constructs the Indicator and adds it to the panel; disable
 tags: [gnome-shell]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T14:00:00Z
+  at: 2026-11-15T18:13:22Z
 sources:
   - id: ext
     title: extension.js
@@ -33,4 +33,4 @@ Inside the Indicator, its `destroy()` owns that discipline,[^indicator] and so d
 
 # Settings effects
 
-The pure `settingsEffect(key)` in `lib/settings-effect.js` maps a changed key to `INTERVAL` (re-arm the poll timer, for `refresh-interval`), `UPDATE_CHECK` (for `update-check-enabled`) or `SYNC`: re-resolve the poll set, fetch only vendors that newly joined it, and repaint every section; `rebuildTheme` for `color-*` keys. `primary-vendor` is handled before it: it forces `active-vendor`, whose own change then lands here. Settings themselves are covered in [configuration](/architecture/config.md).
+Keys changed in one main-loop turn (a reset, a prefs page writing two keys) are collected and applied once from an idle; `settingsEffects(keys)` asks for each effect at most once. The pure `settingsEffect(key)` in `lib/settings-effect.js` maps a changed key to `INTERVAL` (re-arm the poll timer, for `refresh-interval`), `UPDATE_CHECK` (for `update-check-enabled`) or `SYNC`: re-resolve the poll set, fetch only vendors that newly joined it, and repaint every section; `rebuildTheme` for `color-*` keys. `primary-vendor` is handled before it: it forces `active-vendor`, whose own change then lands here. Settings themselves are covered in [configuration](/architecture/config.md).
