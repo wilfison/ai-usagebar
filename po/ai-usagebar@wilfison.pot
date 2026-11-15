@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-14 22:01-0300\n"
+"POT-Creation-Date: 2026-11-14 22:07-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -957,7 +957,7 @@ msgid "No data: use \"Refresh all\""
 msgstr ""
 
 #. Translators: %s is the version number of the newer release (e.g. "1.6.0").
-#: ui/indicator.js
+#: ui/updateItem.js
 #, javascript-format
 msgid "Update available: %s"
 msgstr ""

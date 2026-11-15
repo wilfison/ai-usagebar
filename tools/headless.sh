@@ -111,7 +111,7 @@ PROBE='(() => {
         menuOpen: i.menu.isOpen,
         expanded: [...i._vendorItems].filter(([, item]) => item.menu.isOpen).map(([id]) => id),
         button: geometry(i),
-        segments: [...i._segments].map(([id, {box, label}]) => ({id, text: label.text, style: label.get_style(), geometry: geometry(box)})),
+        segments: [...i._segments.entries()].map(([id, {box, label}]) => ({id, text: label.text, style: label.get_style(), geometry: geometry(box)})),
         results: Object.fromEntries([...i._results].map(([id, r]) => [id, r.ok ? (r.stale ? "stale" : "ok") : r.kind])),
     };
 })()'

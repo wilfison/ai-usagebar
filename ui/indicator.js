@@ -2,11 +2,8 @@ import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
-import St from 'gi://St';
 
 import {gettext as _, ngettext} from 'resource:///org/gnome/shell/extensions/extension.js';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -14,48 +11,35 @@ import {Cache} from '../lib/cache.js';
 import {readConfig} from '../lib/config.js';
 import {FetchGuard} from '../lib/fetch-guard.js';
 import {
-    normalizeActive, cycleVendor, enabledVendors, isPinnedMode, panelVendors, pollVendors,
+    normalizeActive, cycleVendor, enabledVendors, isPinnedMode, pollVendors,
 } from '../lib/config-resolve.js';
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {request, disposeSession} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
 import {vendorLabel, vendorIconName, GENERIC_ICON, VENDOR_IDS} from '../lib/vendors.js';
-import {renderSection} from './vendorSection.js';
+import {renderSection, renderMessage} from './vendorSection.js';
+import {ActionBar} from './actionBar.js';
+import {PanelSegments, badgeSignature} from './panelSegments.js';
+import {Notifier} from './notifier.js';
+import {UpdateItem} from './updateItem.js';
 import {errorText} from '../lib/vendors/section-common.js';
 import {scanSessions} from '../lib/context/scan.js';
 import {tooltipRows, vformat} from '../lib/format.js';
-import {segmentModel, nearestSegment, Tone} from '../lib/panel-segments.js';
-import {decide, Urgency} from '../lib/notify.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides} from '../lib/theme.js';
+import {settingsEffect, Effect} from '../lib/settings-effect.js';
 import {
-    parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, FakeFailure,
-    FAKE_PCT_ENV, FAKE_ERROR_ENV, FAKE_DELAY_ENV, FAKE_ERROR_MESSAGE,
+    parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, fakeResult, fakeHttpFailure,
+    FAKE_PCT_ENV, FAKE_ERROR_ENV, FAKE_DELAY_ENV,
 } from '../lib/debug.js';
-import {
-    RELEASES_API_URL, RELEASES_PAGE_URL, afterCheck, availableUpdate, isDue, parseLatestTag,
-} from '../lib/update-check.js';
-import {readUpdateState, writeUpdateState} from '../lib/update-store.js';
 
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
 const CONTEXT_VENDOR = 'anthropic';
-const TOOLTIP_DELAY_MS = 400;
 
-function fakeHttpFailure() {
-    return {status: 503, headers: {}, bodyBytes: new TextEncoder().encode(FAKE_ERROR_MESSAGE), error: null};
-}
-
-// Panel badge for a vendor: its short code, upper-cased (e.g. "CLD", "GPT");
-// a provider named by the user derives it from the configured name.
-function vendorTag(id, config) {
-    const adapter = getAdapter(id);
-    return (adapter.shortCode ? adapter.shortCode(config) : adapter.vendorShort).toUpperCase();
-}
-
-// What the vendor badges (popup headers and panel segments) are drawn from.
-function badgeSignature(config) {
-    return `${config.vendors.custom.name}|${config.showVendorIcons}`;
+// A rejected promise must never escape into a timeout callback or the event loop.
+function warnOnFailure(what) {
+    return e => console.warn(`ai-usagebar: ${what} failed: ${e}`);
 }
 
 export const Indicator = GObject.registerClass(
@@ -73,10 +57,7 @@ class Indicator extends PanelMenu.Button {
         this._settings = settings;
         this._openPreferences = openPreferences;
         this._path = extensionPath;
-        this._version = version;
-        this._updateCheckBusy = false;
         this._config = config;
-        this._barFormat = this._config.barFormat;
 
         this._cancellable = new Gio.Cancellable();
         this._guards = new Map();       // vendorId -> FetchGuard
@@ -91,65 +72,33 @@ class Indicator extends PanelMenu.Button {
         this._settingsChangedId = null;
         this._destroyed = false;
 
-        // Dev override: AI_USAGEBAR_FAKE_PCT=<0..100> short-circuits the real
-        // fetch with a synthetic snapshot at that percentage (see `make run`).
-        this._fakePct = parseFakePct(GLib.getenv(FAKE_PCT_ENV));
-        if (this._fakePct !== null)
-            log(`ai-usagebar: ${FAKE_PCT_ENV}=${this._fakePct}, overriding usage fetch`);
-        // AI_USAGEBAR_FAKE_ERROR=<id[:stale]|*,...> fails those vendors' fetches;
-        // AI_USAGEBAR_FAKE_DELAY_MS=<ms> holds every fetch that long first.
-        this._fakeErrors = parseFakeErrorVendors(GLib.getenv(FAKE_ERROR_ENV), VENDOR_IDS);
-        this._fakeDelayMs = parseFakeDelayMs(GLib.getenv(FAKE_DELAY_ENV));
-        if (this._fakeErrors !== null)
-            log(`ai-usagebar: ${FAKE_ERROR_ENV}=${[...this._fakeErrors].map(([id, f]) => `${id}:${f}`).join(',')}, failing those fetches`);
-        if (this._fakeDelayMs !== null)
-            log(`ai-usagebar: ${FAKE_DELAY_ENV}=${this._fakeDelayMs}, delaying every fetch`);
-        this._fakeDelayIds = new Set();
+        this._readDevOverrides();
 
         // Lazy per-vendor data: only the poll set (panel segments + the active
         // vendor) is polled; other sub-sections render from whatever is already
         // here. `_fetchedAt` pins each vendor's footer timestamp to its real
         // fetch instant across live re-renders.
         this._results = new Map();      // vendorId -> FetchResult
-        this._notifySource = null;
         this._sessions = null;          // last context scan for CONTEXT_VENDOR
         this._fetchedAt = new Map();    // vendorId -> Date
         this._vendorItems = new Map();  // vendorId -> PopupMenu.PopupSubMenuMenuItem
         this._enabledSig = '';
-        this._segments = new Map();     // vendorId -> {box, label}
-        this._segmentSig = '';
         this._pendingAll = new Set();   // vendorIds whose coalesced rerun came from "Refresh all"
 
-        this._segmentsBox = new St.BoxLayout({style_class: 'panel-status-menu-box aiusagebar-segments'});
-        this.add_child(this._segmentsBox);
+        this._segments = new PanelSegments(id => this._vendorGicon(id));
+        this.add_child(this._segments.actor);
+        this._notifier = new Notifier(() => this._vendorGicon());
 
-        // Footer is a single non-reactive row of icon-only action buttons
-        // (handlers connected once); per-vendor sub-sections are inserted above
-        // the separator on (re)build. A lazily-created tooltip label (shared by
-        // all three buttons) lives in the uiGroup and is torn down in destroy().
-        this._tooltip = null;
-        this._tooltipTimeoutId = null;
-        this._separator = new PopupMenu.PopupSeparatorMenuItem();
-        this.menu.addMenuItem(this._separator);
-        this._actionsItem = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-        const actionsBox = new St.BoxLayout({
-            style_class: 'aiusagebar-actions',
-            x_expand: true,
-            x_align: Clutter.ActorAlign.CENTER,
-        });
-        actionsBox.add_child(this._makeActionButton('view-refresh-symbolic', _('Refresh now'), () =>
-            this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`))));
-        actionsBox.add_child(this._makeActionButton('emblem-synchronizing-symbolic', _('Refresh all'), () =>
-            this._refreshAll().catch(e => console.warn(`ai-usagebar: refresh all failed: ${e}`))));
-        actionsBox.add_child(this._makeActionButton('preferences-system-symbolic', _('Preferences'), () =>
-            this._openPreferences?.()));
-        this._actionsItem.add_child(actionsBox);
-        this.menu.addMenuItem(this._actionsItem);
-
-        this._updateItem = new PopupMenu.PopupImageMenuItem('', 'software-update-available-symbolic');
-        this._updateItem.visible = false;
-        this._updateItem.connect('activate', () => this._openReleasesPage());
-        this.menu.addMenuItem(this._updateItem);
+        // Per-vendor sub-sections are inserted above the separator on (re)build.
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this._actions = new ActionBar([
+            {iconName: 'view-refresh-symbolic', label: _('Refresh now'), onClick: () => this._refresh().catch(warnOnFailure('refresh'))},
+            {iconName: 'emblem-synchronizing-symbolic', label: _('Refresh all'), onClick: () => this._refreshAll().catch(warnOnFailure('refresh all'))},
+            {iconName: 'preferences-system-symbolic', label: _('Preferences'), onClick: () => this._openPreferences?.()},
+        ]);
+        this.menu.addMenuItem(this._actions.item);
+        this._update = new UpdateItem(version, this._cancellable);
+        this.menu.addMenuItem(this._update.item);
 
         // Seed the polled vendors with a Loading… state so their sub-sections (and
         // an immediately-opened popup) are never empty before the first fetch lands.
@@ -173,11 +122,25 @@ class Indicator extends PanelMenu.Button {
         // React to settings changes (prefs / gsettings / scroll write) immediately.
         this._settingsChangedId = this._settings.connect('changed', (s, key) => this._onSettingsChanged(s, key));
 
-        // One immediate refresh, then poll. A rejected promise must never escape
-        // into the timeout callback / event loop.
-        this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
+        this._refresh().catch(warnOnFailure('refresh'));
         this._rearmPollTimer(this._config.refreshIntervalSecs);
-        this._checkForUpdate();
+        this._update.check(this._config.updateCheck.enabled);
+    }
+
+    // AI_USAGEBAR_FAKE_PCT=<0..100> answers every fetch with a synthetic
+    // snapshot; AI_USAGEBAR_FAKE_ERROR=<id[:stale]|*,...> fails those vendors'
+    // fetches; AI_USAGEBAR_FAKE_DELAY_MS=<ms> holds every fetch that long first.
+    _readDevOverrides() {
+        this._fakePct = parseFakePct(GLib.getenv(FAKE_PCT_ENV));
+        if (this._fakePct !== null)
+            log(`ai-usagebar: ${FAKE_PCT_ENV}=${this._fakePct}, overriding usage fetch`);
+        this._fakeErrors = parseFakeErrorVendors(GLib.getenv(FAKE_ERROR_ENV), VENDOR_IDS);
+        this._fakeDelayMs = parseFakeDelayMs(GLib.getenv(FAKE_DELAY_ENV));
+        if (this._fakeErrors !== null)
+            log(`ai-usagebar: ${FAKE_ERROR_ENV}=${[...this._fakeErrors].map(([id, f]) => `${id}:${f}`).join(',')}, failing those fetches`);
+        if (this._fakeDelayMs !== null)
+            log(`ai-usagebar: ${FAKE_DELAY_ENV}=${this._fakeDelayMs}, delaying every fetch`);
+        this._fakeDelayIds = new Set();
     }
 
     _rearmPollTimer(secs) {
@@ -186,8 +149,8 @@ class Indicator extends PanelMenu.Button {
             this._timeoutId = null;
         }
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, secs, () => {
-            this._refresh().catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
-            this._checkForUpdate();
+            this._refresh().catch(warnOnFailure('refresh'));
+            this._update.check(this._config.updateCheck.enabled);
             return GLib.SOURCE_CONTINUE;
         });
     }
@@ -209,36 +172,25 @@ class Indicator extends PanelMenu.Button {
             }
         }
 
-        const config = readConfig(this._settings);
-
-        // Interval change: re-arm the timer (cadence only, no fetch).
-        if (key === 'refresh-interval') {
-            this._config = config;
-            this._rearmPollTimer(config.refreshIntervalSecs);
+        this._config = readConfig(this._settings);
+        const effect = settingsEffect(key);
+        if (effect.kind === Effect.INTERVAL) {
+            this._rearmPollTimer(this._config.refreshIntervalSecs);
             return;
         }
-
-        if (key === 'update-check-enabled') {
-            this._config = config;
-            this._checkForUpdate();
+        if (effect.kind === Effect.UPDATE_CHECK) {
+            this._update.check(this._config.updateCheck.enabled);
             return;
         }
 
         // A vendor that joined the poll set (scroll write, primary sync, a pin, or a
         // disable that bumped the fallback) is fetched now; a cache-warm revisit
-        // skips the network via the 60s TTL. Everything else repaints in-process.
-        this._config = config;
-        this._barFormat = config.barFormat;
-        for (const id of this._syncTargets(config))
-            this._refreshVendor(id).catch(e => console.warn(`ai-usagebar: refresh failed: ${e}`));
-
-        // Appearance-only keys (severity colors, popup format, pace marker) affect
-        // every built section, not just the active one: rebuild the theme on a
-        // color change and re-render all sub-sections. Everything else repaints
-        // just the active section.
-        if (key.startsWith('color-'))
+        // skips the network via the 60s TTL.
+        for (const id of this._syncTargets(this._config))
+            this._refreshVendor(id).catch(warnOnFailure('refresh'));
+        if (effect.rebuildTheme)
             this._rebuildTheme();
-        if (key.startsWith('color-') || key === 'tooltip-format' || key === 'show-pace-marker')
+        if (effect.allSections)
             this._reRenderAllSections();
         else
             this._reRenderFromCache();
@@ -280,7 +232,7 @@ class Indicator extends PanelMenu.Button {
         const section = item.menu;
         const res = this._results.get(id);
         if (!res) {
-            this._setSubmenuMessage(section, _('No data: use "Refresh all"'), {dim: true});
+            renderMessage(section, _('No data: use "Refresh all"'), {dim: true});
             return;
         }
         if (res.ok) {
@@ -304,9 +256,9 @@ class Indicator extends PanelMenu.Button {
             }
             renderSection(section, model, this._config.showPaceMarker);
         } else if (res.kind === 'loading') {
-            this._setSubmenuMessage(section, _('Loading…'), {dim: true});
+            renderMessage(section, _('Loading…'), {dim: true});
         } else {
-            this._setSubmenuMessage(section, errorText(res, _), {
+            renderMessage(section, errorText(res, _), {
                 color: severityColor(Severity.CRITICAL, this._theme),
                 iconName: 'dialog-warning-symbolic',
                 // Only Anthropic errors carry a plan (read from its credentials).
@@ -340,7 +292,8 @@ class Indicator extends PanelMenu.Button {
         }
 
         this._maybeRebuildVendorSections(config);
-        this._maybeRebuildSegments(config);
+        if (this._segments.maybeRebuild(config))
+            this._paintSegments();
         for (const id of added)
             this._renderVendorSection(id);
         if (activeChanged)
@@ -348,17 +301,18 @@ class Indicator extends PanelMenu.Button {
         return added;
     }
 
-    async _refresh() {
+    _reloadConfig() {
         this._config = readConfig(this._settings);
-        this._barFormat = this._config.barFormat;
         this._syncTargets(this._config);
+    }
+
+    async _refresh() {
+        this._reloadConfig();
         await Promise.all(this._pollIds.map(id => this._refreshVendor(id)));
     }
 
     async _refreshAll() {
-        this._config = readConfig(this._settings);
-        this._barFormat = this._config.barFormat;
-        this._syncTargets(this._config);
+        this._reloadConfig();
         await Promise.all(enabledVendors(this._config).map(id => this._refreshVendor(id, {all: true})));
     }
 
@@ -400,7 +354,7 @@ class Indicator extends PanelMenu.Button {
         this._maybeScanContext(id, res, config);
         const polled = this._pollIds.includes(id);
         if (all || polled)
-            this._maybeNotify(adapter, cache, res, config);
+            this._notifier.maybeNotify(adapter, cache, res, config);
         if ((all || polled) && !res.ok && res.kind === 'error')
             console.warn(`ai-usagebar: ${errorText(res)}`);
         try {
@@ -415,27 +369,15 @@ class Indicator extends PanelMenu.Button {
             await this._refreshVendor(id, {all: rerunAll});
     }
 
-    // Real fetch, reshaped by the dev overrides when set: AI_USAGEBAR_FAKE_DELAY_MS
-    // waits first; AI_USAGEBAR_FAKE_PCT returns a synthetic snapshot from adapters
-    // with one; AI_USAGEBAR_FAKE_ERROR fails the listed vendors. A synthetic
-    // failure takes the shapes a real one ends in (an error, or the snapshot
-    // marked stale with the HTTP error); without FAKE_PCT the real fetch runs
+    // The real fetch, reshaped by the dev overrides when set (see
+    // _readDevOverrides). Without FAKE_PCT a failed vendor's real fetch runs
     // against an HTTP 503, so its own stale fallback and sidecars are exercised.
     async _runFetch(adapter, ctx) {
         if (this._fakeDelayMs !== null)
             await this._fakeDelay(this._fakeDelayMs);
         const failure = this._fakeErrors?.get(adapter.id) ?? null;
-        if (this._fakePct !== null && typeof adapter.fakeSnapshot === 'function') {
-            if (failure === FakeFailure.ERROR)
-                return {ok: false, kind: 'error', message: FAKE_ERROR_MESSAGE};
-            return {
-                ok: true,
-                snapshot: adapter.fakeSnapshot(this._fakePct, new Date(), ctx.config),
-                stale: failure === FakeFailure.STALE,
-                lastError: failure === FakeFailure.STALE ? {code: 503, body: FAKE_ERROR_MESSAGE} : null,
-                cacheAgeMs: 0,
-            };
-        }
+        if (this._fakePct !== null && typeof adapter.fakeSnapshot === 'function')
+            return fakeResult(failure, () => adapter.fakeSnapshot(this._fakePct, new Date(), ctx.config));
         if (failure !== null)
             return adapter.fetchSnapshot({...ctx, http: () => Promise.resolve(fakeHttpFailure())});
         return adapter.fetchSnapshot(ctx);
@@ -486,110 +428,6 @@ class Indicator extends PanelMenu.Button {
         } catch (e) {
             if (!e?.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
                 console.warn(`ai-usagebar: context scan failed: ${e}`);
-        }
-    }
-
-    // Only a fresh fetch notifies: a stale fallback or the TTL fast path
-    // re-reports numbers that were already judged. The dedupe state is saved
-    // before delivery, so a failed save skips the notification instead of
-    // repeating it on every poll.
-    async _maybeNotify(adapter, cache, res, config) {
-        if (!res.ok || res.stale || res.cacheAgeMs !== 0 || !config.notifications.enabled)
-            return;
-        try {
-            const {fired, state} = decide({
-                vendor: vendorLabel(adapter.id, config),
-                rows: adapter.notifyRows(res.snapshot, _),
-                credits: adapter.resetCredits(res.snapshot),
-                threshold: config.notifications.threshold,
-                previous: await cache.readNotified(),
-                now: new Date(),
-                _,
-            });
-            if (this._destroyed)
-                return;
-            cache.writeNotified(state);
-            for (const n of fired) {
-                const source = this._notificationSource();
-                source.addNotification(new MessageTray.Notification({
-                    source,
-                    title: n.title,
-                    body: n.body,
-                    urgency: n.urgency === Urgency.CRITICAL ? MessageTray.Urgency.CRITICAL : MessageTray.Urgency.NORMAL,
-                }));
-            }
-            if (fired.length > 0) {
-                global.display.get_sound_player().play_from_theme(
-                    'message-new-instant', vendorLabel(adapter.id, config), null);
-            }
-        } catch (e) {
-            console.warn(`ai-usagebar: notification check failed: ${e}`);
-        }
-    }
-
-    // One tray source for the extension; the shell destroys it once its last
-    // notification is gone, so it is rebuilt on demand.
-    _notificationSource() {
-        if (!this._notifySource) {
-            this._notifySource = new MessageTray.Source({title: 'AI Usage Bar', icon: this._vendorGicon()});
-            this._notifySource.connect('destroy', () => {
-                this._notifySource = null;
-            });
-            Main.messageTray.add(this._notifySource);
-        }
-        return this._notifySource;
-    }
-
-    // Rides the poll tick: the on-disk deadline, not a timer, keeps it to one
-    // request a day across indicator rebuilds and logins.
-    async _checkForUpdate() {
-        if (!this._config.updateCheck.enabled) {
-            this._updateItem.visible = false;
-            return;
-        }
-        if (this._updateCheckBusy)
-            return;
-        this._updateCheckBusy = true;
-        try {
-            let state = await readUpdateState();
-            if (this._destroyed)
-                return;
-            this._paintUpdate(state);
-            if (!isDue(state, Date.now()))
-                return;
-
-            const res = await request({
-                url: RELEASES_API_URL,
-                headers: {Accept: 'application/vnd.github+json'},
-                cancellable: this._cancellable,
-            });
-            if (this._destroyed)
-                return;
-            const latest = res.status === 200 ? parseLatestTag(new TextDecoder().decode(res.bodyBytes)) : null;
-            state = afterCheck(state, latest, Date.now());
-            writeUpdateState(state);
-            this._paintUpdate(state);
-        } catch (e) {
-            console.warn(`ai-usagebar: update check failed: ${e}`);
-        } finally {
-            this._updateCheckBusy = false;
-        }
-    }
-
-    _paintUpdate(state) {
-        const latest = this._config.updateCheck.enabled ? availableUpdate(state, this._version) : null;
-        if (latest) {
-            // Translators: %s is the version number of the newer release (e.g. "1.6.0").
-            this._updateItem.label.text = vformat(_('Update available: %s'), latest);
-        }
-        this._updateItem.visible = latest !== null;
-    }
-
-    _openReleasesPage() {
-        try {
-            Gio.AppInfo.launch_default_for_uri(RELEASES_PAGE_URL, global.create_app_launch_context(0, -1));
-        } catch (e) {
-            console.warn(`ai-usagebar: could not open the releases page: ${e}`);
         }
     }
 
@@ -650,67 +488,18 @@ class Indicator extends PanelMenu.Button {
         return Clutter.EVENT_STOP;
     }
 
-    // The segments are rebuilt only when what they are made of changes: which
-    // vendors, their logos, or the custom provider's name (its short code).
-    _segmentSignature(config) {
-        return `${panelVendors(config).join(',')}|${badgeSignature(config)}`;
-    }
-
-    _maybeRebuildSegments(config) {
-        if (this._segmentSignature(config) !== this._segmentSig)
-            this._rebuildSegments(config);
-    }
-
     _rebuildSegments(config) {
-        this._segmentsBox.destroy_all_children();
-        this._segments.clear();
-        for (const id of panelVendors(config)) {
-            const box = new St.BoxLayout({style_class: 'aiusagebar-segment'});
-            // The badge is the vendor's logo, or its short code with logos off or
-            // for a vendor without a mark of its own.
-            if (config.showVendorIcons && vendorIconName(id) !== GENERIC_ICON) {
-                box.add_child(new St.Icon({
-                    style_class: 'aiusagebar-vendor-icon',
-                    gicon: this._vendorGicon(id),
-                    icon_size: 16,
-                    y_align: Clutter.ActorAlign.CENTER,
-                }));
-            } else {
-                box.add_child(new St.Label({
-                    style_class: 'aiusagebar-panel-tag',
-                    text: vendorTag(id, config),
-                    y_align: Clutter.ActorAlign.CENTER,
-                    y_expand: true,
-                }));
-            }
-            const label = new St.Label({text: '', y_align: Clutter.ActorAlign.CENTER, y_expand: true});
-            box.add_child(label);
-            this._segmentsBox.add_child(box);
-            this._segments.set(id, {box, label});
-        }
-        this._segmentSig = this._segmentSignature(config);
+        this._segments.rebuild(config);
         this._paintSegments();
     }
 
     _paintSegments() {
-        for (const id of this._segments.keys())
+        for (const id of this._segments.ids())
             this._paintSegment(id);
     }
 
     _paintSegment(id) {
-        const segment = this._segments.get(id);
-        if (!segment)
-            return;
-        const model = segmentModel(this._results.get(id), {
-            adapter: getAdapter(id),
-            barFormat: this._barFormat,
-            paceArrows: this._config.showPaceArrows,
-            alone: this._segments.size === 1,
-            now: new Date(),
-        }, _, ngettext);
-        const color = model.tone === Tone.SEVERITY ? severityColor(model.severity, this._theme) : this._theme.fg;
-        segment.label.text = model.text;
-        segment.label.set_style(`color: ${color};`);
+        this._segments.paint(id, this._results.get(id), {config: this._config, theme: this._theme});
     }
 
     // A click or tap on the button focuses the nearest segment's vendor. The
@@ -724,12 +513,7 @@ class Indicator extends PanelMenu.Button {
             type !== Clutter.EventType.TOUCH_BEGIN && type !== Clutter.EventType.TOUCH_END)
             return;
         const [x] = event.get_coords();
-        const spans = [...this._segments].map(([id, {box}]) => {
-            const [sx] = box.get_transformed_position();
-            const [width] = box.get_transformed_size();
-            return {id, x: sx, width};
-        });
-        const id = nearestSegment(x, spans);
+        const id = this._segments.nearest(x);
         if (id === null || id === this._activeId)
             return;
         this._activeId = id;
@@ -756,100 +540,12 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    _setSubmenuMessage(menu, text, opts = {}) {
-        menu.removeAll();
-        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-        const box = new St.BoxLayout({style_class: 'aiusagebar-row'});
-        if (opts.iconName) {
-            box.add_child(new St.Icon({
-                icon_name: opts.iconName,
-                style_class: opts.dim ? 'popup-menu-icon aiusagebar-dim' : 'popup-menu-icon',
-                y_align: Clutter.ActorAlign.CENTER,
-            }));
-        }
-        const l = new St.Label({text, y_align: Clutter.ActorAlign.CENTER});
-        if (opts.color)
-            l.set_style(`color: ${opts.color};`);
-        else if (opts.dim)
-            l.add_style_class_name('aiusagebar-dim');
-        box.add_child(l);
-        if (opts.title) {
-            const container = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
-            container.add_child(new St.Label({text: opts.title, style_class: 'aiusagebar-title'}));
-            container.add_child(box);
-            item.add_child(container);
-        } else {
-            item.add_child(box);
-        }
-        menu.addMenuItem(item);
-    }
-
     // Symbolic name (-symbolic.svg) so St recolors it to the menu foreground;
     // a plain icon would render its currentColor as black and vanish in dark.
     _vendorGicon(id = null) {
         const name = id !== null && this._config.showVendorIcons ? vendorIconName(id) : GENERIC_ICON;
         const f = Gio.File.new_for_path(GLib.build_filenamev([this._path, 'icons', `${name}.svg`]));
         return new Gio.FileIcon({file: f});
-    }
-
-    _makeActionButton(iconName, label, onClick) {
-        const button = new St.Button({
-            style_class: 'aiusagebar-action-button',
-            child: new St.Icon({icon_name: iconName, style_class: 'popup-menu-icon'}),
-            can_focus: true,
-            track_hover: true,
-        });
-        button.accessible_name = label;
-        button.connect('clicked', () => {
-            if (this._destroyed)
-                return;
-            this._hideTooltip();
-            onClick();
-        });
-        button.connect('notify::hover', () => this._onActionHover(button, label));
-        return button;
-    }
-
-    _onActionHover(button, label) {
-        if (this._destroyed)
-            return;
-        this._cancelTooltipTimer();
-        if (!button.hover) {
-            this._hideTooltip();
-            return;
-        }
-        this._tooltipTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_DELAY_MS, () => {
-            this._tooltipTimeoutId = null;
-            this._showTooltip(button, label);
-            return GLib.SOURCE_REMOVE;
-        });
-    }
-
-    _showTooltip(button, label) {
-        if (this._destroyed || !button.hover)
-            return;
-        if (!this._tooltip) {
-            this._tooltip = new St.Label({style_class: 'aiusagebar-tooltip'});
-            this._tooltip.hide();
-            Main.layoutManager.uiGroup.add_child(this._tooltip);
-        }
-        this._tooltip.text = label;
-        this._tooltip.show();
-        const [bx, by] = button.get_transformed_position();
-        const x = Math.round(bx + button.width / 2 - this._tooltip.width / 2);
-        const y = Math.round(by + button.height + 4);
-        this._tooltip.set_position(Math.max(0, x), y);
-    }
-
-    _hideTooltip() {
-        this._tooltip?.hide();
-    }
-
-    _cancelTooltipTimer() {
-        if (this._tooltipTimeoutId) {
-            GLib.Source.remove(this._tooltipTimeoutId);
-            this._tooltipTimeoutId = null;
-        }
     }
 
     destroy() {
@@ -863,14 +559,11 @@ class Indicator extends PanelMenu.Button {
             GLib.Source.remove(this._renderTimeoutId);
             this._renderTimeoutId = null;
         }
-        this._cancelTooltipTimer();
         for (const id of this._fakeDelayIds)
             GLib.Source.remove(id);
         this._fakeDelayIds.clear();
-        if (this._tooltip) {
-            this._tooltip.destroy();
-            this._tooltip = null;
-        }
+        this._actions.destroy();
+        this._update.destroy();
         if (this._openStateId) {
             this.menu.disconnect(this._openStateId);
             this._openStateId = null;
@@ -888,12 +581,11 @@ class Indicator extends PanelMenu.Button {
             this._cancellable = null;
         }
         disposeSession();
-        this._notifySource?.destroy();
-        this._notifySource = null;
+        this._notifier.destroy();
         this._settings = null;
 
         this._vendorItems.clear();
-        this._segments.clear();
+        this._segments.destroy();
         this._guards.clear();
         this._pendingAll.clear();
         this._results.clear();

@@ -155,6 +155,31 @@ function buildFooter(row) {
     return block;
 }
 
+// A one-line section (loading, no data, an error): `opts` takes a `color`,
+// `dim`, an `iconName` and a `title` shown above the line.
+export function renderMessage(menuSection, text, opts = {}) {
+    menuSection.removeAll();
+    const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+    const box = new St.BoxLayout({style_class: 'aiusagebar-row'});
+    if (opts.iconName)
+        box.add_child(makeIcon(opts.iconName, opts.dim));
+    const l = new St.Label({text, y_align: Clutter.ActorAlign.CENTER});
+    if (opts.color)
+        l.set_style(`color: ${opts.color};`);
+    else if (opts.dim)
+        l.add_style_class_name('aiusagebar-dim');
+    box.add_child(l);
+    if (opts.title) {
+        const container = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
+        container.add_child(new St.Label({text: opts.title, style_class: 'aiusagebar-title'}));
+        container.add_child(box);
+        item.add_child(container);
+    } else {
+        item.add_child(box);
+    }
+    menuSection.addMenuItem(item);
+}
+
 export function renderSection(menuSection, model, showPace = false) {
     menuSection.removeAll();
 
