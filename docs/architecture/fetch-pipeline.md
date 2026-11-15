@@ -5,7 +5,7 @@ description: runFetch() is the shared fetch state machine; every vendor resolves
 tags: [cache, errors, polling]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T17:57:27Z
 sources:
   - id: fetch-common
     title: lib/vendors/fetch-common.js
@@ -27,7 +27,7 @@ Each vendor's `fetchSnapshot` is a call to `runFetch()`.[^fetch-common] Before i
 6. **Parse** (before any cache write): a parse error also marks stale and writes `.last_error` with code 0.
 7. **`enrich`** hook, then **write** the projected snapshot.
 
-Other hooks: `httpErrorBody` and `errorExtras`. "Stale-or-X" means the cached payload if usable (`staleResult`), else X. HTTP timeout is 10 s. Each fetch is also serialized per cache directory (`withMutex`). The API-key vendors and the custom provider also run inside `redactedFetch`, which keeps every secret it was handed out of the cache and the result.
+Other hooks: `httpErrorBody` and `errorExtras`. "Stale-or-X" means the cached payload if usable (`staleResult`), else X. HTTP timeout is 10 s. Each fetch is also serialized per cache directory (`withMutex`). The API-key vendors and the custom provider also run inside `redactedFetch`, which keeps every secret it was handed out of the cache and the result. The OAuth vendors use `redactedRun` with the tokens read from their credentials file, plus any a refresh rotates in.
 
 # FetchResult
 

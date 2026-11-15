@@ -226,4 +226,35 @@ describe('fetchSnapshot: a signed-out credentials file', () => {
     }));
 });
 
+describe('fetchSnapshot: a failure that quotes the token', () => {
+    const TOKEN = 'sk-ant-oat01-abcdefgh12345678';
+    const REFRESH = 'sk-ant-ort01-zyxwvuts87654321';
+    const credsOf = (dir, expiresAt) => writeText(GLib.build_filenamev([dir, 'secret.json']), JSON.stringify({
+        claudeAiOauth: {accessToken: TOKEN, refreshToken: REFRESH, expiresAt, subscriptionType: 'pro'},
+    }));
+
+    it('neither the result nor .last_error carries the access token', withTemp(({cache, dir}) => {
+        const credsPath = credsOf(dir, 9_999_999_999_000);
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(500, `bad token ${TOKEN}`)), credsPath}));
+        assertEqual(r.ok, false);
+        assertEqual(JSON.stringify(r).includes(TOKEN), false);
+        const onDisk = runSync(cache.readLastError());
+        assertEqual(onDisk.body.includes(TOKEN), false);
+        assertEqual(onDisk.body.includes('[key]'), true);
+    }));
+
+    it('a refreshed token is redacted too', withTemp(({cache, dir}) => {
+        const credsPath = credsOf(dir, 0);
+        const NEW = 'sk-ant-oat01-newnewnew99999999';
+        const http = httpStub([
+            res(200, JSON.stringify({access_token: NEW, expires_in: 3600})),
+            res(500, `bad token ${NEW} after ${REFRESH}`),
+        ]);
+        runSync(fetchSnapshot({cache, http, credsPath}));
+        const onDisk = runSync(cache.readLastError());
+        assertEqual(onDisk.body.includes(NEW), false);
+        assertEqual(onDisk.body.includes(REFRESH), false);
+    }));
+});
+
 system.exit(summary());

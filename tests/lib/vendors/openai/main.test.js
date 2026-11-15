@@ -260,4 +260,21 @@ describe('fetchSnapshot (openai): a signed-out credentials file', () => {
     }));
 });
 
+describe('fetchSnapshot (openai): a failure that quotes the token', () => {
+    const TOKEN = 'eyJ-access-abcdefgh12345678';
+
+    it('neither the result nor .last_error carries the access token', withCacheHome('openai', ({cache, dir}) => {
+        const credsPath = writeAuth(GLib.build_filenamev([dir, 'auth.json']), {
+            accessToken: TOKEN,
+            idToken: fakeJwt({exp: Math.trunc(Date.now() / 1000) + 3600}),
+        });
+        const r = runSync(fetchSnapshot({cache, http: httpStub(res(500, `bad token ${TOKEN}`)), credsPath}));
+        assertEqual(r.ok, false);
+        assertEqual(JSON.stringify(r).includes(TOKEN), false);
+        const onDisk = runSync(cache.readLastError());
+        assertEqual(onDisk.body.includes(TOKEN), false);
+        assertEqual(onDisk.body.includes('[key]'), true);
+    }));
+});
+
 system.exit(summary());
