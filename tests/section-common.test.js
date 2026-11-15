@@ -13,10 +13,14 @@ import {
     ICON_ERR_SERVER,
     ICON_ERR_CLIENT,
     ICON_FOOTER,
+    windowRow,
+    closingRows,
+    noWindowsRow,
 } from '../lib/vendors/section-common.js';
 import {localTimeHm} from '../lib/format.js';
 import {calc} from '../lib/pacing.js';
-import {localDateHm, format as formatCountdown} from '../lib/countdown.js';
+import {localDateHm, format as formatCountdown, formatWithClock} from '../lib/countdown.js';
+import {defaultTheme} from '../lib/theme.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 
 const theme = {red: '#red', orange: '#orange'};
@@ -367,6 +371,56 @@ describe('paceFootnote: an early burst in a long window', () => {
         const week = 7 * 86400 * 1000;
         const pace = calc({usagePct: 10, reset: new Date(now.getTime() + week - 8 * 3600 * 1000), now, windowMs: week});
         assertEqual(paceFootnote(pace), '~110% over pace');
+    });
+});
+
+describe('windowRow', () => {
+    const t = defaultTheme();
+    const now = new Date(Date.UTC(2026, 4, 1, 12));
+    const resetsAt = new Date(now.getTime() + 3 * 3600 * 1000);
+    const pace = calc({usagePct: 60, reset: resetsAt, now, windowMs: 5 * 3600 * 1000});
+
+    it('builds a window row from its parts, in the row field order', () => {
+        const r = windowRow({icon: 'alarm', title: 'Session', pct: 60, resetsAt, pace, now, theme: t, _: bracket});
+        assertDeepEqual(r, {
+            kind: 'window',
+            icon: 'alarm',
+            title: 'Session',
+            pct: 60,
+            reset: formatCountdown(resetsAt, now, bracket),
+            subtitle: formatWithClock(resetsAt, now, bracket),
+            ...paceFields(60, pace, t, bracket),
+        });
+    });
+    it('without a pace it is a plain severity bar', () => {
+        const r = windowRow({icon: 'x', title: 'Sonnet', pct: 10, resetsAt, pace: null, now, theme: t});
+        assertDeepEqual(r, {...r, ...paceFields(10, null, t)});
+        assertEqual('elapsedPct' in r, false);
+    });
+    it('can drop the footnote', () => {
+        const r = windowRow({icon: 'x', title: 'W', pct: 60, resetsAt, pace, now, theme: t, footnote: false});
+        assertEqual('paceFootnote' in r, false);
+        assertEqual(r.elapsedPct, pace.elapsedPct);
+    });
+    it('a subtitle replaces the reset clock', () => {
+        assertEqual(windowRow({icon: 'x', title: 'W', pct: 1, resetsAt, pace: null, now, theme: t, subtitle: 'mine'}).subtitle, 'mine');
+    });
+});
+
+describe('closingRows', () => {
+    const meta = {fetchedAt: new Date(2026, 0, 1, 9, 5), lastError: null};
+    it('is just the footer without an error', () => {
+        assertDeepEqual(closingRows(meta, theme, bracket), [footerRow(meta, bracket)]);
+    });
+    it('puts the HTTP error above the footer', () => {
+        const m = {...meta, lastError: {code: 503, body: 'down'}};
+        assertDeepEqual(closingRows(m, theme, bracket), [httpErrorRow(m, theme, bracket), footerRow(m, bracket)]);
+    });
+});
+
+describe('noWindowsRow', () => {
+    it('is a dim text row, translated', () => {
+        assertDeepEqual(noWindowsRow(bracket), {kind: 'text', text: '[no usage windows reported]', tone: 'dim'});
     });
 });
 

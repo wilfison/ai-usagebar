@@ -1,6 +1,7 @@
 import system from 'system';
 
-import {buildSection, wrapWords} from '../../../../lib/vendors/anthropic/section.js';
+import {buildSection} from '../../../../lib/vendors/anthropic/section.js';
+import {wrapWords} from '../../../../lib/vendors/section-common.js';
 import {SESSION_MS, WEEKLY_MS} from '../../../../lib/vendors/anthropic/parser.js';
 import {calc} from '../../../../lib/pacing.js';
 import {resetClock, localDateHm, format as formatCountdown} from '../../../../lib/countdown.js';

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-14 21:01-0300\n"
+"POT-Creation-Date: 2026-11-14 22:01-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -327,11 +327,6 @@ msgstr ""
 msgid "Purchased credits: %s"
 msgstr ""
 
-#: lib/vendors/ollama/section.js lib/vendors/openai/section.js
-#: lib/vendors/zai/section.js
-msgid "no usage windows reported"
-msgstr ""
-
 #. Translators: %s is the Ollama plan name from the prefs (e.g. "Pro"), kept verbatim.
 #: lib/vendors/ollama/section.js
 #, javascript-format
@@ -454,6 +449,10 @@ msgstr ""
 #: lib/vendors/section-common.js
 #, javascript-format
 msgid "Updated %s"
+msgstr ""
+
+#: lib/vendors/section-common.js
+msgid "no usage windows reported"
 msgstr ""
 
 #: lib/vendors/section-common.js
