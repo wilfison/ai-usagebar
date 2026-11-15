@@ -60,7 +60,8 @@ const rules = {
 
 export default [
     {
-        ignores: ['node_modules/**', '**/*.compiled', '**/*.shell-extension.zip'],
+        // tmp/ holds local scratch (the upstream Rust clone among it), never shipped.
+        ignores: ['node_modules/**', 'tmp/**', '**/*.compiled', '**/*.shell-extension.zip'],
     },
     {
         files: ['**/*.js'],
