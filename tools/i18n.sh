@@ -11,7 +11,7 @@
 #                   their fuzzy flag, and rewrap every catalog with msgcat
 #
 # String scanning covers the runtime sources only (extension.js, prefs.js,
-# ui/, lib/); tests/ and tools/ and node_modules/ are excluded by construction.
+# ui/, prefs/, lib/); tests/ and tools/ and node_modules/ are excluded by construction.
 
 set -eu
 shopt -s nullglob
@@ -21,7 +21,7 @@ POT="po/${UUID}.pot"
 
 # Echo the runtime *.js sources xgettext should scan (one per line, sorted).
 sources() {
-    find extension.js prefs.js ui lib -name '*.js' | sort
+    find extension.js prefs.js ui prefs lib -name '*.js' | sort
 }
 
 # Extract all marked strings into the .pot-format file named by $1.

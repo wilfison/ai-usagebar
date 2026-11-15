@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-14 22:07-0300\n"
+"POT-Creation-Date: 2026-11-14 22:10-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -114,11 +114,11 @@ msgstr ""
 msgid "Panel"
 msgstr ""
 
-#: lib/prefs-nav.js prefs.js
+#: lib/prefs-nav.js prefs/general.js
 msgid "Popup"
 msgstr ""
 
-#: lib/prefs-nav.js prefs.js
+#: lib/prefs-nav.js prefs/general.js
 msgid "Display"
 msgstr ""
 
@@ -130,8 +130,135 @@ msgstr ""
 msgid "Vendors"
 msgstr ""
 
-#: lib/prefs-nav.js prefs.js
+#: lib/prefs-nav.js prefs/general.js
 msgid "Custom"
+msgstr ""
+
+#: lib/prefs-pages.js prefs/custom.js
+msgid "Enabled"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "API key env var"
+msgstr ""
+
+#: lib/prefs-pages.js prefs/custom.js
+msgid "API key (inline)"
+msgstr ""
+
+#. Translators: "Anthropic" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "Anthropic"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Credentials path: empty uses ~/.claude/.credentials.json."
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Credentials path"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Context monitor"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid ""
+"Lists recent Claude Code sessions in the Claude section, with how much of "
+"the context window each one used. Transcripts are read only while this is on."
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Show session context"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Projects directory (empty: ~/.claude/projects)"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Default context window (tokens)"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "0 shows raw token counts instead of a percentage"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Window per model (JSON, e.g. {\"claude-opus-5\": 1000000})"
+msgstr ""
+
+#. Translators: "OpenAI" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "OpenAI"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Codex auth path: empty uses ~/.codex/auth.json."
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Codex auth path"
+msgstr ""
+
+#. Translators: "Z.AI" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "Z.AI"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Set the API key inline or via the environment variable (env wins)."
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Plan tier (lite/pro/max)"
+msgstr ""
+
+#. Translators: "OpenRouter" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "OpenRouter"
+msgstr ""
+
+#: lib/prefs-pages.js lib/vendors/openrouter/section.js
+msgid "Recent models"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid ""
+"Optional. A management key lists the two most recently used models; it is "
+"sent only to the activity endpoint, never with usage requests."
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Management key env var"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Management key (inline)"
+msgstr ""
+
+#. Translators: "DeepSeek" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "DeepSeek"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Disabled by default; requires an API key (env var or inline)."
+msgstr ""
+
+#. Translators: "Kimi" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "Kimi"
+msgstr ""
+
+#. Translators: "Ollama" is a brand name, usually keep untranslated.
+#: lib/prefs-pages.js
+msgid "Ollama Cloud"
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Plan name (optional)"
 msgstr ""
 
 #: lib/vendors/anthropic/parser.js lib/vendors/anthropic/section.js
@@ -274,7 +401,7 @@ msgstr ""
 msgid "Claude %s"
 msgstr ""
 
-#: lib/vendors/custom/section.js prefs.js
+#: lib/vendors/custom/section.js prefs/custom.js
 msgid "Custom provider"
 msgstr ""
 
@@ -363,10 +490,6 @@ msgstr ""
 
 #: lib/vendors/openai/section.js
 msgid "unlimited"
-msgstr ""
-
-#: lib/vendors/openrouter/section.js prefs.js
-msgid "Recent models"
 msgstr ""
 
 #. Translators: "42 reqs": requests, abbreviated to fit beside the model name.
@@ -518,69 +641,139 @@ msgstr ""
 msgid "MCP tools (monthly)"
 msgstr ""
 
-#: prefs.js
+#: prefs/custom.js
+msgid ""
+"Any HTTPS endpoint that answers a GET with JSON, mapped to usage rows by "
+"JSON Pointer. See the README for an example."
+msgstr ""
+
+#: prefs/custom.js
+msgid "Name"
+msgstr ""
+
+#: prefs/custom.js
+msgid "URL"
+msgstr ""
+
+#: prefs/custom.js
+msgid "Allow plain HTTP"
+msgstr ""
+
+#: prefs/custom.js
+msgid "Authentication"
+msgstr ""
+
+#: prefs/custom.js
+msgid ""
+"Without a key no auth header is sent. An empty scheme sends the key bare."
+msgstr ""
+
+#: prefs/custom.js
+msgid "API key env var (optional)"
+msgstr ""
+
+#: prefs/custom.js
+msgid "Auth header"
+msgstr ""
+
+#: prefs/custom.js
+msgid "Auth scheme"
+msgstr ""
+
+#: prefs/custom.js
+msgid "Extra headers"
+msgstr ""
+
+#: prefs/custom.js
+msgid ""
+"A JSON object of header names to string values; it must not repeat the auth "
+"header."
+msgstr ""
+
+#: prefs/custom.js
+msgid ""
+"Not a JSON object of string header values, or it repeats the auth header."
+msgstr ""
+
+#: prefs/custom.js
+msgid "Mapping"
+msgstr ""
+
+#: prefs/custom.js
+msgid ""
+"Metrics (used + limit, or percent) and texts, each read from the response by "
+"JSON Pointer; an optional currency (e.g. \"USD\") shows used + limit or a "
+"text as money. Saved when the editor loses focus and the mapping is valid."
+msgstr ""
+
+#: prefs/custom.js
+#, javascript-format
+msgid "Not valid JSON: %s"
+msgstr ""
+
+#: prefs/general.js
 msgid "Panel position"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Changes apply immediately."
 msgstr ""
 
-#: prefs.js
-msgid "Left"
-msgstr ""
-
-#: prefs.js
-msgid "Center (beside the clock)"
-msgstr ""
-
-#: prefs.js
-msgid "Right (beside the system menu)"
-msgstr ""
-
-#: prefs.js
+#: prefs/general.js
 msgid "Area"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
+msgid "Left"
+msgstr ""
+
+#: prefs/general.js
+msgid "Center (beside the clock)"
+msgstr ""
+
+#: prefs/general.js
+msgid "Right (beside the system menu)"
+msgstr ""
+
+#: prefs/general.js
 msgid "Position within the area"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "0 is leftmost; in the center, 0 is left of the clock and 1 right of it"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Panel label"
 msgstr ""
 
 #. Translators: the {token} names are literal placeholders the user
 #. types: keep them verbatim, only translate the surrounding prose.
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Bar format"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Pace arrows"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Ends the label with the session pace: ↑ ahead of pace, → on track, ↓ under. "
 "Skipped when the format already has a pace placeholder."
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Vendors on the panel"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Each vendor switched on gets its own logo and label, side by side; clicking "
 "one opens the popup on it. With none on, the panel shows one vendor and "
@@ -590,353 +783,160 @@ msgstr ""
 
 #. Translators: the {token} names are literal placeholders the user
 #. types: keep them verbatim, only translate the surrounding prose.
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Optional extra lines shown above the popup. Empty uses the built-in layout. "
 "Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} "
 "{weekly_reset}"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Popup format"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Show pace marker"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "A tick at how much of the window has passed. Usage past it turns orange or "
 "red when it would run out before the reset."
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Shortcut to open"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Primary vendor"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Shown on the panel when no vendor is pinned, opened first in the popup, and "
 "the scroll-cycle reset target"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Show vendor logos"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Severity colors"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Pick a color per severity tier. Reset returns a tier to its built-in default."
 msgstr ""
 
 #. Translators: Low/Mid/High/Critical are usage-severity tier names.
-#: prefs.js
+#: prefs/general.js
 msgid "Low"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Mid"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "High"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Critical"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Refresh"
 msgstr ""
 
 #. Translators: %d is the minimum refresh interval in seconds.
-#: prefs.js
+#: prefs/general.js
 #, javascript-format
 msgid "Minimum %d s: the upstream endpoints rate-limit below that."
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Refresh interval (seconds)"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Notifications"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Show a desktop notification the first time a usage window reaches the "
 "threshold. It re-arms when usage drops 7 points below it or the window "
 "resets, and warns 48 hours before a reset credit expires."
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Notify on high usage"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Notification threshold (%)"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Updates"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Check for updates"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Once a day, ask GitHub whether a newer release exists"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Reset"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "Restore every setting (vendor toggles, paths, keys, formats, and colors) to "
 "its built-in default."
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Reset all settings"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid "Reset all settings?"
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js
 msgid ""
 "This restores every setting to its built-in default and cannot be undone."
 msgstr ""
 
-#: prefs.js
+#: prefs/general.js prefs/widgets.js
 msgid "Cancel"
 msgstr ""
 
-#. Translators: "Anthropic" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "Anthropic"
-msgstr ""
-
-#: prefs.js
-msgid "Credentials path: empty uses ~/.claude/.credentials.json."
-msgstr ""
-
-#: prefs.js
-msgid "Enabled"
-msgstr ""
-
-#: prefs.js
-msgid "Credentials path"
-msgstr ""
-
-#: prefs.js
-msgid "Context monitor"
-msgstr ""
-
-#: prefs.js
-msgid ""
-"Lists recent Claude Code sessions in the Claude section, with how much of "
-"the context window each one used. Transcripts are read only while this is on."
-msgstr ""
-
-#: prefs.js
-msgid "Show session context"
-msgstr ""
-
-#: prefs.js
-msgid "Projects directory (empty: ~/.claude/projects)"
-msgstr ""
-
-#: prefs.js
-msgid "Default context window (tokens)"
-msgstr ""
-
-#: prefs.js
-msgid "0 shows raw token counts instead of a percentage"
-msgstr ""
-
-#: prefs.js
-msgid "Window per model (JSON, e.g. {\"claude-opus-5\": 1000000})"
-msgstr ""
-
-#. Translators: "OpenAI" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "OpenAI"
-msgstr ""
-
-#: prefs.js
-msgid "Codex auth path: empty uses ~/.codex/auth.json."
-msgstr ""
-
-#: prefs.js
-msgid "Codex auth path"
-msgstr ""
-
-#. Translators: "Z.AI" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "Z.AI"
-msgstr ""
-
-#: prefs.js
-msgid "Set the API key inline or via the environment variable (env wins)."
-msgstr ""
-
-#: prefs.js
-msgid "API key env var"
-msgstr ""
-
-#: prefs.js
-msgid "API key (inline)"
-msgstr ""
-
-#: prefs.js
-msgid "Plan tier (lite/pro/max)"
-msgstr ""
-
-#. Translators: "OpenRouter" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "OpenRouter"
-msgstr ""
-
-#: prefs.js
-msgid ""
-"Optional. A management key lists the two most recently used models; it is "
-"sent only to the activity endpoint, never with usage requests."
-msgstr ""
-
-#: prefs.js
-msgid "Management key env var"
-msgstr ""
-
-#: prefs.js
-msgid "Management key (inline)"
-msgstr ""
-
-#. Translators: "DeepSeek" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "DeepSeek"
-msgstr ""
-
-#: prefs.js
-msgid "Disabled by default; requires an API key (env var or inline)."
-msgstr ""
-
-#. Translators: "Kimi" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "Kimi"
-msgstr ""
-
-#. Translators: "Ollama" is a brand name, usually keep untranslated.
-#: prefs.js
-msgid "Ollama Cloud"
-msgstr ""
-
-#: prefs.js
-msgid "Plan name (optional)"
-msgstr ""
-
-#: prefs.js
-msgid ""
-"Any HTTPS endpoint that answers a GET with JSON, mapped to usage rows by "
-"JSON Pointer. See the README for an example."
-msgstr ""
-
-#: prefs.js
-msgid "Name"
-msgstr ""
-
-#: prefs.js
-msgid "URL"
-msgstr ""
-
-#: prefs.js
-msgid "Allow plain HTTP"
-msgstr ""
-
-#: prefs.js
-msgid "Authentication"
-msgstr ""
-
-#: prefs.js
-msgid ""
-"Without a key no auth header is sent. An empty scheme sends the key bare."
-msgstr ""
-
-#: prefs.js
-msgid "API key env var (optional)"
-msgstr ""
-
-#: prefs.js
-msgid "Auth header"
-msgstr ""
-
-#: prefs.js
-msgid "Auth scheme"
-msgstr ""
-
-#: prefs.js
-msgid "Extra headers"
-msgstr ""
-
-#: prefs.js
-msgid ""
-"A JSON object of header names to string values; it must not repeat the auth "
-"header."
-msgstr ""
-
-#: prefs.js
-msgid ""
-"Not a JSON object of string header values, or it repeats the auth header."
-msgstr ""
-
-#: prefs.js
-msgid "Mapping"
-msgstr ""
-
-#: prefs.js
-msgid ""
-"Metrics (used + limit, or percent) and texts, each read from the response by "
-"JSON Pointer; an optional currency (e.g. \"USD\") shows used + limit or a "
-"text as money. Saved when the editor loses focus and the mapping is valid."
-msgstr ""
-
-#: prefs.js
-#, javascript-format
-msgid "Not valid JSON: %s"
-msgstr ""
-
-#: prefs.js
+#: prefs/widgets.js
 msgid "Reset to default"
 msgstr ""
 
-#: prefs.js
+#: prefs/widgets.js
 msgid "Disabled"
 msgstr ""
 
-#: prefs.js
+#: prefs/widgets.js
 msgid "Set shortcut"
 msgstr ""
 
-#: prefs.js
+#: prefs/widgets.js
 msgid "Press the new shortcut for opening the popup, or Esc to cancel."
 msgstr ""
 
-#: prefs.js
+#: prefs/widgets.js
 msgid "Disable"
 msgstr ""
 

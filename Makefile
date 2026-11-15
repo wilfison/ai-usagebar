@@ -11,7 +11,7 @@ help:
 	@echo "  lint            Check trailing newline + no imports.* in JS files"
 	@echo "  eslint          Run eslint (GNOME Shell style); needs 'npm ci' first"
 	@echo "  validate        Validate metadata.json + compile schema with --strict"
-	@echo "  watch           Re-run 'make test' on changes under lib/ ui/ tests/"
+	@echo "  watch           Re-run 'make test' on changes under lib/ ui/ prefs/ tests/"
 	@echo "  run             Launch a nested gnome-shell (Wayland) to test the extension"
 	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, LANG_UNDER_TEST)"
 	@echo "  headless-stop   Stop it"
@@ -57,7 +57,7 @@ watch:
 		exit 1; \
 	}
 	@$(MAKE) --no-print-directory test || true
-	@while inotifywait -qq -r -e modify,create,delete,move lib ui tests; do \
+	@while inotifywait -qq -r -e modify,create,delete,move lib ui prefs tests; do \
 		$(MAKE) --no-print-directory test || true; \
 	done
 
@@ -103,9 +103,9 @@ i18n-check:
 i18n-todo:
 	@./tools/i18n.sh todo
 
-# pack bundles only a fixed top-level set, so lib/ and ui/ need --extra-source; --podir=po ships the .mo files.
+# pack bundles only a fixed top-level set, so lib/, ui/ and prefs/ need --extra-source; --podir=po ships the .mo files.
 pack: schemas
-	gnome-extensions pack . --extra-source=lib --extra-source=ui --extra-source=icons --podir=po --force
+	gnome-extensions pack . --extra-source=lib --extra-source=ui --extra-source=prefs --extra-source=icons --podir=po --force
 
 info:
 	gnome-extensions info $(UUID)

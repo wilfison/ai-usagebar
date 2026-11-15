@@ -46,7 +46,9 @@ Run a **single test file** directly: `gjs -m tests/lib/vendors/anthropic/parser.
 Each `*.test.js` is self-contained (calls `system.exit(summary())`), and
 `tests/run.js` discovers them **recursively** (so tests may nest in
 subdirectories that mirror the source path) and runs each as an isolated
-`gjs -m` subprocess.
+`gjs -m` subprocess. Shared fixtures (`runSync`, `httpStub`, `routeStub`,
+`res`, `withTempDir`, `withCacheHome`, `backdate`, `fakeJwt`) live in
+`tests/_harness.js`; import them instead of copying.
 
 The runner colorizes output with ANSI codes; `tests/run.js` honors the
 [`NO_COLOR`](https://no-color.org) env var, so run `NO_COLOR=1 make test` to get
@@ -64,7 +66,10 @@ it to the panel; `disable()` calls `this._indicator.destroy()`. **Everything
 created in `enable()` must be released in `disable()`** (widgets, GLib timeout
 sources via `GLib.Source.remove`, signal handlers, the Soup session, the
 Cancellable); reviewers reject extensions that leak on disable. `Indicator`
-owns this discipline in its `destroy()`.
+owns this discipline in its `destroy()`, and so does each part it builds:
+`ActionBar` (footer buttons + tooltip), `PanelSegments`, `Notifier` and
+`UpdateItem` under `ui/`. What a settings key triggers is the pure
+`settingsEffect()` in `lib/settings-effect.js`.
 
 ### Vendor-adapter pattern (the core abstraction)
 
@@ -79,37 +84,45 @@ lives in its own directory
 `lib/vendors/<vendor>/` as a **module quad**:
 
 - `lib/vendors/<vendor>/adapter.js`: wires the triple into the uniform `Adapter`
-  object and exports it (e.g. `anthropicAdapter`). Derives the creds path /
-  resolved API key from config, catching resolution errors into the standard
-  error result, and exposes the pure `buildSection` as-is (the indicator injects
-  the real `gettext` at the call site). Imports `main.js` (transitively `Gio`)
+  with `vendorAdapter()` from `adapter-common.js` and exports it (e.g.
+  `anthropicAdapter`). `apiKeyFetch()` / `guardedFetch()` derive the API key or
+  creds path from config, turning a resolution error into the standard error
+  result; the pure `buildSection` is exposed as-is (the indicator injects the
+  real `gettext` at the call site). Imports `main.js` (transitively `Gio`)
   but **no** `resource://`, so the whole `ADAPTERS` graph loads under `gjs -m`;
   its shape is checked in `tests/lib/vendors/registry.test.js`.
-- `lib/vendors/<vendor>/main.js`: fetch state machine (`fetchSnapshot`). Reads
-  creds/key, maybe-refreshes the OAuth token, GETs the usage endpoint, caches,
-  and falls back to stale cache on failure. Transitively imports `Gio` (via
-  cache/http), so it is **not** unit-tested directly. Never throws: always
-  resolves to a `FetchResult`.
+- `lib/vendors/<vendor>/main.js`: `fetchSnapshot`, a call to `runFetch()` in
+  `fetch-common.js` (fresh-cache fast path, 429 backoff, transport fallback,
+  parse before cache, HTTP error record) with the vendor's request, parser and
+  hooks: `authorize` (the OAuth refresh, settled by `settleRefresh()`),
+  `enrich`, `httpErrorBody`, `errorExtras`. Tested in `main.test.js` against a
+  temp cache. Never throws: always resolves to a `FetchResult`.
 - `lib/vendors/<vendor>/parser.js` (**pure**): `parseUsage(jsonBytes) → snapshot`,
   plus `severity`, `peakUsage`, `placeholders` (Map for `bar-format`
   substitution; takes an injected `ngettext`), `notifyRows`, `resetCredits`,
   `snapshotToCacheJson`/`parseCacheJson`, `ICON`, `VENDOR_SHORT`. No `gi://`;
-  fully unit-tested.
+  fully unit-tested. `SchemaError`, the JSON decode, `parseInstant` and the
+  window lengths come from `parse-common.js`; the per-window placeholder strings
+  and the peak pick from `placeholder-common.js`.
 - `lib/vendors/<vendor>/section.js` (**pure**): `buildSection(snapshot, meta,
 now, theme, _, ngettext) → SectionModel` (an ordered list of typed rows:
   `window`, `gauge`, `text`, `group-heading`, `grouped`, `spacer`,
-  `http-error`, `footer`). No `gi://`; unit-tested. Window rows take their colour
-  and pace fields from `paceFields()` in `section-common.js`.
+  `http-error`, `footer`). No `gi://`; unit-tested. `section-common.js` builds
+  the shared rows: `windowRow()` (colour and pace fields from `paceFields()`),
+  `closingRows()` (HTTP error + footer) and `noWindowsRow()`.
 
-Shared helpers (`registry.js`, `section-common.js`, `fetch-common.js`,
-`snapshot-cache.js`) stay flat at `lib/vendors/`. `registry.js` is now thin: it imports each vendor's
+Shared helpers (`registry.js`, `adapter-common.js`, `fetch-common.js`,
+`parse-common.js`, `placeholder-common.js`, `section-common.js`,
+`snapshot-cache.js`) stay flat at `lib/vendors/`; the OAuth refresh exchange
+both CLIs use is `lib/oauth/refresh.js`. `registry.js` is now thin: it imports each vendor's
 `adapter.js` and maps id → adapter in `ADAPTERS`. To add a vendor: create
 `lib/vendors/<vendor>/` with the quad (the adapter wires the rest), register its
 adapter in `ADAPTERS`, and add its id/label to `lib/vendors.js`
 (`VENDOR_IDS` / `VENDOR_LABELS`, appended last: the gschema enum ordinal and
 the prefs combo index follow that order) + the gschema keys, a prefs page (a
-`_build<Vendor>Page` registered under its id in `builders`; the sidebar item
-comes from `VENDOR_IDS`), and `icons/<id>-symbolic.svg` (or list the id in `GENERIC_ICON_VENDORS`;
+`vendorPageSpec` entry in `lib/prefs-pages.js`, or a hand-built page registered
+under its id in `builders` in `prefs.js`; the sidebar item comes from
+`VENDOR_IDS`), and `icons/<id>-symbolic.svg` (or list the id in `GENERIC_ICON_VENDORS`;
 `registry.test.js` checks it).
 
 ### Data flow
@@ -219,12 +232,17 @@ The custom provider maps any JSON endpoint through `lib/json-pointer.js`
 `prefs.js` runs in a **separate process** and cannot import the gi-bound adapter
 registry; it uses `lib/vendors.js` (`VENDOR_LABELS`) for the primary-vendor
 combo and imports only pure modules (the custom provider's `validateMapping` for
-its JSON editors).
+its JSON editors). The pages live in `prefs/` (`general.js`, `custom.js`) and
+are built from `prefs/widgets.js`; the built-in vendor pages are data
+(`vendorPageSpec` in `lib/prefs-pages.js`) rendered by `specPage()`. `make pack`
+ships `prefs/` through `--extra-source`, so a new top-level directory needs one
+too.
 
 The window is a sidebar, not the stock tabs: `lib/prefs-nav.js` `prefsNav(_)`
 (pure) lists the sections: General (Panel, Popup, Display, Behavior) and
 Vendors (one item per `VENDOR_IDS`), and `fillPreferencesWindow` builds one
-`Adw.PreferencesPage` per item id, throwing on an id with no builder.
+`Adw.PreferencesPage` per item id (a builder, else its `vendorPageSpec`),
+throwing on an id with neither.
 `_buildSplitView` puts them in a `Gtk.Stack` beside a `navigation-sidebar`
 list inside an `Adw.NavigationSplitView`, which collapses below 560sp. The
 shell's `Adw.PreferencesWindow` has no sidebar, so the split view replaces its
