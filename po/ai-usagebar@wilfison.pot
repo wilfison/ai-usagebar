@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 13:48-0300\n"
+"POT-Creation-Date: 2026-11-15 15:32-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -146,6 +146,14 @@ msgstr ""
 msgid "API key (inline)"
 msgstr ""
 
+#: lib/prefs-pages.js
+msgid "Disabled by default; requires an API key (env var or inline)."
+msgstr ""
+
+#: lib/prefs-pages.js
+msgid "Set the API key inline or via the environment variable (env wins)."
+msgstr ""
+
 #. Translators: "Anthropic" is a brand name, usually keep untranslated.
 #: lib/prefs-pages.js
 msgid "Anthropic"
@@ -208,10 +216,6 @@ msgid "Z.AI"
 msgstr ""
 
 #: lib/prefs-pages.js
-msgid "Set the API key inline or via the environment variable (env wins)."
-msgstr ""
-
-#: lib/prefs-pages.js
 msgid "Plan tier (lite/pro/max)"
 msgstr ""
 
@@ -241,10 +245,6 @@ msgstr ""
 #. Translators: "DeepSeek" is a brand name, usually keep untranslated.
 #: lib/prefs-pages.js
 msgid "DeepSeek"
-msgstr ""
-
-#: lib/prefs-pages.js
-msgid "Disabled by default; requires an API key (env var or inline)."
 msgstr ""
 
 #. Translators: "Kimi" is a brand name, usually keep untranslated.

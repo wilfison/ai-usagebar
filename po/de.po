@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 13:48-0300\n"
+"POT-Creation-Date: 2026-11-15 15:32-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: German\n"
@@ -143,6 +143,18 @@ msgstr "Umgebungsvariable des API-Schlüssels"
 msgid "API key (inline)"
 msgstr "API-Schlüssel (direkt)"
 
+#: lib/prefs-pages.js
+msgid "Disabled by default; requires an API key (env var or inline)."
+msgstr ""
+"Standardmäßig deaktiviert; erfordert einen API-Schlüssel (Umgebungsvariable "
+"oder direkt)."
+
+#: lib/prefs-pages.js
+msgid "Set the API key inline or via the environment variable (env wins)."
+msgstr ""
+"API-Schlüssel direkt oder über die Umgebungsvariable festlegen (Umgebung hat "
+"Vorrang)."
+
 #. Translators: "Anthropic" is a brand name, usually keep untranslated.
 #: lib/prefs-pages.js
 msgid "Anthropic"
@@ -208,12 +220,6 @@ msgid "Z.AI"
 msgstr "Z.AI"
 
 #: lib/prefs-pages.js
-msgid "Set the API key inline or via the environment variable (env wins)."
-msgstr ""
-"API-Schlüssel direkt oder über die Umgebungsvariable festlegen (Umgebung hat "
-"Vorrang)."
-
-#: lib/prefs-pages.js
 msgid "Plan tier (lite/pro/max)"
 msgstr "Plan-Stufe (lite/pro/max)"
 
@@ -247,12 +253,6 @@ msgstr "Verwaltungsschlüssel (direkt)"
 #: lib/prefs-pages.js
 msgid "DeepSeek"
 msgstr "DeepSeek"
-
-#: lib/prefs-pages.js
-msgid "Disabled by default; requires an API key (env var or inline)."
-msgstr ""
-"Standardmäßig deaktiviert; erfordert einen API-Schlüssel (Umgebungsvariable "
-"oder direkt)."
 
 #. Translators: "Kimi" is a brand name, usually keep untranslated.
 #: lib/prefs-pages.js
