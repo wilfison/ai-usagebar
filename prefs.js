@@ -21,7 +21,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             panel: () => buildPanelPage(settings, cleanups),
             popup: () => buildPopupPage(settings, cleanups),
             display: () => buildDisplayPage(settings, cleanups),
-            behavior: () => buildBehaviorPage(settings, cleanups),
+            behavior: () => buildBehaviorPage(settings),
             custom: () => buildCustomPage(settings, cleanups),
         };
         const nav = prefsNav(_);
@@ -38,7 +38,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         window.add(new Adw.PreferencesPage());
         window.set_default_size(860, 640);
         // Last: past this point the shell's own error page is no longer on screen.
-        window.set_content(this._buildSplitView(window, nav, pages, cleanups));
+        window.set_content(this._buildSplitView(window, nav, pages));
 
         window.connect('close-request', () => {
             for (const disconnect of cleanups)
@@ -47,7 +47,7 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         });
     }
 
-    _buildSplitView(window, nav, pages, cleanups) {
+    _buildSplitView(window, nav, pages) {
         const stack = new Gtk.Stack();
         for (const [id, page] of pages)
             stack.add_named(page, id);
@@ -86,19 +86,14 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
         });
 
         const splitView = new Adw.NavigationSplitView({sidebar, content});
-        const selectedId = list.connect('row-selected', (_list, row) => {
+        list.connect('row-selected', (_list, row) => {
             if (!row)
                 return;
             const item = items[row.get_index()];
             stack.set_visible_child_name(item.id);
             content.set_title(item.title);
         });
-        const activatedId = list.connect('row-activated', () => splitView.set_show_content(true));
-        cleanups.push(() => {
-            list.disconnect(selectedId);
-            list.disconnect(activatedId);
-            list.set_header_func(null);
-        });
+        list.connect('row-activated', () => splitView.set_show_content(true));
         list.select_row(list.get_row_at_index(0));
 
         const narrow = new Adw.Breakpoint({

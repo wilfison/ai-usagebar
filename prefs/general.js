@@ -11,7 +11,7 @@ import {schemaRange, schemaChoices} from '../lib/prefs-pages.js';
 import {withPinned} from '../lib/config-resolve.js';
 import {providerName} from '../lib/vendors/custom/mapping.js';
 import {
-    switchRow, entryRow, boundSpinRow, syncedSpinRow, comboRow, colorRow, shortcutRow,
+    switchRow, entryRow, boundSpinRow, comboRow, colorRow, shortcutRow, onSetting,
 } from './widgets.js';
 
 
@@ -66,13 +66,12 @@ function buildPinnedGroup(settings, cleanups) {
     const rows = vendors.map(({id, title}) => {
         const row = new Adw.SwitchRow({title, active: settings.get_strv('panel-vendors').includes(id)});
         settings.bind(`${id}-enabled`, row, 'sensitive', Gio.SettingsBindFlags.GET);
-        const notifyId = row.connect('notify::active', () => {
+        row.connect('notify::active', () => {
             const current = settings.get_strv('panel-vendors');
             const next = withPinned(current, id, row.active);
             if (next.join(',') !== current.join(','))
                 settings.set_strv('panel-vendors', next);
         });
-        cleanups.push(() => row.disconnect(notifyId));
         group.add(row);
         return {id, row};
     });
@@ -83,16 +82,14 @@ function buildPinnedGroup(settings, cleanups) {
         customRow.title = raw.trim() === '' ? _('Custom') : providerName(raw);
     };
     syncCustomTitle();
-    const customNameId = settings.connect('changed::custom-name', syncCustomTitle);
-    cleanups.push(() => settings.disconnect(customNameId));
-    const resyncId = settings.connect('changed::panel-vendors', () => {
+    onSetting(settings, 'custom-name', syncCustomTitle, cleanups);
+    onSetting(settings, 'panel-vendors', () => {
         const pinned = settings.get_strv('panel-vendors');
         for (const {id, row} of rows) {
             if (row.active !== pinned.includes(id))
                 row.active = pinned.includes(id);
         }
-    });
-    cleanups.push(() => settings.disconnect(resyncId));
+    }, cleanups);
     return group;
 }
 
@@ -142,7 +139,7 @@ export function buildDisplayPage(settings, cleanups) {
     return page;
 }
 
-export function buildBehaviorPage(settings, cleanups) {
+export function buildBehaviorPage(settings) {
     const page = new Adw.PreferencesPage();
 
     const cadenceGroup = new Adw.PreferencesGroup({
@@ -151,11 +148,11 @@ export function buildBehaviorPage(settings, cleanups) {
         description: vformat(_('Minimum %d s: the upstream endpoints rate-limit below that.'),
             schemaRange(settings.settings_schema, 'refresh-interval').lower),
     });
-    cadenceGroup.add(syncedSpinRow(settings, 'refresh-interval', {
+    cadenceGroup.add(boundSpinRow(settings, 'refresh-interval', {
         title: _('Refresh interval (seconds)'),
         step: 60,
         page: 300,
-    }, cleanups));
+    }));
     page.add(cadenceGroup);
 
     const notifyGroup = new Adw.PreferencesGroup({
@@ -163,11 +160,11 @@ export function buildBehaviorPage(settings, cleanups) {
         description: _('Show a desktop notification the first time a usage window reaches the threshold. It re-arms when usage drops 7 points below it or the window resets, and warns 48 hours before a reset credit expires.'),
     });
     notifyGroup.add(switchRow(settings, 'notify-enabled', _('Notify on high usage')));
-    notifyGroup.add(syncedSpinRow(settings, 'notify-threshold', {
+    notifyGroup.add(boundSpinRow(settings, 'notify-threshold', {
         title: _('Notification threshold (%)'),
         step: 5,
         page: 10,
-    }, cleanups));
+    }));
     page.add(notifyGroup);
 
     const updateGroup = new Adw.PreferencesGroup({title: _('Updates')});
@@ -181,8 +178,7 @@ export function buildBehaviorPage(settings, cleanups) {
     });
     const resetRow = new Adw.ButtonRow({title: _('Reset all settings')});
     resetRow.add_css_class('destructive-action');
-    const resetActivatedId = resetRow.connect('activated', () => confirmResetAll(settings, resetRow.get_root()));
-    cleanups.push(() => resetRow.disconnect(resetActivatedId));
+    resetRow.connect('activated', () => confirmResetAll(settings, resetRow.get_root()));
     resetGroup.add(resetRow);
     page.add(resetGroup);
     return page;

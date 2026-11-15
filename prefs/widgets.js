@@ -8,8 +8,13 @@ import {gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions
 import {rgbToHex} from '../lib/color.js';
 import {RowType, schemaRange} from '../lib/prefs-pages.js';
 
-// Every helper that connects a signal pushes its disconnect onto `cleanups`,
-// which the window runs on close-request.
+// Only a GSettings handler outlives the window (the settings object is the
+// extension's), so each one goes through onSetting, whose disconnect the
+// window runs on close-request. Signals on widgets die with them.
+export function onSetting(settings, key, fn, cleanups) {
+    const id = settings.connect(`changed::${key}`, fn);
+    cleanups.push(() => settings.disconnect(id));
+}
 
 export function switchRow(settings, key, title, subtitle = null) {
     const row = new Adw.SwitchRow(subtitle ? {title, subtitle} : {title});
@@ -46,28 +51,6 @@ export function boundSpinRow(settings, key, opts) {
     return row;
 }
 
-// An integer key kept in step with a spin row by hand, writing only whole
-// values that differ from the stored one.
-export function syncedSpinRow(settings, key, opts, cleanups) {
-    const row = spinWidget({...schemaRange(settings.settings_schema, key), ...opts});
-    row.set_value(settings.get_int(key));
-    const notifyId = row.connect('notify::value', () => {
-        const v = Math.round(row.get_value());
-        if (settings.get_int(key) !== v)
-            settings.set_int(key, v);
-    });
-    const resyncId = settings.connect(`changed::${key}`, () => {
-        const v = settings.get_int(key);
-        if (Math.round(row.get_value()) !== v)
-            row.set_value(v);
-    });
-    cleanups.push(() => {
-        row.disconnect(notifyId);
-        settings.disconnect(resyncId);
-    });
-    return row;
-}
-
 // A combo over `labels`, kept in step with a key through `read()` (the
 // stored index, -1 when unknown) and `write(index)`.
 export function comboRow(settings, key, {title, subtitle, labels, read, write}, cleanups) {
@@ -76,20 +59,16 @@ export function comboRow(settings, key, {title, subtitle, labels, read, write}, 
         model.append(label);
     const row = new Adw.ComboRow({title, ...subtitle ? {subtitle} : {}, model});
     row.selected = Math.max(0, read());
-    const notifyId = row.connect('notify::selected', () => {
+    row.connect('notify::selected', () => {
         // No selection (Gtk.INVALID_LIST_POSITION) writes nothing.
         if (row.selected < labels.length && read() !== row.selected)
             write(row.selected);
     });
-    const resyncId = settings.connect(`changed::${key}`, () => {
+    onSetting(settings, key, () => {
         const i = read();
         if (i >= 0 && row.selected !== i)
             row.selected = i;
-    });
-    cleanups.push(() => {
-        row.disconnect(notifyId);
-        settings.disconnect(resyncId);
-    });
+    }, cleanups);
     return row;
 }
 
@@ -145,7 +124,7 @@ export function colorRow(settings, key, title, defaultHex, cleanups) {
         reset.sensitive = value !== '';
     };
 
-    const pickId = button.connect('notify::rgba', () => {
+    button.connect('notify::rgba', () => {
         if (syncing)
             return;
         const {red, green, blue} = button.get_rgba();
@@ -153,13 +132,8 @@ export function colorRow(settings, key, title, defaultHex, cleanups) {
         if (settings.get_string(key) !== hex)
             settings.set_string(key, hex);
     });
-    const resetId = reset.connect('clicked', () => settings.set_string(key, ''));
-    const changedId = settings.connect(`changed::${key}`, resync);
-    cleanups.push(() => {
-        button.disconnect(pickId);
-        reset.disconnect(resetId);
-        settings.disconnect(changedId);
-    });
+    reset.connect('clicked', () => settings.set_string(key, ''));
+    onSetting(settings, key, resync, cleanups);
 
     resync();
     row.add_suffix(button);
@@ -177,14 +151,9 @@ export function shortcutRow(settings, key, title, cleanups) {
         reset.sensitive = settings.get_user_value(key) !== null;
     };
 
-    const activatedId = row.connect('activated', () => captureShortcut(settings, key, row.get_root()));
-    const resetId = reset.connect('clicked', () => settings.reset(key));
-    const changedId = settings.connect(`changed::${key}`, resync);
-    cleanups.push(() => {
-        row.disconnect(activatedId);
-        reset.disconnect(resetId);
-        settings.disconnect(changedId);
-    });
+    row.connect('activated', () => captureShortcut(settings, key, row.get_root()));
+    reset.connect('clicked', () => settings.reset(key));
+    onSetting(settings, key, resync, cleanups);
 
     resync();
     row.add_suffix(label);
@@ -267,10 +236,9 @@ export function jsonEditor(settings, key, validate, cleanups) {
     });
     view.add_controller(focus);
 
-    const syncId = settings.connect(`changed::${key}`, () => {
+    onSetting(settings, key, () => {
         if (!view.has_focus && view.buffer.text.trim() !== settings.get_string(key))
             view.buffer.text = settings.get_string(key);
-    });
-    cleanups.push(() => settings.disconnect(syncId));
+    }, cleanups);
     return box;
 }
