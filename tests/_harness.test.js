@@ -4,7 +4,7 @@ import system from 'system';
 
 import {describe, it, assertEqual, assertDeepEqual} from './_assert.js';
 import {
-    runSync, httpStub, routeStub, res, resTransport, rmRf, chmod, readText, writeText, withTempDir, withCacheHome, backdate, b64url, fakeJwt, retryArmed,
+    runSync, httpStub, routeStub, res, resTransport, rmRf, chmod, readText, writeText, withTempDir, withCacheHome, backdate, b64url, fakeJwt, retryArmed, testSettings, extensionSchema,
 } from './_harness.js';
 import {summary} from './_assert.js';
 
@@ -197,6 +197,17 @@ describe('backdate', () => {
         const age = runSync(cache.payloadAgeMs());
         assertEqual(age >= 3600_000 && age < 3700_000, true, `age ${age}`);
     }));
+});
+
+describe('testSettings', () => {
+    it('reads the checkout schema, on a backend of its own', () => {
+        const a = testSettings({'refresh-interval': 600, 'panel-vendors': ['zai']});
+        assertEqual(a.get_int('refresh-interval'), 600);
+        assertDeepEqual(a.get_strv('panel-vendors'), ['zai']);
+        assertEqual(testSettings().get_int('refresh-interval'), 300, 'a fresh one has the defaults');
+    });
+    it('extensionSchema is the extension\'s', () =>
+        assertEqual(extensionSchema().get_id(), 'org.gnome.shell.extensions.ai-usagebar'));
 });
 
 system.exit(summary());

@@ -5,7 +5,7 @@ description: Pure modules get gjs unit tests mirroring the source path; gi-bound
 tags: [testing, pure-modules]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:38:53Z
 sources:
   - id: run
     title: tests/run.js
@@ -35,7 +35,7 @@ gjs -m tests/lib/vendors/anthropic/parser.test.js    # one file
 make watch                                           # rerun on change (inotify-tools)
 ```
 
-New tests mirror the source path (`lib/vendors/zai/parser.js` → `tests/lib/vendors/zai/parser.test.js`); older ones sit flat in `tests/` (`tests/cache.test.js`, `tests/pacing.test.js`, ...). `tests/run.js` discovers `*.test.js` recursively and runs each as an isolated `gjs -m` subprocess;[^run] each file ends with `system.exit(summary())`. Shared fixtures (`runSync`, `httpStub`, `routeStub`, `res`, `withTempDir`, `withCacheHome`, `backdate`, `fakeJwt`) are in `tests/_harness.js`.[^harness]
+New tests mirror the source path (`lib/vendors/zai/parser.js` → `tests/lib/vendors/zai/parser.test.js`); older ones sit flat in `tests/` (`tests/cache.test.js`, `tests/pacing.test.js`, ...). `tests/run.js` discovers `*.test.js` recursively and runs each as an isolated `gjs -m` subprocess;[^run] each file ends with `system.exit(summary())`. Shared fixtures (`runSync`, `httpStub`, `routeStub`, `res`, `withTempDir`, `withCacheHome`, `backdate`, `fakeJwt`, and `testSettings(overrides)` / `extensionSchema()` for GSettings on a private memory backend) are in `tests/_harness.js`.[^harness]
 
 # CI gate
 

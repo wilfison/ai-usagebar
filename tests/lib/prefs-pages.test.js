@@ -1,22 +1,11 @@
-import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
 import {vendorPageSpec, RowType, schemaRange, schemaChoices} from '../../lib/prefs-pages.js';
 import {VENDOR_IDS} from '../../lib/vendors.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../_assert.js';
+import {extensionSchema} from '../_harness.js';
 
-const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
-
-function schema() {
-    const path = import.meta.url.replace(/^file:\/\//u, '');
-    const root = GLib.path_get_dirname(GLib.path_get_dirname(GLib.path_get_dirname(path)));
-    const source = Gio.SettingsSchemaSource.new_from_directory(
-        GLib.build_filenamev([root, 'schemas']), Gio.SettingsSchemaSource.get_default(), false);
-    return source.lookup(SCHEMA_ID, false);
-}
-
-const SCHEMA = schema();
+const SCHEMA = extensionSchema();
 const TYPE_OF_ROW = {[RowType.SWITCH]: 'b', [RowType.ENTRY]: 's', [RowType.PASSWORD]: 's', [RowType.SPIN]: 'i'};
 const fake = s => `<${s}>`;
 const rowsOf = spec => spec.groups.flatMap(g => g.rows);

@@ -1,32 +1,8 @@
-import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
-
-// Isolate from the user's real dconf store: select the memory backend before
-// any Gio.Settings is constructed.
-GLib.setenv('GSETTINGS_BACKEND', 'memory', true);
 
 import {readConfig, anthropicCredsPath, codexAuthPath} from '../lib/config.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
-
-const SCHEMA_ID = 'org.gnome.shell.extensions.ai-usagebar';
-
-function schemasDir() {
-    const url = import.meta.url;
-    const path = url.startsWith('file://') ? url.slice('file://'.length) : url;
-    const tests = GLib.path_get_dirname(path);
-    return GLib.build_filenamev([GLib.path_get_dirname(tests), 'schemas']);
-}
-
-function makeSettings() {
-    const source = Gio.SettingsSchemaSource.new_from_directory(
-        schemasDir(),
-        Gio.SettingsSchemaSource.get_default(),
-        false
-    );
-    const schema = source.lookup(SCHEMA_ID, false);
-    return Gio.Settings.new_full(schema, null, null);
-}
+import {testSettings as makeSettings} from './_harness.js';
 
 describe('readConfig: schema defaults', () => {
     const cfg = readConfig(makeSettings());

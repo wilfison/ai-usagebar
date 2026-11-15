@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- Tests get GSettings from `testSettings(overrides)` in the harness (checkout schema, private memory backend). Updated testing.
 - The dev fetch overrides moved out of the indicator into `DevFetch` (`ui/devFetch.js`). Updated headless.
 - Kimi projects its 5h, weekly and monthly blocks to the shared window shape (`utilizationPct`, `resetsAt`, `windowMs`; null when absent), cache `CACHE_VERSION` 2.
 - OAuth stops carry `no-access-token` / `token-refresh-failed` codes with the login command, and the popup translates them, the key-echo redaction note and Anthropic's "minor units" amount.
