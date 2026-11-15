@@ -3,7 +3,7 @@ import Adw from 'gi://Adw';
 import {gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import {vformat} from '../lib/format.js';
-import {parseExtraHeaders, validateMapping} from '../lib/vendors/custom/parser.js';
+import {parseExtraHeaders, validateMapping, authHeaderOf} from '../lib/vendors/custom/mapping.js';
 import {switchRow, entryRow, passwordRow, jsonEditor} from './widgets.js';
 
 export function buildCustomPage(settings, cleanups) {
@@ -34,7 +34,7 @@ export function buildCustomPage(settings, cleanups) {
         description: _('A JSON object of header names to string values; it must not repeat the auth header.'),
     });
     headers.add(jsonEditor(settings, 'custom-extra-headers', text => {
-        const authHeader = settings.get_string('custom-auth-header').trim() || 'Authorization';
+        const authHeader = authHeaderOf(settings.get_string('custom-auth-header'));
         return parseExtraHeaders(text, authHeader) === null
             ? [_('Not a JSON object of string header values, or it repeats the auth header.')]
             : [];

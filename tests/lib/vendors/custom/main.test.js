@@ -1,6 +1,7 @@
 import system from 'system';
 
-import {parseUsage, snapshotToCacheJson, requestHeaders} from '../../../../lib/vendors/custom/parser.js';
+import {parseUsage, snapshotToCacheJson} from '../../../../lib/vendors/custom/parser.js';
+import {requestHeaders} from '../../../../lib/vendors/custom/mapping.js';
 import {fetchSnapshot} from '../../../../lib/vendors/custom/main.js';
 import {customAdapter} from '../../../../lib/vendors/custom/adapter.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';

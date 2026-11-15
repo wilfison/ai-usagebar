@@ -5,11 +5,14 @@ description: Turns any GET JSON endpoint into a vendor through a user mapping of
 tags: [vendors, errors]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-15T18:20:33Z
 sources:
   - id: parser
     title: lib/vendors/custom/parser.js
     resource: lib/vendors/custom/parser.js
+  - id: mapping
+    title: lib/vendors/custom/mapping.js
+    resource: lib/vendors/custom/mapping.js
   - id: pointer
     title: lib/json-pointer.js
     resource: lib/json-pointer.js
@@ -20,7 +23,7 @@ sources:
 
 # Overview
 
-The custom provider maps a user-chosen endpoint through `lib/json-pointer.js` (RFC 6901)[^pointer] and `lib/vendors/custom/parser.js` (`validateMapping`, `urlProblem`, `shortCode`).[^parser] Its display name comes from the config, so `vendorLabel(id, config)` takes an optional config.
+The custom provider maps a user-chosen endpoint through `lib/json-pointer.js` (RFC 6901)[^pointer] with its configuration checked in `lib/vendors/custom/mapping.js` (`validateMapping`, `urlProblem`, `parseExtraHeaders`, `authHeaderOf`)[^mapping] and the response projected in `lib/vendors/custom/parser.js` (`parseUsage`, `shortCode`).[^parser] Its display name comes from the config, so `vendorLabel(id, config)` takes an optional config.
 
 # Mapping
 

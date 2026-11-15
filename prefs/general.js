@@ -8,7 +8,7 @@ import {defaultTheme} from '../lib/theme.js';
 import {prefsNav} from '../lib/prefs-nav.js';
 import {VENDOR_LABELS} from '../lib/vendors.js';
 import {withPinned} from '../lib/config-resolve.js';
-import {providerName} from '../lib/vendors/custom/parser.js';
+import {providerName} from '../lib/vendors/custom/mapping.js';
 import {
     switchRow, entryRow, boundSpinRow, syncedSpinRow, comboRow, colorRow, shortcutRow,
 } from './widgets.js';
