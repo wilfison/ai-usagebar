@@ -17,17 +17,18 @@ import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {request, disposeSession} from '../lib/http.js';
 import {getAdapter} from '../lib/vendors/registry.js';
 import {vendorLabel, vendorIconName, GENERIC_ICON, VENDOR_IDS} from '../lib/vendors.js';
-import {renderSection, renderMessage} from './vendorSection.js';
+import {VendorCard} from './vendorSection.js';
 import {ActionBar} from './actionBar.js';
+import {Tooltip} from './tooltip.js';
 import {PanelSegments, badgeSignature} from './panelSegments.js';
 import {Notifier} from './notifier.js';
 import {UpdateItem} from './updateItem.js';
-import {errorText} from '../lib/vendors/section-common.js';
+import {errorText, footerRow} from '../lib/vendors/section-common.js';
 import {loading} from '../lib/vendors/fetch-common.js';
 import {scanSessions} from '../lib/context/scan.js';
 import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
-import {defaultTheme, withOverrides} from '../lib/theme.js';
+import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
 import {settingsEffect, Effect} from '../lib/settings-effect.js';
 import {
     parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, fakeResult, fakeHttpFailure,
@@ -72,17 +73,18 @@ class Indicator extends PanelMenu.Button {
         this._scrollId = null;
         this._settingsChangedId = null;
         this._destroyed = false;
+        this._darkPopup = true;
 
         this._readDevOverrides();
 
         // Lazy per-vendor data: only the poll set (panel segments + the active
         // vendor) is polled; other sub-sections render from whatever is already
-        // here. `_fetchedAt` pins each vendor's footer timestamp to its real
-        // fetch instant across live re-renders.
+        // here. `_fetchedAt` pins each vendor's timestamp to its real fetch
+        // instant across live re-renders.
         this._results = new Map();      // vendorId -> FetchResult
         this._sessions = null;          // last context scan for CONTEXT_VENDOR
         this._fetchedAt = new Map();    // vendorId -> Date
-        this._vendorItems = new Map();  // vendorId -> PopupMenu.PopupSubMenuMenuItem
+        this._vendorItems = new Map();  // vendorId -> VendorCard
         this._enabledSig = '';
         this._pendingAll = new Set();   // vendorIds whose coalesced rerun came from "Refresh all"
 
@@ -90,25 +92,26 @@ class Indicator extends PanelMenu.Button {
         this.add_child(this._segments.actor);
         this._notifier = new Notifier(() => this._vendorGicon());
 
+        this._tooltip = new Tooltip();
+
         // Per-vendor sub-sections are inserted above the separator on (re)build.
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this._actions = new ActionBar([
-            {iconName: 'view-refresh-symbolic', label: _('Refresh now'), onClick: () => this._refresh().catch(warnOnFailure('refresh'))},
-            {iconName: 'emblem-synchronizing-symbolic', label: _('Refresh all'), onClick: () => this._refreshAll().catch(warnOnFailure('refresh all'))},
+        this._actions = new ActionBar(this._tooltip, [
+            {iconName: 'view-refresh-symbolic', label: _('Refresh all'), onClick: () => this._refreshAll().catch(warnOnFailure('refresh all'))},
             {iconName: 'preferences-system-symbolic', label: _('Preferences'), onClick: () => this._openPreferences?.()},
         ]);
         this.menu.addMenuItem(this._actions.item);
         this._update = new UpdateItem(version, this._cancellable);
         this.menu.addMenuItem(this._update.item);
 
-        // Seed the polled vendors with a Loading… state so their sub-sections (and
-        // an immediately-opened popup) are never empty before the first fetch lands.
+        // Seed the polled vendors with a Loading… state so their cards (and an
+        // immediately-opened popup) are never empty before the first fetch lands.
         for (const id of this._pollIds)
             this._results.set(id, loading());
         this._rebuildVendorSections(this._config);
         this._rebuildSegments(this._config);
 
-        // Live countdowns: re-render the active sub-section only while open.
+        // Live countdowns: re-render the cards only while open.
         this._openStateId = this.menu.connect('open-state-changed', (_m, open) => {
             if (this._destroyed)
                 return;
@@ -191,14 +194,11 @@ class Indicator extends PanelMenu.Button {
             this._refreshVendor(id).catch(warnOnFailure('refresh'));
         if (effect.rebuildTheme)
             this._rebuildTheme();
-        if (effect.allSections)
-            this._reRenderAllSections();
-        else
-            this._reRenderFromCache();
+        this._reRenderFromCache();
     }
 
-    // The custom provider's name is its sub-menu label and the logos toggle
-    // swaps every header icon, so either one rebuilds the sub-menus too.
+    // The custom provider's name is its card title and the logos toggle swaps
+    // every header icon, so either one rebuilds the cards too.
     _enabledSignature(config) {
         return `${enabledVendors(config).join(',')}|${badgeSignature(config)}`;
     }
@@ -209,16 +209,20 @@ class Indicator extends PanelMenu.Button {
     }
 
     _rebuildVendorSections(config) {
-        for (const item of this._vendorItems.values())
-            item.destroy();
+        for (const card of this._vendorItems.values())
+            card.item.destroy();
         this._vendorItems.clear();
 
         enabledVendors(config).forEach((id, idx) => {
-            const sub = new PopupMenu.PopupSubMenuMenuItem('', true);
-            sub.icon.gicon = this._vendorGicon(id);
-            sub.label.text = vendorLabel(id, config);
-            this.menu.addMenuItem(sub, idx);
-            this._vendorItems.set(id, sub);
+            const card = new VendorCard({
+                gicon: this._vendorGicon(id),
+                name: vendorLabel(id, config),
+                tooltip: this._tooltip,
+                refreshLabel: _('Refresh now'),
+                onRefresh: () => this._refreshVendor(id, {all: true}).catch(warnOnFailure('refresh')),
+            });
+            this.menu.addMenuItem(card.item, idx);
+            this._vendorItems.set(id, card);
             this._renderVendorSection(id);
         });
 
@@ -227,13 +231,12 @@ class Indicator extends PanelMenu.Button {
     }
 
     _renderVendorSection(id) {
-        const item = this._vendorItems.get(id);
-        if (!item)
+        const card = this._vendorItems.get(id);
+        if (!card)
             return;
-        const section = item.menu;
         const res = this._results.get(id);
         if (!res) {
-            renderMessage(section, _('No data: use "Refresh all"'), {dim: true});
+            card.setMessage(_('No data: use "Refresh all"'), {dim: true});
             return;
         }
         if (res.ok) {
@@ -255,25 +258,51 @@ class Indicator extends PanelMenu.Button {
                 if (extra.length)
                     model.rows = [...extra, ...model.rows];
             }
-            renderSection(section, model, this._config.showPaceMarker);
+            card.setModel(model, {showPace: this._config.showPaceMarker, textColor: c => this._textColor(c)});
         } else if (res.kind === 'loading') {
-            renderMessage(section, _('Loading…'), {dim: true});
+            card.setMessage(_('Loading…'), {dim: true});
         } else {
-            renderMessage(section, errorText(res, _), {
-                color: severityColor(Severity.CRITICAL, this._theme),
-                iconName: 'dialog-warning-symbolic',
-                // Only Anthropic errors carry a plan (read from its credentials).
+            // Only Anthropic errors carry a plan (read from its credentials).
+            if (res.plan)
                 // Translators: %s is the Anthropic plan name (e.g. "Max"), kept verbatim.
-                title: res.plan ? vformat(_('Claude %s'), res.plan) : null,
+                card.setPlan(vformat(_('Claude %s'), res.plan));
+            card.setMessage(errorText(res, _), {
+                color: this._textColor(severityColor(Severity.CRITICAL, this._theme)),
+                iconName: 'dialog-warning-symbolic',
             });
         }
+        this._updateStatus();
+    }
+
+    // The footer shows the most recent successful fetch among the cards.
+    _updateStatus() {
+        let latest = null;
+        for (const id of this._vendorItems.keys()) {
+            const at = this._results.get(id)?.ok ? this._fetchedAt.get(id) : null;
+            if (at && (latest === null || at > latest))
+                latest = at;
+        }
+        this._actions.setStatus(latest ? footerRow({fetchedAt: latest}, _).text : '');
+    }
+
+    // Palette colours are tuned for bars; as text on a dark popup they are
+    // brightened until readable. A light popup keeps them as they are.
+    _textColor(color) {
+        return color && this._darkPopup ? legibleOnDark(color) : color;
+    }
+
+    // The shell theme is dark when its menu foreground is light.
+    _readPopupScheme() {
+        const fg = this.menu.box.get_theme_node().get_foreground_color();
+        const hex = `#${[fg.red, fg.green, fg.blue].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+        this._darkPopup = luminance(hex) > 0.5;
     }
 
     _setActiveExpansion(activeId) {
-        for (const [id, item] of this._vendorItems) {
+        for (const [id, card] of this._vendorItems) {
             const want = id === activeId;
-            if (item.menu.isOpen !== want)
-                item.setSubmenuShown(want);
+            if (card.item.menu.isOpen !== want)
+                card.item.setSubmenuShown(want);
         }
     }
 
@@ -338,6 +367,7 @@ class Indicator extends PanelMenu.Button {
             return;
         }
 
+        this._vendorItems.get(id)?.setBusy(true);
         const adapter = getAdapter(id);
         const cache = Cache.forVendor(adapter.cacheId);
         const config = this._config;
@@ -351,6 +381,7 @@ class Indicator extends PanelMenu.Button {
             return;
 
         const again = guard.end(token);
+        this._vendorItems.get(id)?.setBusy(false);
         this._storeResult(id, res);
         this._maybeScanContext(id, res, config);
         const polled = this._pollIds.includes(id);
@@ -432,13 +463,14 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
-    // Repaint every panel segment and the active sub-section from the results map.
+    // Repaint every panel segment and every card from the results map.
     _reRenderFromCache() {
         if (this._destroyed)
             return;
         try {
             this._paintSegments();
-            this._renderVendorSection(this._activeId);
+            for (const id of this._vendorItems.keys())
+                this._renderVendorSection(id);
         } catch (e) {
             console.warn(`ai-usagebar: re-render failed: ${e}`);
         }
@@ -446,16 +478,6 @@ class Indicator extends PanelMenu.Button {
 
     _rebuildTheme() {
         this._theme = withOverrides(defaultTheme(), this._config.colors);
-    }
-
-    _reRenderAllSections() {
-        if (this._destroyed)
-            return;
-        this._reRenderFromCache();
-        for (const id of this._vendorItems.keys()) {
-            if (id !== this._activeId)
-                this._renderVendorSection(id);
-        }
     }
 
     _onScroll(_actor, event) {
@@ -525,6 +547,7 @@ class Indicator extends PanelMenu.Button {
     _onPopupOpen() {
         this._focusClickedSegment();
         this._setActiveExpansion(this._activeId);
+        this._readPopupScheme();
         this._reRenderFromCache();
         if (this._renderTimeoutId)
             return;
@@ -563,7 +586,7 @@ class Indicator extends PanelMenu.Button {
         for (const id of this._fakeDelayIds)
             GLib.Source.remove(id);
         this._fakeDelayIds.clear();
-        this._actions.destroy();
+        this._tooltip.destroy();
         this._update.destroy();
         if (this._openStateId) {
             this.menu.disconnect(this._openStateId);

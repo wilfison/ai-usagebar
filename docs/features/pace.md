@@ -4,8 +4,8 @@ title: Pace
 description: lib/pacing.js calc() projects a usage window to its reset and reports a state and, for ok windows, a calm/over/critical verdict.
 tags: [pure-modules]
 generated:
-  by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  by: claude/fable-5-2
+  at: 2026-11-15T14:00:00Z
 sources:
   - id: pacing
     title: lib/pacing.js
@@ -36,6 +36,6 @@ An `ok` window gets a `verdict` from its **unrounded** projection at the reset:
 - `over`: over 110% and 3 pts past the marker.
 - `calm`: otherwise.
 
-The bar past the marker is orange for `over`, red for `critical`, plain for `calm` (`lib/pace-fill.js`),[^pace-fill] except when usage is at 100% or the base colour is already that colour or red: then the bar is one colour. The footnote reads "42% elapsed · 3pts ahead" (calm), "~20% over pace", "Limit in 1h 04m" (critical, from `runsOutAt`, set only when the projected run-out falls before the reset; otherwise "~N% over pace"), "Estimating…" or "Limit reached".
+The bar past the marker is orange for `over`, red for `critical`, plain for `calm` (`lib/pace-fill.js`),[^pace-fill] except when usage is at 100% or the base colour is already that colour or red: then the bar is one colour. The popup row carries two texts. The alert beside the title is empty while calm and otherwise reads "~20% over pace", "Limit in 1h 04m" (critical, from `runsOutAt`, set only when the projected run-out falls before the reset; otherwise "~N% over pace") or "Limit reached". The footnote under the bar reads "42% elapsed · 3pts ahead" for every `ok` window, whatever the verdict, or "Estimating…".
 
-Rows get these fields through `paceFields()` in `windowRow()` ([vendor adapters](/architecture/vendor-adapters.md)).
+Rows get these fields (`paceAlert`, `paceFootnote`) through `paceFields()` in `windowRow()` ([vendor adapters](/architecture/vendor-adapters.md)).

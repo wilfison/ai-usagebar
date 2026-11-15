@@ -1,7 +1,3 @@
-.aiusagebar-section {
-    spacing: 8px;
-}
-
 .aiusagebar-vendor-icon {
     margin-right: 6px;
 }
@@ -12,72 +8,81 @@
 }
 
 .aiusagebar-popup {
-    min-width: 320px;
-    max-width: 440px;
-}
-
-.aiusagebar-popup .popup-submenu-menu-item {
-    background-color: rgba(0, 0, 0, 0.2);
+    width: 450px;
 }
 
 .aiusagebar-popup .popup-sub-menu {
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: transparent;
     box-shadow: none;
     border: none;
+}
+
+.aiusagebar-vendor-name {
+    font-weight: bold;
+    font-size: 1.15em;
+}
+
+.aiusagebar-vendor-plan {
+    padding-left: 6px;
+}
+
+.popup-submenu-menu-item .aiusagebar-action-button {
+    padding: 4px;
+}
+
+.aiusagebar-card {
+    background-color: rgba(127, 127, 127, 0.12);
+    border-radius: 14px;
+    padding: 12px 14px;
+    spacing: 12px;
+}
+
+.aiusagebar-metric {
+    spacing: 4px;
+}
+
+.aiusagebar-block {
+    spacing: 6px;
+}
+
+.aiusagebar-metric-title {
+    font-weight: bold;
+}
+
+.aiusagebar-metric-value {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.aiusagebar-metric-detail {
+    font-size: 0.85em;
+}
+
+.aiusagebar-pace-alert {
+    font-size: 0.85em;
 }
 
 .aiusagebar-row {
     spacing: 8px;
 }
 
-.aiusagebar-title {
-    font-weight: bold;
-}
-
-.aiusagebar-row-title {
-    font-weight: bold;
-}
-
-.aiusagebar-row-subtitle {
-    font-size: 0.85em;
-}
-
 .aiusagebar-dim {
     opacity: 0.55;
 }
 
-.aiusagebar-card-row {
-    spacing: 6px;
-    padding: 8px 4px;
-}
-
-.aiusagebar-card-sep {
-    height: 1px;
-    background-color: rgba(127, 127, 127, 0.16);
-}
-
-.aiusagebar-rule {
-    height: 1px;
-    background-color: rgba(127, 127, 127, 0.16);
-}
-
 .aiusagebar-bar {
-    height: 8px;
-    border-radius: 4px;
+    height: 6px;
+    border-radius: 3px;
 }
 
 .aiusagebar-bar-track {
     background-color: rgba(127, 127, 127, 0.25);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .aiusagebar-bar-fill {
     background-color: -st-accent-color;
-    border-radius: 4px;
-}
-
-.aiusagebar-spacer {
-    height: 4px;
+    border-radius: 3px;
 }
 
 .aiusagebar-group-heading {
@@ -104,12 +109,16 @@
     border-radius: 1px;
 }
 
-.aiusagebar-actions {
-    spacing: 12px;
+.aiusagebar-footer {
+    spacing: 4px;
+}
+
+.aiusagebar-footer-status {
+    font-size: 0.9em;
 }
 
 .aiusagebar-action-button {
-    padding: 10px;
+    padding: 8px;
     border-radius: 6px;
 }
 

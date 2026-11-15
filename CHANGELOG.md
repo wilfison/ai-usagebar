@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+The popup layout follows the upstream Linux Mint tray.
+
+### Added
+
+- **Refresh one vendor.** Each popup section header has its own refresh
+  button; its tooltip shows when that vendor was last updated.
+- **Pace alert beside the title.** A window running hot says so on its title
+  line ("Limit in 1h 04m", "~20% over pace", "Limit reached"), in the pace
+  color.
+
+### Changed
+
+- **Popup sections redesigned.** The header shows the vendor name with the
+  plan beside it, and the section body is one rounded card. A usage window is
+  now its title, the bar, "40% used" against the reset time, then the elapsed
+  line ("42% elapsed · 3pts ahead"), which stays visible even when a pace
+  alert shows. The per-row icons and the pace arrow beside the percentage are
+  gone from the popup; the arrow remains on the panel.
+- **Popup footer.** The last update time sits on the left, with *Refresh all*
+  and *Preferences* on the right. *Refresh now* moved to each section header,
+  and the per-section "Updated" line shows only after a failed refresh.
+- **Fixed popup width** (450px), so expanding a section with little content no
+  longer shrinks the popup.
+
+### Fixed
+
+- **Red text was hard to read on a dark shell theme.** Severity colors used as
+  text in the popup are brightened until legible there; bars, the panel label
+  and light themes keep the configured colors.
+
 ## [1.7.0] - 2026-11-14
 
 ### Added

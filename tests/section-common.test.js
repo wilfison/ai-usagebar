@@ -8,6 +8,7 @@ import {
     groupHeading,
     groupedUsage,
     resetCreditRows,
+    paceAlert,
     paceFootnote,
     paceFields,
     ICON_ERR_SERVER,
@@ -268,45 +269,48 @@ describe('paceFootnote', () => {
     it('ahead', () => assertEqual(paceFootnote(pace('ok', 3)), '42% elapsed · 3pts ahead'));
     it('under', () => assertEqual(paceFootnote(pace('ok', -7)), '42% elapsed · 7pts under'));
     it('estimating', () => assertEqual(paceFootnote(pace('estimating', -7)), 'Estimating…'));
-    it('limit', () => assertEqual(paceFootnote(pace('limit', 58)), 'Limit reached'));
+    it('limit → empty, the alert says it', () => assertEqual(paceFootnote(pace('limit', 58)), ''));
     it('neutral → empty', () => assertEqual(paceFootnote(pace('neutral')), ''));
 
     it('translates through the injected translator', () => {
         assertEqual(paceFootnote(pace('ok', 3), bracket), '[42% elapsed · [3pts ahead]]');
-        assertEqual(paceFootnote(pace('limit'), bracket), '[Limit reached]');
+        assertEqual(paceFootnote(pace('estimating'), bracket), '[Estimating…]');
     });
 
-    describe('by verdict', () => {
-        const NOW = new Date('2026-06-05T12:00:00Z');
-        const runsOutAt = new Date(NOW.getTime() + 64 * 60 * 1000);
-        const verdict = (v, extra = {}) =>
-            ({...pace('ok', 18), verdict: v, projectedPct: 119.6, runsOutAt: null, now: NOW, ...extra});
+    it('keeps the elapsed line whatever the verdict', () => {
+        for (const verdict of ['calm', 'over', 'critical', null])
+            assertEqual(paceFootnote({...pace('ok', 18), verdict}), '42% elapsed · 18pts ahead');
+    });
+});
 
-        it('calm keeps the elapsed footnote', () =>
-            assertEqual(paceFootnote(verdict('calm')), '42% elapsed · 18pts ahead'));
+describe('paceAlert', () => {
+    const NOW = new Date('2026-06-05T12:00:00Z');
+    const runsOutAt = new Date(NOW.getTime() + 64 * 60 * 1000);
+    const verdict = (v, extra = {}) =>
+        ({state: 'ok', delta: 18, elapsedPct: 42, verdict: v, projectedPct: 119.6, runsOutAt: null, now: NOW, ...extra});
 
-        it('no verdict keeps the elapsed footnote', () =>
-            assertEqual(paceFootnote(verdict(null)), '42% elapsed · 18pts ahead'));
+    it('calm has no alert', () => assertEqual(paceAlert(verdict('calm')), ''));
 
-        it('over says by how much', () =>
-            assertEqual(paceFootnote(verdict('over')), '~20% over pace'));
+    it('no verdict has no alert', () => assertEqual(paceAlert(verdict(null)), ''));
 
-        it('critical says when the limit hits', () =>
-            assertEqual(paceFootnote(verdict('critical', {runsOutAt})), `Limit in ${formatCountdown(runsOutAt, NOW)}`));
+    it('over says by how much', () => assertEqual(paceAlert(verdict('over')), '~20% over pace'));
 
-        it('critical without a run-out instant falls back to over pace', () =>
-            assertEqual(paceFootnote(verdict('critical')), '~20% over pace'));
+    it('critical says when the limit hits', () =>
+        assertEqual(paceAlert(verdict('critical', {runsOutAt})), `Limit in ${formatCountdown(runsOutAt, NOW)}`));
 
-        it('estimating, limit and neutral ignore the verdict', () => {
-            assertEqual(paceFootnote({...verdict('critical', {runsOutAt}), state: 'estimating'}), 'Estimating…');
-            assertEqual(paceFootnote({...verdict('critical', {runsOutAt}), state: 'limit'}), 'Limit reached');
-            assertEqual(paceFootnote({...verdict('critical', {runsOutAt}), state: 'neutral'}), '');
-        });
+    it('critical without a run-out instant falls back to over pace', () =>
+        assertEqual(paceAlert(verdict('critical')), '~20% over pace'));
 
-        it('translates through the injected translator', () => {
-            assertEqual(paceFootnote(verdict('over'), bracket), '[~20% over pace]');
-            assertEqual(paceFootnote(verdict('critical', {runsOutAt}), bracket).startsWith('[Limit in '), true);
-        });
+    it('estimating, limit and neutral ignore the verdict', () => {
+        assertEqual(paceAlert({...verdict('critical', {runsOutAt}), state: 'estimating'}), '');
+        assertEqual(paceAlert({...verdict('critical', {runsOutAt}), state: 'limit'}), 'Limit reached');
+        assertEqual(paceAlert({...verdict('critical', {runsOutAt}), state: 'neutral'}), '');
+    });
+
+    it('translates through the injected translator', () => {
+        assertEqual(paceAlert(verdict('over'), bracket), '[~20% over pace]');
+        assertEqual(paceAlert(verdict('critical', {runsOutAt}), bracket).startsWith('[Limit in '), true);
+        assertEqual(paceAlert({state: 'limit'}, bracket), '[Limit reached]');
     });
 });
 
@@ -324,6 +328,7 @@ describe('paceFields', () => {
         assertEqual(f.elapsedPct, 40);
         assertEqual('paceColor' in f, false);
         assertEqual(f.paceFootnote, '40% elapsed · 10pts under');
+        assertEqual(f.paceAlert, '');
     });
 
     it('ok → the tail colour follows the verdict', () => {
@@ -344,7 +349,8 @@ describe('paceFields', () => {
         assertEqual(f.paceGlyph, '');
         assertEqual('elapsedPct' in f, false);
         assertEqual('paceColor' in f, false);
-        assertEqual(f.paceFootnote, 'Limit reached');
+        assertEqual(f.paceAlert, 'Limit reached');
+        assertEqual(f.paceFootnote, '');
     });
 
     it('neutral draws no marker and an empty footnote', () => {
@@ -353,8 +359,10 @@ describe('paceFields', () => {
         assertEqual(f.paceFootnote, '');
     });
 
-    it('footnote: false leaves the footnote out', () => {
-        assertEqual('paceFootnote' in paceFields(30, pace('ok'), palette, undefined, {footnote: false}), false);
+    it('footnote: false leaves the footnote and the alert out', () => {
+        const f = paceFields(30, pace('ok'), palette, undefined, {footnote: false});
+        assertEqual('paceFootnote' in f, false);
+        assertEqual('paceAlert' in f, false);
     });
 });
 
@@ -365,12 +373,12 @@ describe('errorText: invalid mapping', () => {
     });
 });
 
-describe('paceFootnote: an early burst in a long window', () => {
+describe('paceAlert: an early burst in a long window', () => {
     it('10% eight hours into a week reads as over pace, never a run-out time', () => {
         const now = new Date('2026-06-01T08:00:00Z');
         const week = 7 * 86400 * 1000;
         const pace = calc({usagePct: 10, reset: new Date(now.getTime() + week - 8 * 3600 * 1000), now, windowMs: week});
-        assertEqual(paceFootnote(pace), '~110% over pace');
+        assertEqual(paceAlert(pace), '~110% over pace');
     });
 });
 
@@ -387,6 +395,7 @@ describe('windowRow', () => {
             icon: 'alarm',
             title: 'Session',
             pct: 60,
+            usedText: '[60% used]',
             reset: formatCountdown(resetsAt, now, bracket),
             subtitle: formatWithClock(resetsAt, now, bracket),
             ...paceFields(60, pace, t, bracket),

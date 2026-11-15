@@ -4,8 +4,8 @@ title: Vendor adapters
 description: The indicator drives every vendor through one uniform Adapter; each vendor is a directory with adapter, main, parser and section modules.
 tags: [vendors, pure-modules]
 generated:
-  by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  by: claude/fable-5-2
+  at: 2026-11-15T14:00:00Z
 sources:
   - id: registry
     title: lib/vendors/registry.js
@@ -35,7 +35,7 @@ Each vendor lives in `lib/vendors/<vendor>/`:
 
 Shared helpers stay flat in `lib/vendors/`: `fetch-common.js`, `parse-common.js` (`SchemaError`, JSON decode, `parseInstant`, window lengths), `placeholder-common.js`, `section-common.js` (`windowRow()`, `closingRows()`, `noWindowsRow()`, `errorText()`), `snapshot-cache.js`. The OAuth refresh both CLIs share is `lib/oauth/refresh.js`.
 
-The pure `section.js` builders produce already-translated rows; the renderer `ui/vendorSection.js` maps row kinds (`window`, `gauge`, `text`, `group-heading`, `grouped`, `spacer`, `http-error`, `footer`) to St widgets and owns no prose. See [i18n](/development/i18n.md).
+The pure `section.js` builders produce already-translated rows; the renderer `ui/vendorSection.js` maps row kinds (`window`, `gauge`, `text`, `group-heading`, `grouped`, `spacer`, `http-error`, `footer`) to St widgets inside the vendor's card and owns no prose; the section `title` becomes the plan beside the vendor name. See [panel and popup](/architecture/panel-and-popup.md). See [i18n](/development/i18n.md).
 
 # Adding a vendor
 

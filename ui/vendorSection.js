@@ -5,6 +5,7 @@ import St from 'gi://St';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {makeBar} from './bar.js';
+import {iconButton} from './tooltip.js';
 
 function label(text, opts = null) {
     const props = {text, y_align: Clutter.ActorAlign.CENTER};
@@ -17,13 +18,8 @@ function label(text, opts = null) {
         l.clutter_text.line_wrap_mode = Pango.WrapMode.WORD_CHAR;
         l.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
     }
-    let css = '';
     if (opts?.color)
-        css += `color: ${opts.color};`;
-    if (opts?.bold)
-        css += 'font-weight: bold;';
-    if (css)
-        l.set_style(css);
+        l.set_style(`color: ${opts.color};`);
     return l;
 }
 
@@ -35,210 +31,236 @@ function makeIcon(name, dim = false) {
     });
 }
 
-function rowHeader(iconName, title, opts = {}) {
-    const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
-    if (iconName)
-        head.add_child(makeIcon(iconName));
+function row() {
+    return new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
+}
 
-    const col = new St.BoxLayout({
-        vertical: true,
-        x_expand: true,
-        y_align: Clutter.ActorAlign.CENTER,
-    });
-    col.add_child(label(title, {styleClass: 'aiusagebar-row-title'}));
-    if (opts.subtitle)
-        col.add_child(label(opts.subtitle, {styleClass: 'aiusagebar-dim aiusagebar-row-subtitle'}));
-    if (opts.footnote)
-        col.add_child(label(opts.footnote, {styleClass: 'aiusagebar-dim aiusagebar-row-subtitle'}));
-    head.add_child(col);
+function metric() {
+    return new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-metric'});
+}
 
-    if (opts.trailing)
-        head.add_child(label(opts.trailing, {bold: true, color: opts.trailingColor}));
-
+// The title on the left and, when there is one, a short value on the right.
+function metricHead(title, trailing, trailingOpts) {
+    const head = row();
+    const name = label(title, {styleClass: 'aiusagebar-metric-title'});
+    name.x_expand = true;
+    head.add_child(name);
+    if (trailing)
+        head.add_child(label(trailing, trailingOpts));
     return head;
 }
 
-function cardRow() {
-    return new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card-row'});
+function buildWindowRow(model, showPace, textColor) {
+    const m = metric();
+    m.add_child(metricHead(model.title, model.paceAlert, {
+        styleClass: 'aiusagebar-pace-alert',
+        color: textColor(model.paceColor ?? model.color),
+    }));
+
+    const marker = showPace ? model.elapsedPct ?? null : null;
+    const overColor = marker !== null ? model.paceColor ?? null : null;
+    m.add_child(makeBar(model.pct, model.color, marker, overColor));
+
+    const detail = row();
+    detail.add_child(label(model.usedText, {styleClass: 'aiusagebar-metric-value', color: textColor(model.color)}));
+    if (model.subtitle) {
+        // Ellipsized rather than widening the popup: a custom metric's
+        // footnote travels in the subtitle.
+        const reset = label(model.subtitle, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail'});
+        reset.x_expand = true;
+        reset.x_align = Clutter.ActorAlign.END;
+        detail.add_child(reset);
+    }
+    m.add_child(detail);
+
+    if (model.paceFootnote)
+        m.add_child(label(model.paceFootnote, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail'}));
+    return m;
 }
 
-function buildWindowRow(row, showPace) {
-    const r = cardRow();
-    const pctText = row.paceGlyph ? `${row.pct}% ${row.paceGlyph}` : `${row.pct}%`;
-    r.add_child(rowHeader(row.icon, row.title, {
-        subtitle: row.subtitle,
-        footnote: row.paceFootnote,
-        trailing: pctText,
-        trailingColor: row.color,
+function buildGaugeRow(model, textColor) {
+    const m = metric();
+    m.add_child(metricHead(model.title, model.value, {
+        styleClass: 'aiusagebar-metric-value',
+        color: textColor(model.color),
     }));
-    const marker = showPace ? row.elapsedPct ?? null : null;
-    const overColor = marker !== null ? row.paceColor ?? null : null;
-    r.add_child(makeBar(row.pct, row.color, marker, overColor));
-    return r;
-}
-
-function buildGaugeRow(row) {
-    const r = cardRow();
-    r.add_child(rowHeader(row.icon, row.title, {
-        subtitle: row.subLine,
-        trailing: row.value,
-        trailingColor: row.color,
-    }));
-    if (typeof row.pct === 'number')
-        r.add_child(makeBar(row.pct, row.color));
-    return r;
+    if (typeof model.pct === 'number')
+        m.add_child(makeBar(model.pct, model.color));
+    if (model.subLine)
+        m.add_child(label(model.subLine, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail', wrap: true}));
+    return m;
 }
 
 // Wraps rather than widening the popup: text rows carry free-form strings
 // (reset titles, user formats) that the popup's max-width must hold.
-function buildTextLine(row) {
-    const dim = row.tone === 'dim';
-    const line = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
-    if (row.icon)
-        line.add_child(makeIcon(row.icon, dim && !row.color));
+function buildTextLine(model, textColor) {
+    const dim = model.tone === 'dim';
+    const line = row();
+    if (model.icon)
+        line.add_child(makeIcon(model.icon, dim && !model.color));
     let text;
-    if (row.color)
-        text = label(row.text, {color: row.color, wrap: true});
+    if (model.color)
+        text = label(model.text, {color: textColor(model.color), wrap: true});
     else
-        text = label(row.text, {styleClass: dim ? 'aiusagebar-dim' : null, wrap: true});
-    if (!row.subtitle) {
+        text = label(model.text, {styleClass: dim ? 'aiusagebar-dim' : null, wrap: true});
+    if (!model.subtitle) {
         line.add_child(text);
         return line;
     }
     const col = new St.BoxLayout({vertical: true, x_expand: true});
     col.add_child(text);
-    col.add_child(label(row.subtitle, {styleClass: 'aiusagebar-dim aiusagebar-row-subtitle', wrap: true}));
+    col.add_child(label(model.subtitle, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail', wrap: true}));
     line.add_child(col);
     return line;
 }
 
-function buildGroupedRow(row) {
+function buildGroupedRow(model) {
     const r = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-grouped-row'});
-    const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
-    const name = label(row.label, {styleClass: 'aiusagebar-dim'});
+    const head = row();
+    const name = label(model.label, {styleClass: 'aiusagebar-dim'});
     name.x_expand = true;
     head.add_child(name);
-    head.add_child(label(row.valueText));
+    head.add_child(label(model.valueText));
     r.add_child(head);
 
-    const bar = makeBar(row.pct, row.color);
+    const bar = makeBar(model.pct, model.color);
     bar.add_style_class_name('aiusagebar-grouped-bar');
-    bar.set_style(`background-color: ${row.trackColor};`);
+    bar.set_style(`background-color: ${model.trackColor};`);
     r.add_child(bar);
 
-    if (row.detail)
-        r.add_child(label(row.detail, {styleClass: 'aiusagebar-dim aiusagebar-grouped-detail'}));
+    if (model.detail)
+        r.add_child(label(model.detail, {styleClass: 'aiusagebar-dim aiusagebar-grouped-detail', wrap: true}));
     return r;
 }
 
-function buildHttpError(row) {
-    const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
-    block.add_child(new St.Widget({style_class: 'aiusagebar-rule', x_expand: true}));
-    const head = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
-    if (row.icon)
-        head.add_child(makeIcon(row.icon));
-    head.add_child(label(row.status));
+function buildHttpError(model) {
+    const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-metric'});
+    const head = row();
+    if (model.icon)
+        head.add_child(makeIcon(model.icon));
+    head.add_child(label(model.status, {wrap: true}));
     block.add_child(head);
-    for (const line of row.lines)
+    for (const line of model.lines)
         block.add_child(label(line, {styleClass: 'aiusagebar-dim'}));
     return block;
 }
 
-function buildFooter(row) {
-    const block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
-    block.add_child(new St.Widget({style_class: 'aiusagebar-rule', x_expand: true}));
-    const line = new St.BoxLayout({style_class: 'aiusagebar-row', x_expand: true});
-    if (row.icon)
-        line.add_child(makeIcon(row.icon, true));
-    line.add_child(label(row.text, {styleClass: 'aiusagebar-dim'}));
-    block.add_child(line);
-    return block;
-}
+// One provider in the popup: an expandable header (logo, name, plan, refresh)
+// over a rounded body repainted on every render. It owns no prose: every
+// string comes from the caller or the section model.
+export class VendorCard {
+    // `refreshLabel` names the header button; `onRefresh` runs on its click.
+    constructor({gicon, name, tooltip, refreshLabel, onRefresh}) {
+        this._name = name;
+        this._updated = '';
 
-// A one-line section (loading, no data, an error): `opts` takes a `color`,
-// `dim`, an `iconName` and a `title` shown above the line.
-export function renderMessage(menuSection, text, opts = {}) {
-    menuSection.removeAll();
-    const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-    const box = new St.BoxLayout({style_class: 'aiusagebar-row'});
-    if (opts.iconName)
-        box.add_child(makeIcon(opts.iconName, opts.dim));
-    const l = new St.Label({text, y_align: Clutter.ActorAlign.CENTER});
-    if (opts.color)
-        l.set_style(`color: ${opts.color};`);
-    else if (opts.dim)
-        l.add_style_class_name('aiusagebar-dim');
-    box.add_child(l);
-    if (opts.title) {
-        const container = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-section'});
-        container.add_child(new St.Label({text: opts.title, style_class: 'aiusagebar-title'}));
-        container.add_child(box);
-        item.add_child(container);
-    } else {
-        item.add_child(box);
+        this.item = new PopupMenu.PopupSubMenuMenuItem(name, true);
+        this.item.icon.gicon = gicon;
+        this.item.label.add_style_class_name('aiusagebar-vendor-name');
+
+        this._plan = label('', {styleClass: 'aiusagebar-dim aiusagebar-vendor-plan'});
+        this.item.insert_child_above(this._plan, this.item.label);
+        this._refresh = iconButton(tooltip, {
+            iconName: 'view-refresh-symbolic',
+            label: refreshLabel,
+            onClick: onRefresh,
+            tooltipText: () => (this._updated ? `${refreshLabel}\n${this._updated}` : refreshLabel),
+        });
+        // Last but one: the expander arrow stays at the end of the header.
+        this.item.insert_child_at_index(this._refresh, this.item.get_n_children() - 1);
+
+        this._body = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card'});
+        const holder = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        holder.add_child(this._body);
+        this.item.menu.addMenuItem(holder);
     }
-    menuSection.addMenuItem(item);
-}
 
-export function renderSection(menuSection, model, showPace = false) {
-    menuSection.removeAll();
+    // The header button is held while this vendor's fetch is in flight.
+    setBusy(busy) {
+        this._refresh.reactive = !busy;
+        this._refresh.can_focus = !busy;
+        if (busy)
+            this._refresh.add_style_class_name('aiusagebar-dim');
+        else
+            this._refresh.remove_style_class_name('aiusagebar-dim');
+    }
 
-    const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-    const container = new St.BoxLayout({
-        vertical: true,
-        x_expand: true,
-        style_class: 'aiusagebar-section',
-    });
-    item.add_child(container);
-    menuSection.addMenuItem(item);
+    // A plan that only repeats the vendor name is left out.
+    setPlan(plan) {
+        const text = plan ?? '';
+        this._plan.text = text.toLowerCase() === this._name.toLowerCase() ? '' : text;
+    }
 
-    container.add_child(label(model.title, {styleClass: 'aiusagebar-title'}));
+    // A one-line body (loading, no data, an error): `opts` takes a `color`,
+    // `dim` and an `iconName`.
+    setMessage(text, opts = {}) {
+        this._body.destroy_all_children();
+        const line = row();
+        if (opts.iconName)
+            line.add_child(makeIcon(opts.iconName, opts.dim));
+        line.add_child(label(text, {
+            color: opts.color,
+            styleClass: !opts.color && opts.dim ? 'aiusagebar-dim' : null,
+            wrap: true,
+        }));
+        this._body.add_child(line);
+    }
 
-    // Group consecutive window/gauge rows into one rounded card with thin
-    // separators; any other row kind breaks the card and renders inline.
-    let card = null;
-    const pushCardRow = rowWidget => {
-        if (!card) {
-            card = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-card'});
-            container.add_child(card);
-        } else {
-            card.add_child(new St.Widget({style_class: 'aiusagebar-card-sep', x_expand: true}));
-        }
-        card.add_child(rowWidget);
-    };
+    // `textColor` maps a palette colour to one legible as text on the popup.
+    setModel(model, {showPace = false, textColor = c => c} = {}) {
+        this._body.destroy_all_children();
+        this.setPlan(model.title);
+        this._updated = '';
 
-    for (const row of model.rows) {
-        switch (row.kind) {
-        case 'window':
-            pushCardRow(buildWindowRow(row, showPace));
-            break;
-        case 'gauge':
-            pushCardRow(buildGaugeRow(row));
-            break;
-        case 'text':
-            card = null;
-            container.add_child(buildTextLine(row));
-            break;
-        case 'spacer':
-            card = null;
-            container.add_child(new St.Widget({style_class: 'aiusagebar-spacer', x_expand: true}));
-            break;
-        case 'group-heading':
-            card = null;
-            container.add_child(label(row.label, {styleClass: 'aiusagebar-group-heading'}));
-            break;
-        case 'grouped':
-            card = null;
-            container.add_child(buildGroupedRow(row));
-            break;
-        case 'http-error':
-            card = null;
-            container.add_child(buildHttpError(row));
-            break;
-        case 'footer':
-            card = null;
-            container.add_child(buildFooter(row));
-            break;
+        // A heading and the loose lines under it read as one block, set
+        // tighter than the metrics around it.
+        let block = null;
+        const add = (widget, inBlock = false) => {
+            if (!inBlock) {
+                block = null;
+                this._body.add_child(widget);
+                return;
+            }
+            if (!block) {
+                block = new St.BoxLayout({vertical: true, x_expand: true, style_class: 'aiusagebar-block'});
+                this._body.add_child(block);
+            }
+            block.add_child(widget);
+        };
+
+        let failed = false;
+        for (const r of model.rows) {
+            switch (r.kind) {
+            case 'window':
+                add(buildWindowRow(r, showPace, textColor));
+                break;
+            case 'gauge':
+                add(buildGaugeRow(r, textColor));
+                break;
+            case 'text':
+                add(buildTextLine(r, textColor), true);
+                break;
+            case 'spacer':
+                block = null;
+                break;
+            case 'group-heading':
+                block = null;
+                add(label(r.label, {styleClass: 'aiusagebar-dim aiusagebar-group-heading'}), true);
+                break;
+            case 'grouped':
+                add(buildGroupedRow(r), true);
+                break;
+            case 'http-error':
+                failed = true;
+                add(buildHttpError(r));
+                break;
+            case 'footer':
+                this._updated = r.text;
+                // After a failed refresh this card is older than the popup footer says.
+                if (failed)
+                    add(label(r.text, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail'}));
+                break;
+            }
         }
     }
 }

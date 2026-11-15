@@ -4,8 +4,8 @@ title: Extension lifecycle
 description: enable() constructs the Indicator and adds it to the panel; disable() must release every resource it created.
 tags: [gnome-shell]
 generated:
-  by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  by: claude/fable-5-2
+  at: 2026-11-15T14:00:00Z
 sources:
   - id: ext
     title: extension.js
@@ -29,8 +29,8 @@ sources:
 
 Everything created in `enable()` must be released in `disable()`: widgets, GLib timeout sources (`GLib.Source.remove`), signal handlers, the Soup session of the [HTTP layer](/architecture/http.md), and the Cancellable. Extension reviewers reject extensions that leak on disable.
 
-Inside the Indicator, its `destroy()` owns that discipline,[^indicator] and so does each part it builds under `ui/`: `ActionBar` (footer buttons and tooltip), `PanelSegments`, `Notifier` and `UpdateItem`. A new part that holds a source or a signal needs its own `destroy()` wired into the indicator's.
+Inside the Indicator, its `destroy()` owns that discipline,[^indicator] and so does each part it builds under `ui/`: `Tooltip` (the hover label shared by the footer and card buttons, with its timer), `PanelSegments`, `Notifier` and `UpdateItem`. A new part that holds a source or a signal needs its own `destroy()` wired into the indicator's.
 
 # Settings effects
 
-The pure `settingsEffect(key)` in `lib/settings-effect.js` maps a changed key to `INTERVAL` (re-arm the poll timer, for `refresh-interval`), `UPDATE_CHECK` (for `update-check-enabled`) or `SYNC`: re-resolve the poll set, fetch only vendors that newly joined it, and repaint; `rebuildTheme` for `color-*` keys, `allSections` (repaint every section, not just the active one) for `color-*`, `tooltip-format` and `show-pace-marker`. `primary-vendor` is handled before it: it forces `active-vendor`, whose own change then lands here. Settings themselves are covered in [configuration](/architecture/config.md).
+The pure `settingsEffect(key)` in `lib/settings-effect.js` maps a changed key to `INTERVAL` (re-arm the poll timer, for `refresh-interval`), `UPDATE_CHECK` (for `update-check-enabled`) or `SYNC`: re-resolve the poll set, fetch only vendors that newly joined it, and repaint every section; `rebuildTheme` for `color-*` keys. `primary-vendor` is handled before it: it forces `active-vendor`, whose own change then lands here. Settings themselves are covered in [configuration](/architecture/config.md).

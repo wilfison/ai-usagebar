@@ -84,12 +84,13 @@ describe('buildSection (zai): pace footnote', () => {
         .rows.filter(r => r.kind === 'window');
 
     it('every window carries its footnote', () => {
-        assertEqual(windows[0].paceFootnote, '~20% over pace'); // 60% at half time projects 120%
+        assertEqual(windows[0].paceAlert, '~20% over pace'); // 60% at half time projects 120%
+        assertEqual(windows[0].paceFootnote, '50% elapsed · 10pts ahead');
         assertEqual(windows[2].paceFootnote, '50% elapsed · 40pts under');
     });
 
     it('a window at its cap: Limit reached, no marker, no glyph', () => {
-        assertEqual(windows[1].paceFootnote, 'Limit reached');
+        assertEqual(windows[1].paceAlert, 'Limit reached');
         assertEqual('elapsedPct' in windows[1], false);
         assertEqual(windows[1].paceGlyph, '');
     });

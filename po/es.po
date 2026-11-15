@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-14 22:10-0300\n"
+"POT-Creation-Date: 2026-11-15 13:48-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Spanish\n"
@@ -605,10 +605,6 @@ msgid "expires %s (%s)"
 msgstr "vence el %s (%s)"
 
 #: lib/vendors/section-common.js
-msgid "Estimating…"
-msgstr "Estimando…"
-
-#: lib/vendors/section-common.js
 msgid "Limit reached"
 msgstr "Límite alcanzado"
 
@@ -623,6 +619,10 @@ msgstr "Límite en %s"
 #, javascript-format
 msgid "~%d%% over pace"
 msgstr "~%d%% por encima del ritmo"
+
+#: lib/vendors/section-common.js
+msgid "Estimating…"
+msgstr "Estimando…"
 
 #: lib/vendors/section-common.js
 msgid "on track"
@@ -643,6 +643,12 @@ msgstr "%d pts por debajo"
 #, javascript-format
 msgid "%d%% elapsed · %s"
 msgstr "%d%% transcurrido · %s"
+
+#. Translators: "40% used": how much of a usage window is spent.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "%d%% used"
+msgstr "%d%% usado"
 
 #: lib/vendors/zai/parser.js lib/vendors/zai/section.js
 msgid "Session (5h)"
@@ -991,16 +997,16 @@ msgid "Disable"
 msgstr "Desactivar"
 
 #: ui/indicator.js
-msgid "Refresh now"
-msgstr "Actualizar ahora"
-
-#: ui/indicator.js
 msgid "Refresh all"
 msgstr "Actualizar todo"
 
 #: ui/indicator.js
 msgid "Preferences"
 msgstr "Preferencias"
+
+#: ui/indicator.js
+msgid "Refresh now"
+msgstr "Actualizar ahora"
 
 #: ui/indicator.js
 msgid "No data: use \"Refresh all\""

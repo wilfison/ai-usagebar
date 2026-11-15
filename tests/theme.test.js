@@ -1,6 +1,6 @@
 import system from 'system';
 
-import {defaultTheme, withOverrides, hexBlend} from '../lib/theme.js';
+import {defaultTheme, withOverrides, hexBlend, luminance, legibleOnDark} from '../lib/theme.js';
 import {describe, it, assertEqual, assertDeepEqual, assertThrows, summary} from './_assert.js';
 
 describe('defaultTheme', () => {
@@ -133,6 +133,39 @@ describe('indicator color resolution (config.colors)', () => {
         assertEqual(t.yellow, def.yellow);
         assertEqual(t.orange, def.orange);
         assertEqual(t.red, def.red);
+    });
+});
+
+describe('luminance', () => {
+    it('black is 0 and white is 1', () => {
+        assertEqual(luminance('#000000'), 0);
+        assertEqual(Math.round(luminance('#ffffff') * 1000), 1000);
+    });
+    it('not a colour → null', () => {
+        assertEqual(luminance('red'), null);
+        assertEqual(luminance(null), null);
+    });
+});
+
+describe('legibleOnDark', () => {
+    const t = defaultTheme();
+
+    it('brightens the default red, keeping it red', () => {
+        const red = legibleOnDark(t.red);
+        assertEqual(red === t.red, false);
+        assertEqual(luminance(red) >= 0.32, true);
+        const [r, g, b] = [1, 3, 5].map(i => parseInt(red.slice(i, i + 2), 16));
+        assertEqual(r > g && r > b, true);
+    });
+    it('leaves the colours that already read well', () => {
+        for (const key of ['green', 'yellow', 'orange'])
+            assertEqual(legibleOnDark(t[key]), t[key]);
+    });
+    it('a custom colour too dark to read is brightened too', () =>
+        assertEqual(luminance(legibleOnDark('#400000')) >= 0.32, true));
+    it('passes through what is not a #rrggbb colour', () => {
+        assertEqual(legibleOnDark('red'), 'red');
+        assertEqual(legibleOnDark(null), null);
     });
 });
 
