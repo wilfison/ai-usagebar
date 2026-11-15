@@ -6,6 +6,9 @@
 #   update-po       msgmerge each po/*.po against the refreshed template
 #   compile-locale  msgfmt each po/*.po into locale/<lang>/LC_MESSAGES/*.mo
 #   check           fail on a stale .pot (regenerate + diff) or a malformed .po
+#   todo            list each catalog's untranslated and fuzzy msgids
+#   fill FILE.json  set msgstrs from FILE.json ({msgid: {lang: text}}), clear
+#                   their fuzzy flag, and rewrap every catalog with msgcat
 #
 # String scanning covers the runtime sources only (extension.js, prefs.js,
 # ui/, lib/); tests/ and tools/ and node_modules/ are excluded by construction.
@@ -28,6 +31,7 @@ extract() {
         --from-code=UTF-8 \
         --language=JavaScript \
         --add-comments=Translators \
+        --add-location=file \
         --keyword=_ --keyword=ngettext:1,2 --keyword=pgettext:1c,2 \
         --package-name="${UUID}" \
         --copyright-holder="ai-usagebar contributors" \
@@ -74,8 +78,33 @@ check)
     done
     echo "i18n-check: OK"
     ;;
+todo)
+    # Print one catalog's msgids selected by a msgattrib flag, one per line. A
+    # msgid spanning several lines (an embedded \n) is joined, and the header
+    # (the empty msgid) is skipped.
+    pending() {
+        msgattrib "$1" --no-obsolete --no-location "$2" | msgcat --no-wrap - | awk '
+            /^msgid "/ { inid = 1; id = substr($0, 8, length($0) - 8); next }
+            inid && /^"/ { id = id substr($0, 2, length($0) - 2); next }
+            /^msgstr/ { if (inid && id != "") print "  " id; inid = 0 }'
+    }
+    for po in po/*.po; do
+        untranslated="$(pending --untranslated "$po")"
+        fuzzy="$(pending --only-fuzzy "$po")"
+        echo "== ${po}: $(grep -c . <<<"$untranslated" || true) untranslated, $(grep -c . <<<"$fuzzy" || true) fuzzy"
+        if [ -n "$untranslated" ]; then echo "$untranslated"; fi
+        if [ -n "$fuzzy" ]; then echo "$fuzzy"; fi
+    done
+    ;;
+fill)
+    table="${2:?usage: $0 fill TRANSLATIONS.json}"
+    python3 -I "$(dirname "$0")/po-fill.py" "$table" po/*.po
+    for po in po/*.po; do
+        msgcat "$po" -o "${po}.tmp" && mv "${po}.tmp" "$po"
+    done
+    ;;
 *)
-    echo "usage: $0 {pot|update-po|compile-locale|check}" >&2
+    echo "usage: $0 {pot|update-po|compile-locale|check|todo|fill FILE.json}" >&2
     exit 2
     ;;
 esac

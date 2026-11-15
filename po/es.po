@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-14 20:42-0300\n"
+"POT-Creation-Date: 2026-11-14 21:01-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Spanish\n"
@@ -16,50 +16,50 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. Translators: compact duration, s = seconds.
-#: lib/countdown.js:9
+#: lib/countdown.js
 #, javascript-format
 msgid "%ds"
 msgstr "%ds"
 
 #. Translators: compact duration, m = minutes.
-#: lib/countdown.js:13
+#: lib/countdown.js
 #, javascript-format
 msgid "%dm"
 msgstr "%dm"
 
 #. Translators: compact duration, h = hours, m = minutes.
-#: lib/countdown.js:15
+#: lib/countdown.js
 #, javascript-format
 msgid "%dh %dm"
 msgstr "%dh %dm"
 
-#: lib/countdown.js:24
+#: lib/countdown.js
 msgid "now"
 msgstr "ahora"
 
 #. Translators: compact countdown, d = days, h = hours.
-#: lib/countdown.js:32
+#: lib/countdown.js
 #, javascript-format
 msgid "%dd %dh"
 msgstr "%dd %dh"
 
 #. Translators: compact countdown, h = hours, m = minutes (zero-padded).
-#: lib/countdown.js:34
+#: lib/countdown.js
 #, javascript-format
 msgid "%dh %02dm"
 msgstr "%dh %02dm"
 
-#: lib/countdown.js:59
+#: lib/countdown.js
 msgid "Reset due"
 msgstr "Reinicio pendiente"
 
 #. Translators: "Resets in 4h 05m · 13:54": a countdown, then the clock time (or date and time).
-#: lib/countdown.js:61
+#: lib/countdown.js
 #, javascript-format
 msgid "Resets in %s · %s"
 msgstr "Se reinicia en %s · %s"
 
-#: lib/format.js:147
+#: lib/format.js
 #, javascript-format
 msgid "%d reset available"
 msgid_plural "%d resets available"
@@ -67,313 +67,312 @@ msgstr[0] "%d reinicio disponible"
 msgstr[1] "%d reinicios disponibles"
 
 #. Translators: "Claude: Session at 97%": the vendor, the usage window, then the percentage.
-#: lib/notify.js:60
+#: lib/notify.js
 #, javascript-format
 msgid "%s: %s at %d%%"
 msgstr "%s: %s al %d%%"
 
-#: lib/notify.js:61
+#: lib/notify.js
 #, javascript-format
 msgid "%d%% of the %s used"
 msgstr "%d%% de %s usado"
 
 #. Translators: appended to the body: " · resets 2h 05m (16:00)".
-#: lib/notify.js:64
+#: lib/notify.js
 #, javascript-format
 msgid " · resets %s (%s)"
 msgstr " · se reinicia en %s (%s)"
 
 #. Translators: "Claude: reset credit expires Oct 22 16:00".
-#: lib/notify.js:71
+#: lib/notify.js
 #, javascript-format
 msgid "%s: reset credit expires %s"
 msgstr "%s: el crédito de reinicio vence el %s"
 
 #. Translators: "Full reset: redeem within 1d 4h (16:00)".
-#: lib/notify.js:73
+#: lib/notify.js
 #, javascript-format
 msgid "%s: redeem within %s (%s)"
 msgstr "%s: canjéalo en %s (%s)"
 
-#: lib/notify.js:73 lib/vendors/openai/section.js:43
+#: lib/notify.js lib/vendors/openai/section.js
 msgid "Reset credit"
 msgstr "Crédito de reinicio"
 
-#: lib/panel-segments.js:24 ui/indicator.js:290
+#: lib/panel-segments.js ui/indicator.js
 msgid "Loading…"
 msgstr "Cargando…"
 
-#: lib/prefs-nav.js:8
+#: lib/prefs-nav.js
 msgid "General"
 msgstr "General"
 
-#: lib/prefs-nav.js:10
+#: lib/prefs-nav.js
 msgid "Panel"
 msgstr "Panel"
 
-#: lib/prefs-nav.js:11 prefs.js:247
+#: lib/prefs-nav.js prefs.js
 msgid "Popup"
 msgstr "Ventana emergente"
 
-#: lib/prefs-nav.js:12 prefs.js:264
+#: lib/prefs-nav.js prefs.js
 msgid "Display"
 msgstr "Visualización"
 
-#: lib/prefs-nav.js:13
+#: lib/prefs-nav.js
 msgid "Behavior"
 msgstr "Comportamiento"
 
-#: lib/prefs-nav.js:18
+#: lib/prefs-nav.js
 msgid "Vendors"
 msgstr "Proveedores"
 
-#: lib/prefs-nav.js:22 prefs.js:227
+#: lib/prefs-nav.js prefs.js
 msgid "Custom"
 msgstr "Personalizado"
 
-#: lib/vendors/anthropic/parser.js:426 lib/vendors/anthropic/section.js:174
-#: lib/vendors/ollama/parser.js:185 lib/vendors/ollama/section.js:37
+#: lib/vendors/anthropic/parser.js lib/vendors/anthropic/section.js
+#: lib/vendors/ollama/parser.js lib/vendors/ollama/section.js
 msgid "Session"
 msgstr "Sesión"
 
-#: lib/vendors/anthropic/parser.js:427 lib/vendors/anthropic/section.js:175
-#: lib/vendors/kimi/parser.js:251 lib/vendors/kimi/section.js:35
-#: lib/vendors/ollama/parser.js:185 lib/vendors/ollama/section.js:38
-#: lib/vendors/zai/parser.js:222 lib/vendors/zai/section.js:29
+#: lib/vendors/anthropic/parser.js lib/vendors/anthropic/section.js
+#: lib/vendors/kimi/parser.js lib/vendors/kimi/section.js
+#: lib/vendors/ollama/parser.js lib/vendors/ollama/section.js
+#: lib/vendors/zai/parser.js lib/vendors/zai/section.js
 msgid "Weekly"
 msgstr "Semanal"
 
-#: lib/vendors/anthropic/parser.js:429 lib/vendors/anthropic/section.js:177
+#: lib/vendors/anthropic/parser.js lib/vendors/anthropic/section.js
 msgid "Sonnet only"
 msgstr "Solo Sonnet"
 
-#: lib/vendors/anthropic/section.js:44
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "session %s"
 msgstr "sesión %s"
 
-#: lib/vendors/anthropic/section.js:45
+#: lib/vendors/anthropic/section.js
 msgid "unknown project"
 msgstr "proyecto desconocido"
 
-#: lib/vendors/anthropic/section.js:46
+#: lib/vendors/anthropic/section.js
 msgid "unknown model"
 msgstr "modelo desconocido"
 
 #. Translators: "84,000 / 200,000 tokens · claude-opus-5 · last active 14:03:12".
-#: lib/vendors/anthropic/section.js:54
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "%s / %s tokens · %s · last active %s"
 msgstr "%s / %s tokens · %s · última actividad %s"
 
-#: lib/vendors/anthropic/section.js:57
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "%s tokens"
 msgstr "%s tokens"
 
-#: lib/vendors/anthropic/section.js:58
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "window size is not configured · %s · last active %s"
 msgstr "tamaño de ventana no configurado · %s · última actividad %s"
 
-#: lib/vendors/anthropic/section.js:60
+#: lib/vendors/anthropic/section.js
 msgid "compacted"
 msgstr "compactada"
 
-#: lib/vendors/anthropic/section.js:61
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "compacted · waiting for the next response · %s · last active %s"
 msgstr "compactada · esperando la próxima respuesta · %s · última actividad %s"
 
-#: lib/vendors/anthropic/section.js:63
+#: lib/vendors/anthropic/section.js
 msgid "unknown"
 msgstr "desconocido"
 
-#: lib/vendors/anthropic/section.js:64
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "context usage unavailable · %s · last active %s"
 msgstr "uso de contexto no disponible · %s · última actividad %s"
 
-#: lib/vendors/anthropic/section.js:80
+#: lib/vendors/anthropic/section.js
 msgid "Sessions"
 msgstr "Sesiones"
 
-#: lib/vendors/anthropic/section.js:86
+#: lib/vendors/anthropic/section.js
 msgid "no recent Claude Code sessions"
 msgstr "no hay sesiones recientes de Claude Code"
 
-#: lib/vendors/anthropic/section.js:93
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "… and %d more session"
 msgid_plural "… and %d more sessions"
 msgstr[0] "… y %d sesión más"
 msgstr[1] "… y %d sesiones más"
 
-#: lib/vendors/anthropic/section.js:101
+#: lib/vendors/anthropic/section.js
 msgid "out of credits"
 msgstr "sin créditos"
 
-#: lib/vendors/anthropic/section.js:103
+#: lib/vendors/anthropic/section.js
 msgid "monthly limit reached"
 msgstr "límite mensual alcanzado"
 
-#: lib/vendors/anthropic/section.js:105
+#: lib/vendors/anthropic/section.js
 msgid "currently unavailable"
 msgstr "no disponible por ahora"
 
-#: lib/vendors/anthropic/section.js:119 lib/vendors/anthropic/section.js:129
+#: lib/vendors/anthropic/section.js
 msgid "Extra usage"
 msgstr "Uso adicional"
 
-#: lib/vendors/anthropic/section.js:121
+#: lib/vendors/anthropic/section.js
 msgid "Limit: none reported"
 msgstr "Límite: ninguno informado"
 
-#: lib/vendors/anthropic/section.js:132
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "Limit: %s"
 msgstr "Límite: %s"
 
 #. Translators: "$0.00 of $250.00 used (0%)": cloud session credits spent of the grant.
-#: lib/vendors/anthropic/section.js:144
+#: lib/vendors/anthropic/section.js
 #, javascript-format
 msgid "%s of %s used (%d%%)"
 msgstr "%s de %s usados (%d%%)"
 
-#: lib/vendors/anthropic/section.js:147
+#: lib/vendors/anthropic/section.js
 msgid "locked"
 msgstr "bloqueado"
 
-#: lib/vendors/anthropic/section.js:151
+#: lib/vendors/anthropic/section.js
 msgid "Cloud session credits"
 msgstr "Créditos de sesiones en la nube"
 
-#: lib/vendors/anthropic/section.js:161
+#: lib/vendors/anthropic/section.js
 msgid "Usage credits"
 msgstr "Créditos de uso"
 
-#: lib/vendors/anthropic/section.js:162 lib/vendors/openai/section.js:67
+#: lib/vendors/anthropic/section.js lib/vendors/openai/section.js
 #, javascript-format
 msgid "balance: %s"
 msgstr "saldo: %s"
 
-#: lib/vendors/anthropic/section.js:166
+#: lib/vendors/anthropic/section.js
 msgid "auto-reload: on"
 msgstr "recarga automática: activada"
 
-#: lib/vendors/anthropic/section.js:166
+#: lib/vendors/anthropic/section.js
 msgid "auto-reload: off"
 msgstr "recarga automática: desactivada"
 
 #. Translators: %s is the Anthropic plan name (e.g. "Max"), kept verbatim.
-#: lib/vendors/anthropic/section.js:205 ui/indicator.js:297
+#: lib/vendors/anthropic/section.js ui/indicator.js
 #, javascript-format
 msgid "Claude %s"
 msgstr "Claude %s"
 
-#: lib/vendors/custom/section.js:34 prefs.js:560
+#: lib/vendors/custom/section.js prefs.js
 msgid "Custom provider"
 msgstr "Proveedor personalizado"
 
-#: lib/vendors/deepseek/section.js:16 lib/vendors/openrouter/parser.js:265
-#: lib/vendors/openrouter/section.js:37
+#: lib/vendors/deepseek/section.js lib/vendors/openrouter/parser.js
+#: lib/vendors/openrouter/section.js
 msgid "Balance"
 msgstr "Saldo"
 
 #. Translators: %s are money amounts (granted credit, topped-up credit).
-#: lib/vendors/deepseek/section.js:20
+#: lib/vendors/deepseek/section.js
 #, javascript-format
 msgid "granted %s · topped-up %s"
 msgstr "concedido %s · recargado %s"
 
-#: lib/vendors/deepseek/section.js:28
+#: lib/vendors/deepseek/section.js
 msgid "API available"
 msgstr "API disponible"
 
-#: lib/vendors/deepseek/section.js:28
+#: lib/vendors/deepseek/section.js
 msgid "API unavailable"
 msgstr "API no disponible"
 
-#: lib/vendors/kimi/parser.js:249 lib/vendors/kimi/section.js:33
+#: lib/vendors/kimi/parser.js lib/vendors/kimi/section.js
 msgid "Window (5h)"
 msgstr "Ventana (5h)"
 
-#: lib/vendors/kimi/parser.js:253 lib/vendors/kimi/section.js:37
-#: lib/vendors/ollama/parser.js:185 lib/vendors/ollama/section.js:39
+#: lib/vendors/kimi/parser.js lib/vendors/kimi/section.js
+#: lib/vendors/ollama/parser.js lib/vendors/ollama/section.js
 msgid "Monthly"
 msgstr "Mensual"
 
 #. Translators: "Kimi" is a brand name, kept verbatim.
-#: lib/vendors/kimi/section.js:48
+#: lib/vendors/kimi/section.js
 #, javascript-format
 msgid "Kimi %s"
 msgstr "Kimi %s"
 
-#: lib/vendors/ollama/section.js:25 lib/vendors/openai/section.js:66
+#: lib/vendors/ollama/section.js lib/vendors/openai/section.js
 msgid "Credits"
 msgstr "Créditos"
 
 #. Translators: "$45.00 remaining of $60.00": the monthly included credits.
-#: lib/vendors/ollama/section.js:27
+#: lib/vendors/ollama/section.js
 #, javascript-format
 msgid "%s remaining of %s"
 msgstr "%s restantes de %s"
 
-#: lib/vendors/ollama/section.js:30
+#: lib/vendors/ollama/section.js
 #, javascript-format
 msgid "Purchased credits: %s"
 msgstr "Créditos comprados: %s"
 
-#: lib/vendors/ollama/section.js:46 lib/vendors/openai/section.js:50
-#: lib/vendors/zai/section.js:34
+#: lib/vendors/ollama/section.js lib/vendors/openai/section.js
+#: lib/vendors/zai/section.js
 msgid "no usage windows reported"
 msgstr "no se informaron ventanas de uso"
 
 #. Translators: %s is the Ollama plan name from the prefs (e.g. "Pro"), kept verbatim.
-#: lib/vendors/ollama/section.js:58
+#: lib/vendors/ollama/section.js
 #, javascript-format
 msgid "Ollama %s"
 msgstr "Ollama %s"
 
-#: lib/vendors/openai/parser.js:301 lib/vendors/openai/section.js:55
+#: lib/vendors/openai/parser.js lib/vendors/openai/section.js
 msgid "Codex 5h"
 msgstr "Codex 5h"
 
-#: lib/vendors/openai/parser.js:302 lib/vendors/openai/section.js:58
+#: lib/vendors/openai/parser.js lib/vendors/openai/section.js
 msgid "Codex weekly"
 msgstr "Codex semanal"
 
-#: lib/vendors/openai/parser.js:303 lib/vendors/openai/section.js:62
+#: lib/vendors/openai/parser.js lib/vendors/openai/section.js
 msgid "Code review (weekly)"
 msgstr "Revisión de código (semanal)"
 
-#: lib/vendors/openai/section.js:40 lib/vendors/openai/section.js:42
-#: lib/vendors/section-common.js:142
+#: lib/vendors/openai/section.js lib/vendors/section-common.js
 msgid "Resets"
 msgstr "Reinicios"
 
-#: lib/vendors/openai/section.js:40
+#: lib/vendors/openai/section.js
 msgid "None available"
 msgstr "Ninguno disponible"
 
-#: lib/vendors/openai/section.js:56
+#: lib/vendors/openai/section.js
 msgid "Codex 5h: not reported"
 msgstr "Codex 5h: no informado"
 
-#: lib/vendors/openai/section.js:59
+#: lib/vendors/openai/section.js
 msgid "Codex weekly: not reported"
 msgstr "Codex semanal: no informado"
 
-#: lib/vendors/openai/section.js:67
+#: lib/vendors/openai/section.js
 msgid "unlimited"
 msgstr "ilimitado"
 
-#: lib/vendors/openrouter/section.js:16 prefs.js:504
+#: lib/vendors/openrouter/section.js prefs.js
 msgid "Recent models"
 msgstr "Modelos recientes"
 
 #. Translators: "42 reqs": requests, abbreviated to fit beside the model name.
-#: lib/vendors/openrouter/section.js:19
+#: lib/vendors/openrouter/section.js
 #, javascript-format
 msgid "%d req"
 msgid_plural "%d reqs"
@@ -381,57 +380,57 @@ msgstr[0] "%d sol."
 msgstr[1] "%d sols."
 
 #. Translators: "gpt-5-codex ($1.25 · 42 reqs)": a model, its recent spend and requests.
-#: lib/vendors/openrouter/section.js:22
+#: lib/vendors/openrouter/section.js
 #, javascript-format
 msgid "%s (%s · %s)"
 msgstr "%s (%s · %s)"
 
 #. Translators: "gpt-5-codex (42 reqs)": a model with no spend, and its requests.
-#: lib/vendors/openrouter/section.js:24
+#: lib/vendors/openrouter/section.js
 #, javascript-format
 msgid "%s (%s)"
 msgstr "%s (%s)"
 
 #. Translators: %s are money amounts, %s%% is the consumed percentage.
-#: lib/vendors/openrouter/section.js:41
+#: lib/vendors/openrouter/section.js
 #, javascript-format
 msgid "%s of %s used (%s%%)"
 msgstr "%s de %s usado (%s%%)"
 
-#: lib/vendors/openrouter/section.js:46
+#: lib/vendors/openrouter/section.js
 msgid "Usage"
 msgstr "Uso"
 
 #. Translators: %s are money amounts for the day, week and month to date.
-#: lib/vendors/openrouter/section.js:50
+#: lib/vendors/openrouter/section.js
 #, javascript-format
 msgid "today %s · week %s · month %s"
 msgstr "hoy %s · semana %s · mes %s"
 
-#: lib/vendors/openrouter/section.js:57
+#: lib/vendors/openrouter/section.js
 msgid "Per-key limit"
 msgstr "Límite por clave"
 
 #. Translators: %s are money amounts (remaining of limit).
-#: lib/vendors/openrouter/section.js:61
+#: lib/vendors/openrouter/section.js
 #, javascript-format
 msgid "%s of %s remaining"
 msgstr "%s de %s restante"
 
-#: lib/vendors/openrouter/section.js:66
+#: lib/vendors/openrouter/section.js
 msgid "free tier"
 msgstr "plan gratuito"
 
-#: lib/vendors/openrouter/section.js:66
+#: lib/vendors/openrouter/section.js
 msgid "paid tier"
 msgstr "plan de pago"
 
-#: lib/vendors/section-common.js:36
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "rate limited; next attempt in %s"
 msgstr "límite de solicitudes; próximo intento en %s"
 
-#: lib/vendors/section-common.js:40
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid ""
 "HTTP %d: authentication rejected; credentials may be missing, expired, or "
@@ -440,7 +439,7 @@ msgstr ""
 "HTTP %d: autenticación rechazada; las credenciales pueden faltar, haber "
 "caducado o ser inválidas"
 
-#: lib/vendors/section-common.js:55
+#: lib/vendors/section-common.js
 msgid ""
 "The custom provider mapping or extra headers are not valid; fix them in the "
 "preferences."
@@ -448,120 +447,120 @@ msgstr ""
 "El mapeo o los encabezados extra del proveedor personalizado no son válidos; "
 "corrígelos en las preferencias."
 
-#: lib/vendors/section-common.js:81
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "HTTP %s"
 msgstr "HTTP %s"
 
-#: lib/vendors/section-common.js:92
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "Updated %s"
 msgstr "Actualizado %s"
 
-#: lib/vendors/section-common.js:121
+#: lib/vendors/section-common.js
 msgid "no expiry reported"
 msgstr "sin vencimiento informado"
 
-#: lib/vendors/section-common.js:123
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "expired %s"
 msgstr "venció el %s"
 
 #. Translators: "expires Oct 22 16:00 (3d 4h)": the date and time, then a countdown.
-#: lib/vendors/section-common.js:125
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "expires %s (%s)"
 msgstr "vence el %s (%s)"
 
-#: lib/vendors/section-common.js:156
+#: lib/vendors/section-common.js
 msgid "Estimating…"
 msgstr "Estimando…"
 
-#: lib/vendors/section-common.js:158
+#: lib/vendors/section-common.js
 msgid "Limit reached"
 msgstr "Límite alcanzado"
 
 #. Translators: "Limit in 1h 04m": when the window runs out at the current pace.
-#: lib/vendors/section-common.js:164
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "Limit in %s"
 msgstr "Límite en %s"
 
 #. Translators: "~20% over pace": projected usage at the reset beyond 100%.
-#: lib/vendors/section-common.js:167
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "~%d%% over pace"
 msgstr "~%d%% por encima del ritmo"
 
-#: lib/vendors/section-common.js:168
+#: lib/vendors/section-common.js
 msgid "on track"
 msgstr "al ritmo"
 
-#: lib/vendors/section-common.js:170
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "%dpts ahead"
 msgstr "%d pts por encima"
 
-#: lib/vendors/section-common.js:172
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "%dpts under"
 msgstr "%d pts por debajo"
 
 #. Translators: "42% elapsed · 3pts ahead": how much of the window has passed, then the pace.
-#: lib/vendors/section-common.js:174
+#: lib/vendors/section-common.js
 #, javascript-format
 msgid "%d%% elapsed · %s"
 msgstr "%d%% transcurrido · %s"
 
-#: lib/vendors/zai/parser.js:221 lib/vendors/zai/section.js:27
+#: lib/vendors/zai/parser.js lib/vendors/zai/section.js
 msgid "Session (5h)"
 msgstr "Sesión (5h)"
 
-#: lib/vendors/zai/parser.js:223 lib/vendors/zai/section.js:31
+#: lib/vendors/zai/parser.js lib/vendors/zai/section.js
 msgid "MCP tools (monthly)"
 msgstr "Herramientas MCP (mensual)"
 
-#: prefs.js:152
+#: prefs.js
 msgid "Panel position"
 msgstr "Posición en el panel"
 
-#: prefs.js:153
+#: prefs.js
 msgid "Changes apply immediately."
 msgstr "Los cambios se aplican al instante."
 
-#: prefs.js:157
+#: prefs.js
 msgid "Left"
 msgstr "Izquierda"
 
-#: prefs.js:157
+#: prefs.js
 msgid "Center (beside the clock)"
 msgstr "Centro (junto al reloj)"
 
-#: prefs.js:157
+#: prefs.js
 msgid "Right (beside the system menu)"
 msgstr "Derecha (junto al menú del sistema)"
 
-#: prefs.js:159
+#: prefs.js
 msgid "Area"
 msgstr "Área"
 
-#: prefs.js:177
+#: prefs.js
 msgid "Position within the area"
 msgstr "Posición dentro del área"
 
-#: prefs.js:178
+#: prefs.js
 msgid "0 is leftmost; in the center, 0 is left of the clock and 1 right of it"
 msgstr ""
 "0 es la más a la izquierda; en el centro, 0 queda a la izquierda del reloj y "
 "1 a la derecha"
 
-#: prefs.js:187
+#: prefs.js
 msgid "Panel label"
 msgstr "Etiqueta del panel"
 
 #. Translators: the {token} names are literal placeholders the user
 #. types: keep them verbatim, only translate the surrounding prose.
-#: prefs.js:190
+#: prefs.js
 msgid ""
 "Placeholders: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
@@ -569,15 +568,15 @@ msgstr ""
 "Marcadores: {vendor_short} {session_pct}% {session_reset} {plan} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:192
+#: prefs.js
 msgid "Bar format"
 msgstr "Formato de la barra"
 
-#: prefs.js:195
+#: prefs.js
 msgid "Pace arrows"
 msgstr "Flechas de ritmo"
 
-#: prefs.js:196
+#: prefs.js
 msgid ""
 "Ends the label with the session pace: ↑ ahead of pace, → on track, ↓ under. "
 "Skipped when the format already has a pace placeholder."
@@ -585,11 +584,11 @@ msgstr ""
 "Termina la etiqueta con el ritmo de la sesión: ↑ por encima del ritmo, → en "
 "ritmo, ↓ por debajo. Se omite si el formato ya tiene un marcador de ritmo."
 
-#: prefs.js:206
+#: prefs.js
 msgid "Vendors on the panel"
 msgstr "Proveedores en el panel"
 
-#: prefs.js:207
+#: prefs.js
 msgid ""
 "Each vendor switched on gets its own logo and label, side by side; clicking "
 "one opens the popup on it. With none on, the panel shows one vendor and "
@@ -597,13 +596,13 @@ msgid ""
 "center."
 msgstr ""
 "Cada proveedor activado tiene su propio logo y etiqueta, uno al lado del "
-"otro; al hacer clic en uno se abre el popup en él. Sin ninguno activado, el "
-"panel muestra un proveedor y el desplazamiento alterna entre ellos. En el "
-"área central, los proveedores adicionales descentran el reloj."
+"otro; al hacer clic en uno se abre la ventana emergente en él. Sin ninguno "
+"activado, el panel muestra un proveedor y el desplazamiento alterna entre "
+"ellos. En el área central, los proveedores adicionales descentran el reloj."
 
 #. Translators: the {token} names are literal placeholders the user
 #. types: keep them verbatim, only translate the surrounding prose.
-#: prefs.js:250
+#: prefs.js
 msgid ""
 "Optional extra lines shown above the popup. Empty uses the built-in layout. "
 "Placeholders: {plan} {session_pct} {session_reset} {weekly_pct} "
@@ -613,15 +612,15 @@ msgstr ""
 "diseño interno. Marcadores: {plan} {session_pct} {session_reset} "
 "{weekly_pct} {weekly_reset}"
 
-#: prefs.js:252
+#: prefs.js
 msgid "Popup format"
 msgstr "Formato de la ventana emergente"
 
-#: prefs.js:253
+#: prefs.js
 msgid "Show pace marker"
 msgstr "Mostrar marcador de ritmo"
 
-#: prefs.js:254
+#: prefs.js
 msgid ""
 "A tick at how much of the window has passed. Usage past it turns orange or "
 "red when it would run out before the reset."
@@ -629,31 +628,32 @@ msgstr ""
 "Una marca en la parte de la ventana que ya pasó. El uso más allá de ella se "
 "vuelve naranja o rojo cuando se agotaría antes del reinicio."
 
-#: prefs.js:255
+#: prefs.js
 msgid "Shortcut to open"
 msgstr "Atajo para abrir"
 
-#: prefs.js:270
+#: prefs.js
 msgid "Primary vendor"
 msgstr "Proveedor principal"
 
-#: prefs.js:271
+#: prefs.js
 msgid ""
 "Shown on the panel when no vendor is pinned, opened first in the popup, and "
 "the scroll-cycle reset target"
 msgstr ""
 "Se muestra en el panel cuando no hay ningún proveedor fijado, se abre "
-"primero en el popup y es el destino de reinicio del desplazamiento"
+"primero en la ventana emergente y es el destino de reinicio del "
+"desplazamiento"
 
-#: prefs.js:292
+#: prefs.js
 msgid "Show vendor logos"
 msgstr "Mostrar logotipos de los proveedores"
 
-#: prefs.js:296
+#: prefs.js
 msgid "Severity colors"
 msgstr "Colores de severidad"
 
-#: prefs.js:297
+#: prefs.js
 msgid ""
 "Pick a color per severity tier. Reset returns a tier to its built-in default."
 msgstr ""
@@ -661,41 +661,41 @@ msgstr ""
 "su valor predeterminado."
 
 #. Translators: Low/Mid/High/Critical are usage-severity tier names.
-#: prefs.js:301
+#: prefs.js
 msgid "Low"
 msgstr "Bajo"
 
-#: prefs.js:302
+#: prefs.js
 msgid "Mid"
 msgstr "Medio"
 
-#: prefs.js:303
+#: prefs.js
 msgid "High"
 msgstr "Alto"
 
-#: prefs.js:304
+#: prefs.js
 msgid "Critical"
 msgstr "Crítico"
 
-#: prefs.js:314
+#: prefs.js
 msgid "Refresh"
 msgstr "Actualización"
 
 #. Translators: %d is the minimum refresh interval in seconds.
-#: prefs.js:316
+#: prefs.js
 #, javascript-format
 msgid "Minimum %d s: the upstream endpoints rate-limit below that."
 msgstr "Mínimo %d s: los endpoints upstream limitan la tasa por debajo de eso."
 
-#: prefs.js:325
+#: prefs.js
 msgid "Refresh interval (seconds)"
 msgstr "Intervalo de actualización (segundos)"
 
-#: prefs.js:348
+#: prefs.js
 msgid "Notifications"
 msgstr "Notificaciones"
 
-#: prefs.js:349
+#: prefs.js
 msgid ""
 "Show a desktop notification the first time a usage window reaches the "
 "threshold. It re-arms when usage drops 7 points below it or the window "
@@ -705,31 +705,31 @@ msgstr ""
 "umbral. Se rearma cuando el uso baja 7 puntos por debajo o la ventana se "
 "reinicia, y avisa 48 horas antes de que venza un crédito de reinicio."
 
-#: prefs.js:351
+#: prefs.js
 msgid "Notify on high usage"
 msgstr "Notificar con uso elevado"
 
-#: prefs.js:359
+#: prefs.js
 msgid "Notification threshold (%)"
 msgstr "Umbral de notificación (%)"
 
-#: prefs.js:381
+#: prefs.js
 msgid "Updates"
 msgstr "Actualizaciones"
 
-#: prefs.js:382
+#: prefs.js
 msgid "Check for updates"
 msgstr "Buscar actualizaciones"
 
-#: prefs.js:383
+#: prefs.js
 msgid "Once a day, ask GitHub whether a newer release exists"
 msgstr "Una vez al día, pregunta a GitHub si existe una versión más reciente"
 
-#: prefs.js:387 prefs.js:416
+#: prefs.js
 msgid "Reset"
 msgstr "Restablecer"
 
-#: prefs.js:388
+#: prefs.js
 msgid ""
 "Restore every setting (vendor toggles, paths, keys, formats, and colors) to "
 "its built-in default."
@@ -737,47 +737,46 @@ msgstr ""
 "Restablece cada ajuste (interruptores de proveedores, rutas, claves, "
 "formatos y colores) a su valor predeterminado."
 
-#: prefs.js:390
+#: prefs.js
 msgid "Reset all settings"
 msgstr "Restablecer todos los ajustes"
 
-#: prefs.js:412
+#: prefs.js
 msgid "Reset all settings?"
 msgstr "¿Restablecer todos los ajustes?"
 
-#: prefs.js:413
+#: prefs.js
 msgid ""
 "This restores every setting to its built-in default and cannot be undone."
 msgstr ""
 "Esto restablece cada ajuste a su valor predeterminado y no se puede deshacer."
 
-#: prefs.js:415 prefs.js:758
+#: prefs.js
 msgid "Cancel"
 msgstr "Cancelar"
 
 #. Translators: "Anthropic" is a brand name, usually keep untranslated.
-#: prefs.js:436
+#: prefs.js
 msgid "Anthropic"
 msgstr "Anthropic"
 
-#: prefs.js:437
+#: prefs.js
 msgid "Credentials path: empty uses ~/.claude/.credentials.json."
 msgstr "Ruta de credenciales: vacío usa ~/.claude/.credentials.json."
 
-#: prefs.js:439 prefs.js:470 prefs.js:483 prefs.js:498 prefs.js:520
-#: prefs.js:534 prefs.js:548 prefs.js:563
+#: prefs.js
 msgid "Enabled"
 msgstr "Activado"
 
-#: prefs.js:440
+#: prefs.js
 msgid "Credentials path"
 msgstr "Ruta de credenciales"
 
-#: prefs.js:444
+#: prefs.js
 msgid "Context monitor"
 msgstr "Monitor de contexto"
 
-#: prefs.js:445
+#: prefs.js
 msgid ""
 "Lists recent Claude Code sessions in the Claude section, with how much of "
 "the context window each one used. Transcripts are read only while this is on."
@@ -786,69 +785,68 @@ msgstr ""
 "cuánto de la ventana de contexto usó cada una. Las transcripciones solo se "
 "leen mientras esto esté activado."
 
-#: prefs.js:447
+#: prefs.js
 msgid "Show session context"
 msgstr "Mostrar el contexto de las sesiones"
 
-#: prefs.js:448
+#: prefs.js
 msgid "Projects directory (empty: ~/.claude/projects)"
 msgstr "Directorio de proyectos (vacío: ~/.claude/projects)"
 
-#: prefs.js:451
+#: prefs.js
 msgid "Default context window (tokens)"
 msgstr "Ventana de contexto predeterminada (tokens)"
 
-#: prefs.js:452
+#: prefs.js
 msgid "0 shows raw token counts instead of a percentage"
 msgstr "0 muestra el recuento bruto de tokens en lugar de un porcentaje"
 
-#: prefs.js:458
+#: prefs.js
 msgid "Window per model (JSON, e.g. {\"claude-opus-5\": 1000000})"
 msgstr "Ventana por modelo (JSON, p. ej. {\"claude-opus-5\": 1000000})"
 
 #. Translators: "OpenAI" is a brand name, usually keep untranslated.
-#: prefs.js:467
+#: prefs.js
 msgid "OpenAI"
 msgstr "OpenAI"
 
-#: prefs.js:468
+#: prefs.js
 msgid "Codex auth path: empty uses ~/.codex/auth.json."
 msgstr "Ruta de autenticación de Codex: vacío usa ~/.codex/auth.json."
 
-#: prefs.js:471
+#: prefs.js
 msgid "Codex auth path"
 msgstr "Ruta de autenticación de Codex"
 
 #. Translators: "Z.AI" is a brand name, usually keep untranslated.
-#: prefs.js:480
+#: prefs.js
 msgid "Z.AI"
 msgstr "Z.AI"
 
-#: prefs.js:481 prefs.js:496
+#: prefs.js
 msgid "Set the API key inline or via the environment variable (env wins)."
 msgstr ""
 "Establezca la clave de API en línea o mediante la variable de entorno (el "
 "entorno tiene prioridad)."
 
-#: prefs.js:484 prefs.js:499 prefs.js:521 prefs.js:535 prefs.js:549
+#: prefs.js
 msgid "API key env var"
 msgstr "Variable de entorno de la clave de API"
 
-#: prefs.js:485 prefs.js:500 prefs.js:522 prefs.js:536 prefs.js:550
-#: prefs.js:574
+#: prefs.js
 msgid "API key (inline)"
 msgstr "Clave de API (en línea)"
 
-#: prefs.js:486
+#: prefs.js
 msgid "Plan tier (lite/pro/max)"
 msgstr "Nivel del plan (lite/pro/max)"
 
 #. Translators: "OpenRouter" is a brand name, usually keep untranslated.
-#: prefs.js:495
+#: prefs.js
 msgid "OpenRouter"
 msgstr "OpenRouter"
 
-#: prefs.js:505
+#: prefs.js
 msgid ""
 "Optional. A management key lists the two most recently used models; it is "
 "sent only to the activity endpoint, never with usage requests."
@@ -857,40 +855,40 @@ msgstr ""
 "recientemente; solo se envía al endpoint de actividad, nunca con las "
 "solicitudes de uso."
 
-#: prefs.js:507
+#: prefs.js
 msgid "Management key env var"
 msgstr "Variable de entorno de la clave de administración"
 
-#: prefs.js:508
+#: prefs.js
 msgid "Management key (inline)"
 msgstr "Clave de administración (en línea)"
 
 #. Translators: "DeepSeek" is a brand name, usually keep untranslated.
-#: prefs.js:517
+#: prefs.js
 msgid "DeepSeek"
 msgstr "DeepSeek"
 
-#: prefs.js:518 prefs.js:532 prefs.js:546
+#: prefs.js
 msgid "Disabled by default; requires an API key (env var or inline)."
 msgstr ""
 "Desactivado de forma predeterminada; requiere una clave de API (variable de "
 "entorno o en línea)."
 
 #. Translators: "Kimi" is a brand name, usually keep untranslated.
-#: prefs.js:531
+#: prefs.js
 msgid "Kimi"
 msgstr "Kimi"
 
 #. Translators: "Ollama" is a brand name, usually keep untranslated.
-#: prefs.js:545
+#: prefs.js
 msgid "Ollama Cloud"
 msgstr "Ollama Cloud"
 
-#: prefs.js:551
+#: prefs.js
 msgid "Plan name (optional)"
 msgstr "Nombre del plan (opcional)"
 
-#: prefs.js:561
+#: prefs.js
 msgid ""
 "Any HTTPS endpoint that answers a GET with JSON, mapped to usage rows by "
 "JSON Pointer. See the README for an example."
@@ -898,46 +896,46 @@ msgstr ""
 "Cualquier endpoint HTTPS que responda a un GET con JSON, asignado a filas de "
 "uso mediante JSON Pointer. Consulta un ejemplo en el README."
 
-#: prefs.js:564
+#: prefs.js
 msgid "Name"
 msgstr "Nombre"
 
-#: prefs.js:565
+#: prefs.js
 msgid "URL"
 msgstr "URL"
 
-#: prefs.js:566
+#: prefs.js
 msgid "Allow plain HTTP"
 msgstr "Permitir HTTP sin cifrar"
 
-#: prefs.js:570
+#: prefs.js
 msgid "Authentication"
 msgstr "Autenticación"
 
-#: prefs.js:571
+#: prefs.js
 msgid ""
 "Without a key no auth header is sent. An empty scheme sends the key bare."
 msgstr ""
 "Sin clave no se envía ningún encabezado de autenticación. Un esquema vacío "
 "envía la clave sola."
 
-#: prefs.js:573
+#: prefs.js
 msgid "API key env var (optional)"
 msgstr "Variable de entorno de la clave de API (opcional)"
 
-#: prefs.js:575
+#: prefs.js
 msgid "Auth header"
 msgstr "Encabezado de autenticación"
 
-#: prefs.js:576
+#: prefs.js
 msgid "Auth scheme"
 msgstr "Esquema de autenticación"
 
-#: prefs.js:580
+#: prefs.js
 msgid "Extra headers"
 msgstr "Encabezados extra"
 
-#: prefs.js:581
+#: prefs.js
 msgid ""
 "A JSON object of header names to string values; it must not repeat the auth "
 "header."
@@ -945,18 +943,18 @@ msgstr ""
 "Un objeto JSON de nombres de encabezado a valores de texto; no puede repetir "
 "el encabezado de autenticación."
 
-#: prefs.js:586
+#: prefs.js
 msgid ""
 "Not a JSON object of string header values, or it repeats the auth header."
 msgstr ""
 "No es un objeto JSON de valores de encabezado de texto, o repite el "
 "encabezado de autenticación."
 
-#: prefs.js:592
+#: prefs.js
 msgid "Mapping"
 msgstr "Mapeo"
 
-#: prefs.js:593
+#: prefs.js
 msgid ""
 "Metrics (used + limit, or percent) and texts, each read from the response by "
 "JSON Pointer; an optional currency (e.g. \"USD\") shows used + limit or a "
@@ -967,50 +965,50 @@ msgstr ""
 "usado + límite o un texto como importe. Se guarda cuando el editor pierde el "
 "foco y el mapeo es válido."
 
-#: prefs.js:600
+#: prefs.js
 #, javascript-format
 msgid "Not valid JSON: %s"
 msgstr "JSON no válido: %s"
 
-#: prefs.js:679 prefs.js:727
+#: prefs.js
 msgid "Reset to default"
 msgstr "Restablecer al valor predeterminado"
 
-#: prefs.js:720
+#: prefs.js
 msgid "Disabled"
 msgstr "Desactivado"
 
-#: prefs.js:755
+#: prefs.js
 msgid "Set shortcut"
 msgstr "Definir atajo"
 
-#: prefs.js:756
+#: prefs.js
 msgid "Press the new shortcut for opening the popup, or Esc to cancel."
 msgstr ""
 "Pulse el nuevo atajo para abrir la ventana emergente, o Esc para cancelar."
 
-#: prefs.js:759
+#: prefs.js
 msgid "Disable"
 msgstr "Desactivar"
 
-#: ui/indicator.js:123
+#: ui/indicator.js
 msgid "Refresh now"
 msgstr "Actualizar ahora"
 
-#: ui/indicator.js:125
+#: ui/indicator.js
 msgid "Refresh all"
 msgstr "Actualizar todo"
 
-#: ui/indicator.js:127
+#: ui/indicator.js
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: ui/indicator.js:266
+#: ui/indicator.js
 msgid "No data: use \"Refresh all\""
 msgstr "Sin datos: use \"Actualizar todo\""
 
 #. Translators: %s is the version number of the newer release (e.g. "1.6.0").
-#: ui/indicator.js:544
+#: ui/indicator.js
 #, javascript-format
 msgid "Update available: %s"
 msgstr "Actualización disponible: %s"
