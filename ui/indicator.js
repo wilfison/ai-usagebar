@@ -65,13 +65,9 @@ class Indicator extends PanelMenu.Button {
         this._guards = new Map();       // vendorId -> FetchGuard
         this._activeId = normalizeActive(this._config);
         this._pollIds = pollVendors(this._config);
-        this._theme = defaultTheme();
         this._rebuildTheme();
         this._timeoutId = null;
         this._renderTimeoutId = null;
-        this._openStateId = null;
-        this._scrollId = null;
-        this._settingsChangedId = null;
         this._settingsIdleId = null;
         this._pendingKeys = new Set();
         this._destroyed = false;
@@ -114,19 +110,17 @@ class Indicator extends PanelMenu.Button {
         this._rebuildSegments(this._config);
 
         // Live countdowns: re-render the cards only while open.
-        this._openStateId = this.menu.connect('open-state-changed', (_m, open) => {
+        this.menu.connectObject('open-state-changed', (_m, open) => {
             if (this._destroyed)
                 return;
             if (open)
                 this._onPopupOpen();
             else
                 this._onPopupClose();
-        });
-
-        this._scrollId = this.connect('scroll-event', (actor, event) => this._onScroll(actor, event));
+        }, this);
 
         // React to settings changes (prefs / gsettings / scroll write) immediately.
-        this._settingsChangedId = this._settings.connect('changed', (s, key) => this._onSettingsChanged(s, key));
+        this._settings.connectObject('changed', (s, key) => this._onSettingsChanged(s, key), this);
 
         this._refresh().catch(warnOnFailure('refresh'));
         this._rearmPollTimer(this._config.refreshIntervalSecs);
@@ -149,11 +143,16 @@ class Indicator extends PanelMenu.Button {
         this._fakeDelayIds = new Set();
     }
 
-    _rearmPollTimer(secs) {
-        if (this._timeoutId) {
-            GLib.Source.remove(this._timeoutId);
-            this._timeoutId = null;
+    // Removes the GLib source stored in `this[field]`, if any.
+    _clearSource(field) {
+        if (this[field]) {
+            GLib.Source.remove(this[field]);
+            this[field] = null;
         }
+    }
+
+    _rearmPollTimer(secs) {
+        this._clearSource('_timeoutId');
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, secs, () => {
             this._refresh().catch(warnOnFailure('refresh'));
             this._update.check(this._config.updateCheck.enabled);
@@ -495,7 +494,7 @@ class Indicator extends PanelMenu.Button {
         this._theme = withOverrides(defaultTheme(), this._config.colors);
     }
 
-    _onScroll(_actor, event) {
+    vfunc_scroll_event(event) {
         if (this._destroyed)
             return Clutter.EVENT_PROPAGATE;
 
@@ -571,10 +570,7 @@ class Indicator extends PanelMenu.Button {
     }
 
     _onPopupClose() {
-        if (this._renderTimeoutId) {
-            GLib.Source.remove(this._renderTimeoutId);
-            this._renderTimeoutId = null;
-        }
+        this._clearSource('_renderTimeoutId');
     }
 
     // Symbolic name (-symbolic.svg) so St recolors it to the menu foreground;
@@ -585,54 +581,32 @@ class Indicator extends PanelMenu.Button {
         return new Gio.FileIcon({file: f});
     }
 
-    destroy() {
+    // Runs on any destroy, from JS or from the shell tearing the panel down,
+    // so nothing here may outlive the actor.
+    _onDestroy() {
         this._destroyed = true;
 
-        if (this._timeoutId) {
-            GLib.Source.remove(this._timeoutId);
-            this._timeoutId = null;
-        }
-        if (this._renderTimeoutId) {
-            GLib.Source.remove(this._renderTimeoutId);
-            this._renderTimeoutId = null;
-        }
+        this._clearSource('_timeoutId');
+        this._clearSource('_renderTimeoutId');
+        this._clearSource('_settingsIdleId');
         for (const id of this._fakeDelayIds)
             GLib.Source.remove(id);
         this._fakeDelayIds.clear();
+        this.menu.disconnectObject(this);
+        this._settings.disconnectObject(this);
+        this._cancellable.cancel();
         this._tooltip.destroy();
         this._update.destroy();
-        if (this._openStateId) {
-            this.menu.disconnect(this._openStateId);
-            this._openStateId = null;
-        }
-        if (this._scrollId) {
-            this.disconnect(this._scrollId);
-            this._scrollId = null;
-        }
-        if (this._settingsIdleId) {
-            GLib.Source.remove(this._settingsIdleId);
-            this._settingsIdleId = null;
-        }
-        if (this._settingsChangedId) {
-            this._settings.disconnect(this._settingsChangedId);
-            this._settingsChangedId = null;
-        }
-        if (this._cancellable) {
-            this._cancellable.cancel();
-            this._cancellable = null;
-        }
-        this._notifier = null;
-        this._settings = null;
-
-        this._vendorItems.clear();
         this._segments.destroy();
+
+        this._settings = null;
+        this._notifier = null;
+        this._vendorItems.clear();
         this._guards.clear();
         this._pendingAll.clear();
         this._results.clear();
         this._fetchedAt.clear();
 
-        this.menu?.removeAll();
-
-        super.destroy();
+        super._onDestroy();
     }
 });

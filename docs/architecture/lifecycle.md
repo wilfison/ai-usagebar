@@ -5,7 +5,7 @@ description: enable() constructs the Indicator and adds it to the panel; disable
 tags: [gnome-shell]
 generated:
   by: claude/fable-5-2
-  at: 2026-11-15T18:14:46Z
+  at: 2026-11-15T18:17:25Z
 sources:
   - id: ext
     title: extension.js
@@ -30,7 +30,7 @@ sources:
 
 Everything created in `enable()` must be released in `disable()`: widgets, GLib timeout sources (`GLib.Source.remove`), signal handlers, the Soup session of the [HTTP layer](/architecture/http.md), and the Cancellable. Extension reviewers reject extensions that leak on disable.
 
-Inside the Indicator, its `destroy()` owns that discipline,[^indicator] and so does each part it builds under `ui/`: `Tooltip` (the hover label shared by the footer and card buttons, with its timer), `PanelSegments` and `UpdateItem`. A new part that holds a source or a signal needs its own `destroy()` wired into the indicator's.
+Inside the Indicator, its `_onDestroy()` owns that discipline,[^indicator] so it runs on any destroy, from JS or from the shell tearing the panel down; signals use `connectObject` / `disconnectObject` and timers `_clearSource()`. Each part it builds under `ui/` owns its own too: `Tooltip` (the hover label shared by the footer and card buttons, with its timer), `PanelSegments` and `UpdateItem`. A new part that holds a source or a signal needs its own `destroy()` called from the indicator's `_onDestroy()`.
 
 # Settings effects
 
