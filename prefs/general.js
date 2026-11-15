@@ -7,15 +7,13 @@ import {vformat} from '../lib/format.js';
 import {defaultTheme} from '../lib/theme.js';
 import {prefsNav} from '../lib/prefs-nav.js';
 import {VENDOR_LABELS} from '../lib/vendors.js';
+import {schemaRange, schemaChoices} from '../lib/prefs-pages.js';
 import {withPinned} from '../lib/config-resolve.js';
 import {providerName} from '../lib/vendors/custom/mapping.js';
 import {
     switchRow, entryRow, boundSpinRow, syncedSpinRow, comboRow, colorRow, shortcutRow,
 } from './widgets.js';
 
-const INTERVAL_MIN = 300;
-const INTERVAL_MAX = 86400;
-const PANEL_BOXES = ['left', 'center', 'right'];
 
 // User-facing strings are wrapped in `_()` inside the builders, never at
 // module top level: the gettext domain is not yet bound when this module is
@@ -23,6 +21,8 @@ const PANEL_BOXES = ['left', 'center', 'right'];
 
 export function buildPanelPage(settings, cleanups) {
     const page = new Adw.PreferencesPage();
+    // The combo follows the schema's choice order.
+    const boxes = schemaChoices(settings.settings_schema, 'panel-box');
 
     const positionGroup = new Adw.PreferencesGroup({
         title: _('Panel position'),
@@ -31,14 +31,12 @@ export function buildPanelPage(settings, cleanups) {
     positionGroup.add(comboRow(settings, 'panel-box', {
         title: _('Area'),
         labels: [_('Left'), _('Center (beside the clock)'), _('Right (beside the system menu)')],
-        read: () => PANEL_BOXES.indexOf(settings.get_string('panel-box')),
-        write: i => settings.set_string('panel-box', PANEL_BOXES[i]),
+        read: () => boxes.indexOf(settings.get_string('panel-box')),
+        write: i => settings.set_string('panel-box', boxes[i]),
     }, cleanups));
     positionGroup.add(boundSpinRow(settings, 'panel-index', {
         title: _('Position within the area'),
         subtitle: _('0 is leftmost; in the center, 0 is left of the clock and 1 right of it'),
-        lower: 0,
-        upper: 20,
         step: 1,
         page: 1,
     }));
@@ -150,12 +148,11 @@ export function buildBehaviorPage(settings, cleanups) {
     const cadenceGroup = new Adw.PreferencesGroup({
         title: _('Refresh'),
         // Translators: %d is the minimum refresh interval in seconds.
-        description: vformat(_('Minimum %d s: the upstream endpoints rate-limit below that.'), INTERVAL_MIN),
+        description: vformat(_('Minimum %d s: the upstream endpoints rate-limit below that.'),
+            schemaRange(settings.settings_schema, 'refresh-interval').lower),
     });
     cadenceGroup.add(syncedSpinRow(settings, 'refresh-interval', {
         title: _('Refresh interval (seconds)'),
-        lower: INTERVAL_MIN,
-        upper: INTERVAL_MAX,
         step: 60,
         page: 300,
     }, cleanups));
@@ -168,8 +165,6 @@ export function buildBehaviorPage(settings, cleanups) {
     notifyGroup.add(switchRow(settings, 'notify-enabled', _('Notify on high usage')));
     notifyGroup.add(syncedSpinRow(settings, 'notify-threshold', {
         title: _('Notification threshold (%)'),
-        lower: 1,
-        upper: 100,
         step: 5,
         page: 10,
     }, cleanups));

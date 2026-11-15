@@ -6,7 +6,7 @@ import Gtk from 'gi://Gtk';
 import {gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import {rgbToHex} from '../lib/color.js';
-import {RowType} from '../lib/prefs-pages.js';
+import {RowType, schemaRange} from '../lib/prefs-pages.js';
 
 // Every helper that connects a signal pushes its disconnect onto `cleanups`,
 // which the window runs on close-request.
@@ -39,8 +39,9 @@ function spinWidget({title, subtitle, lower, upper, step, page}) {
 }
 
 // An integer key bound straight to a spin row.
+// The bounds come from the key's schema range.
 export function boundSpinRow(settings, key, opts) {
-    const row = spinWidget(opts);
+    const row = spinWidget({...schemaRange(settings.settings_schema, key), ...opts});
     settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
     return row;
 }
@@ -48,7 +49,7 @@ export function boundSpinRow(settings, key, opts) {
 // An integer key kept in step with a spin row by hand, writing only whole
 // values that differ from the stored one.
 export function syncedSpinRow(settings, key, opts, cleanups) {
-    const row = spinWidget(opts);
+    const row = spinWidget({...schemaRange(settings.settings_schema, key), ...opts});
     row.set_value(settings.get_int(key));
     const notifyId = row.connect('notify::value', () => {
         const v = Math.round(row.get_value());
