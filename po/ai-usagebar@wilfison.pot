@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 15:32-0300\n"
+"POT-Creation-Date: 2026-11-15 15:33-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -399,6 +399,12 @@ msgstr ""
 #: lib/vendors/anthropic/section.js ui/indicator.js
 #, javascript-format
 msgid "Claude %s"
+msgstr ""
+
+#. Translators: "12 of 100": the used amount of a limit; both may be money.
+#: lib/vendors/custom/section.js
+#, javascript-format
+msgid "%s of %s"
 msgstr ""
 
 #: lib/vendors/custom/section.js prefs/custom.js

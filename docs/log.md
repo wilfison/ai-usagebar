@@ -2,6 +2,7 @@
 
 ## 2026-11-15
 
+- The custom provider caches a metric's raw used/limit (`CACHE_VERSION` 2) and the popup formats it with a translated "%s of %s".
 - Vendors are one `VENDORS` table in `lib/vendors.js` (id, label, generic icon, user-given name); `apiKeyFetch` names a vendor by that label. Updated vendor adapters.
 - The update check reads its deadline from disk once per indicator and keeps it in memory; any 2xx answer is parsed. Updated update check.
 - The default User-Agent carries the extension's `version-name` (it was a fixed `ai-usagebar/0.1`), and `disposeSession()` aborts the Soup session. Updated HTTP layer.

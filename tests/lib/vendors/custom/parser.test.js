@@ -2,9 +2,10 @@ import system from 'system';
 
 import {
     parseUsage, placeholders, customPeakUsage, formatNumber, SchemaError,
-    shortCode, notifyRows, resetCredits, snapshotToCacheJson, parseCacheJson, fakeSnapshot,
+    shortCode, notifyRows, resetCredits, snapshotToCacheJson, parseCacheJson, fakeSnapshot, CACHE_VERSION,
 } from '../../../../lib/vendors/custom/parser.js';
 import {validateMapping} from '../../../../lib/vendors/custom/mapping.js';
+import {amountText} from '../../../../lib/vendors/custom/section.js';
 import {customAdapter} from '../../../../lib/vendors/custom/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../../_assert.js';
@@ -34,10 +35,10 @@ function schemaError(fn) {
 const metric = (extra) => ({metrics: [Object.assign({label: 'Requests'}, extra)]});
 
 describe('parseUsage: metrics', () => {
-    it('used + limit → rounded, clamped percent with an "X of Y" footnote', () => {
+    it('used + limit → rounded, clamped percent, keeping the raw amount', () => {
         const m = parse(metric({used: '/usage/used', limit: '/usage/limit'})).metrics[0];
         assertEqual(m.pct, 12);
-        assertEqual(m.footnote, '12 of 100');
+        assertDeepEqual(m.amount, {used: 12, limit: 100, currency: null});
         assertEqual(parse(metric({used: '/a', limit: '/b'}), '{"a":2,"b":3}').metrics[0].pct, 67);
         assertEqual(parse(metric({used: '/a', limit: '/b'}), '{"a":250,"b":100}').metrics[0].pct, 100);
     });
@@ -47,10 +48,10 @@ describe('parseUsage: metrics', () => {
         assertEqual(schemaError(() => parse(metric({used: '/a', limit: '/b'}), '{"a":1,"b":-5}')) !== null, true);
     });
 
-    it('percent alone is used directly (numeric strings accepted), with no footnote', () => {
+    it('percent alone is used directly (numeric strings accepted), with no amount', () => {
         const m = parse(metric({percent: '/usage/pct'})).metrics[0];
         assertEqual(m.pct, 43);
-        assertEqual(m.footnote, '');
+        assertEqual(m.amount, null);
     });
 
     it('rejects number-like strings that are not plain numbers', () => {
@@ -213,14 +214,26 @@ describe('currency', () => {
     const now = new Date('2026-10-01T00:00:00Z');
     const metric = extra => ({label: 'Spend', used: '/spend/used', limit: '/spend/limit', ...extra});
 
-    it('formats used and limit as money', () =>
-        assertEqual(parseUsage(body, {metrics: [metric({currency: 'USD'})]}, now).metrics[0].footnote, '$12.50 of $60.00'));
+    const text = extra => amountText(parseUsage(body, {metrics: [metric(extra)]}, now).metrics[0].amount);
+
+    it('formats used and limit as money', () => assertEqual(text({currency: 'USD'}), '$12.50 of $60.00'));
     it('uses the currency\'s own symbol, or the code after an unknown one', () => {
-        assertEqual(parseUsage(body, {metrics: [metric({currency: 'EUR'})]}, now).metrics[0].footnote, '€12.50 of €60.00');
-        assertEqual(parseUsage(body, {metrics: [metric({currency: 'CHF'})]}, now).metrics[0].footnote, '12.50 CHF of 60.00 CHF');
+        assertEqual(text({currency: 'EUR'}), '€12.50 of €60.00');
+        assertEqual(text({currency: 'CHF'}), '12.50 CHF of 60.00 CHF');
     });
-    it('without currency the bare numbers stay', () =>
-        assertEqual(parseUsage(body, {metrics: [metric()]}, now).metrics[0].footnote, '12.5 of 60'));
+    it('without currency the bare numbers stay', () => assertEqual(text({}), '12.5 of 60'));
+    it('the "of" is translated', () =>
+        assertEqual(amountText({used: 1, limit: 2, currency: null}, s => s.replace('of', 'de')), '1 de 2'));
+    it('a cache from before the raw amount is refused', () => {
+        assertEqual(CACHE_VERSION, 2);
+        let threw = false;
+        try {
+            parseCacheJson(JSON.stringify({cacheVersion: 1, snapshot: {metrics: [], texts: []}}));
+        } catch (_) {
+            threw = true;
+        }
+        assertEqual(threw, true);
+    });
     it('a text with currency is money', () =>
         assertEqual(parseUsage(body, {texts: [{label: 'Wallet', value: '/wallet', currency: 'USD'}]}, now).texts[0].value, '$7.00'));
     it('a text with currency must be numeric', () => {
@@ -247,8 +260,9 @@ describe('currency', () => {
 describe('fakeSnapshot', () => {
     const s = fakeSnapshot(84.4, NOW);
     it('both metrics at the rounded percentage', () => assertDeepEqual(s.metrics.map(m => m.pct), [84, 84]));
-    it('the same shape as a parsed metric (empty footnote, no name)', () => {
-        assertEqual(s.metrics[0].footnote, '');
+    it('the same shape as a parsed metric (no amount on the paced one, no name)', () => {
+        assertEqual(s.metrics[0].amount, null);
+        assertDeepEqual(s.metrics[1].amount, {used: s.metrics[1].pct / 2, limit: 50, currency: 'USD'});
         assertEqual('name' in s, false);
     });
     it('a non-numeric percentage reads as 0', () => assertEqual(fakeSnapshot('x', NOW).metrics[0].pct, 0));

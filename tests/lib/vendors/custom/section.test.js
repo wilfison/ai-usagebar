@@ -14,9 +14,9 @@ function snapshot() {
     return {
         plan: 'Team',
         metrics: [
-            {label: 'Requests', pct: 12, footnote: '12 of 100', resetsAt: new Date(NOW.getTime() + HOUR), windowMs: 5 * HOUR},
-            {label: 'Tokens', pct: 40, footnote: '', resetsAt: new Date(NOW.getTime() + HOUR), windowMs: null},
-            {label: 'Storage', pct: 5, footnote: '', resetsAt: null, windowMs: 5 * HOUR},
+            {label: 'Requests', pct: 12, amount: {used: 12, limit: 100, currency: null}, resetsAt: new Date(NOW.getTime() + HOUR), windowMs: 5 * HOUR},
+            {label: 'Tokens', pct: 40, amount: null, resetsAt: new Date(NOW.getTime() + HOUR), windowMs: null},
+            {label: 'Storage', pct: 5, amount: null, resetsAt: null, windowMs: 5 * HOUR},
         ],
         texts: [{label: 'Region', value: 'eu'}],
     };

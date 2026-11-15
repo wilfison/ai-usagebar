@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 15:32-0300\n"
+"POT-Creation-Date: 2026-11-15 15:33-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: Portuguese (Brazil)\n"
@@ -407,6 +407,12 @@ msgstr "recarga automática: desativada"
 #, javascript-format
 msgid "Claude %s"
 msgstr "Claude %s"
+
+#. Translators: "12 of 100": the used amount of a limit; both may be money.
+#: lib/vendors/custom/section.js
+#, javascript-format
+msgid "%s of %s"
+msgstr "%s de %s"
 
 #: lib/vendors/custom/section.js prefs/custom.js
 msgid "Custom provider"
