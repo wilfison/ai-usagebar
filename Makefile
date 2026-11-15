@@ -13,10 +13,14 @@ help:
 	@echo "  validate        Validate metadata.json + compile schema with --strict"
 	@echo "  watch           Re-run 'make test' on changes under lib/ ui/ tests/"
 	@echo "  run             Launch a nested gnome-shell (Wayland) to test the extension"
+	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, LANG_UNDER_TEST)"
+	@echo "  headless-stop   Stop it"
 	@echo "  pot             Extract translatable strings into po/$(UUID).pot"
 	@echo "  update-po       Merge each po/*.po against the refreshed template"
 	@echo "  compile-locale  Compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo"
 	@echo "  i18n-check      Fail on a stale .pot or a malformed po/*.po (CI gate)"
+	@echo "  i18n-todo       List each catalog's untranslated and fuzzy strings"
+	@echo "  upstream-diff   Report upstream changes since FROM=<tag> (tools/upstream-diff.sh)"
 	@echo "  pack            Build the upload zip via gnome-extensions pack (--podir=po)"
 	@echo "  info            Show gnome-extensions info for $(UUID)"
 
@@ -57,14 +61,28 @@ watch:
 		$(MAKE) --no-print-directory test || true; \
 	done
 
-# Launch a throwaway nested gnome-shell to test live. Set AI_USAGEBAR_FAKE_PCT
-# to override the real usage fetch with a synthetic snapshot at that percentage
-# (handy for eyeballing the bar): AI_USAGEBAR_FAKE_PCT=23 make run
+# Launch a throwaway nested gnome-shell to test live. Dev overrides:
+# AI_USAGEBAR_FAKE_PCT=23 (synthetic snapshot at that percentage),
+# AI_USAGEBAR_FAKE_ERROR=zai,openai:stale or * (fail, or serve stale data),
+# AI_USAGEBAR_FAKE_DELAY_MS=3000 (every fetch waits first).
 run:
 	@if [ -n "$$AI_USAGEBAR_FAKE_PCT" ]; then \
 		echo "run: AI_USAGEBAR_FAKE_PCT=$$AI_USAGEBAR_FAKE_PCT, overriding usage fetch"; \
 	fi
 	dbus-run-session -- gnome-shell --wayland --devkit
+
+# An isolated headless gnome-shell driven from the command line (eval, probe,
+# click, keys, prefs, shot): see tools/headless.sh for every subcommand.
+# make headless FAKE_PCT=40 LANG_UNDER_TEST=pt_BR
+headless:
+	@./tools/headless.sh start $(if $(FAKE_PCT),--fake-pct $(FAKE_PCT)) $(if $(LANG_UNDER_TEST),--lang $(LANG_UNDER_TEST))
+
+headless-stop:
+	@./tools/headless.sh stop
+
+# What the upstream Rust widget changed since a tag: make upstream-diff FROM=v1.52.1
+upstream-diff:
+	@./tools/upstream-diff.sh $(or $(FROM),$(error FROM=<tag> is required, e.g. make upstream-diff FROM=v1.52.1))
 
 # Extract every marked string into the tracked .pot template.
 pot:
@@ -82,6 +100,9 @@ compile-locale:
 i18n-check:
 	@./tools/i18n.sh check
 
+i18n-todo:
+	@./tools/i18n.sh todo
+
 # pack bundles only a fixed top-level set, so lib/ and ui/ need --extra-source; --podir=po ships the .mo files.
 pack: schemas
 	gnome-extensions pack . --extra-source=lib --extra-source=ui --extra-source=icons --podir=po --force
@@ -90,4 +111,4 @@ info:
 	gnome-extensions info $(UUID)
 
 .PHONY: help schemas enable disable reload logs test lint eslint validate watch \
-	run pot update-po compile-locale i18n-check pack info
+	run headless headless-stop upstream-diff pot update-po compile-locale i18n-check i18n-todo pack info
