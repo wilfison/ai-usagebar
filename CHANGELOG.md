@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.0] - 2026-11-14
 
 ### Added
 
@@ -13,18 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   vendors side by side, each with its own logo (or short code), label and
   severity color, all from the same bar format, in the fixed vendor order. A
   loading segment reads `…` and a failing one `⚠` without touching the others.
-  Clicking a segment opens the popup on that vendor; `Super+U` opens it on the
-  last one. The idea comes from the upstream GNOME extension, but it stays one
-  panel button with one popup and one poll timer.
+  Clicking a segment (or the gap or edge nearest to it) opens the popup on that
+  vendor; `Super+U`, or Enter on the focused button, opens it on the last one.
+  A vendor-specific placeholder such as `{or_balance}` stays literal in the
+  other vendors' segments, so a shared format works best with the common ones
+  (`{session_pct}`, `{session_reset}`, `{plan}`). The idea comes from the
+  upstream GNOME extension, but it stays one panel button with one popup and
+  one poll timer.
 
 ### Changed
 
 - **Every pinned vendor is polled and notifies.** The poll tick fetches the
-  pinned vendors and the active one in parallel, each with its own in-flight
-  guard, so a slow vendor no longer holds the others back. Usage notifications
-  now fire for every pinned vendor, not only the active one.
+  pinned vendors and the active one in parallel, each on its own, so a slow
+  vendor no longer holds the others back. Usage notifications now fire for
+  every pinned vendor, not only the active one.
 - **Scrolling does nothing while a pinned vendor is enabled.** With none pinned
   the panel behaves as before: one vendor, cycled by scrolling.
+- The *Primary vendor* preference now describes its role with pinned vendors:
+  shown on the panel when none is pinned, and opened first in the popup.
 
 ## [1.6.0] - 2026-11-10
 
