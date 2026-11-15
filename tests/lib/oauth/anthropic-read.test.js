@@ -1,66 +1,12 @@
 import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
 import {readCreds, planLabel, defaultCredsPath} from '../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
-
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
-}
-
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) {
-        return;
-    }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        const en = f.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try { f.delete(null); } catch (_) { /* best-effort */ }
-}
-
-function writeFixture(text) {
-    const dir = GLib.Dir.make_tmp('ai-usagebar-creds-XXXXXX');
-    const path = GLib.build_filenamev([dir, '.credentials.json']);
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(text),
-        null,
-        false,
-        Gio.FileCreateFlags.PRIVATE,
-        null
-    );
-    return {path, cleanup: () => rmRf(dir)};
-}
+import {runSync, writeText, withTempDir} from '../../_harness.js';
 
 function withFixture(text, fn) {
-    return () => {
-        const {path, cleanup} = writeFixture(text);
-        try {
-            fn(path);
-        } finally {
-            cleanup();
-        }
-    };
+    return withTempDir(({dir}) => fn(writeText(GLib.build_filenamev([dir, '.credentials.json']), text, {private: true})));
 }
 
 describe('oauth/anthropic readCreds', () => {

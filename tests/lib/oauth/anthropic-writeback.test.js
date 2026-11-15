@@ -4,71 +4,11 @@ import system from 'system';
 
 import {writeBack, readCreds} from '../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
+import {runSync, readText, writeText as writeFile, withTempDir as withTempDirIn} from '../../_harness.js';
 
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
-}
+const withTempDir = fn => withTempDirIn(fn, {setup: dir => ({path: GLib.build_filenamev([dir, '.credentials.json'])})});
 
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) {
-        return;
-    }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        // Restore directory writable so we can delete its children if a test chmodded it.
-        try { f.set_attribute_uint32('unix::mode', 0o700, Gio.FileQueryInfoFlags.NONE, null); } catch (_) { /* best-effort */ }
-        const en = f.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try { f.delete(null); } catch (_) { /* best-effort */ }
-}
-
-function withTempDir(fn) {
-    return () => {
-        const dir = GLib.Dir.make_tmp('ai-usagebar-wb-XXXXXX');
-        const path = GLib.build_filenamev([dir, '.credentials.json']);
-        try {
-            fn({dir, path});
-        } finally {
-            rmRf(dir);
-        }
-    };
-}
-
-function writeText(path, text) {
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(text),
-        null,
-        false,
-        Gio.FileCreateFlags.PRIVATE,
-        null
-    );
-}
-
-function readText(path) {
-    const [ok, contents] = Gio.File.new_for_path(path).load_contents(null);
-    if (!ok)
-        throw new Error(`failed to read ${path}`);
-    return new TextDecoder().decode(contents);
-}
+const writeText = (path, text) => writeFile(path, text, {private: true});
 
 const baseOauth = {
     accessToken: 'NEW',

@@ -2,26 +2,7 @@ import system from 'system';
 
 import {parseJwtClaims, jwtExpSecs, chatgptPlanType} from '../../../lib/oauth/jwt.js';
 import {describe, it, assertEqual, summary} from '../../_assert.js';
-
-function b64url(str) {
-    const bytes = new TextEncoder().encode(str);
-    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-    let out = '';
-    for (let i = 0; i < bytes.length; i += 3) {
-        const b0 = bytes[i];
-        const b1 = bytes[i + 1];
-        const b2 = bytes[i + 2];
-        out += A[b0 >> 2];
-        out += A[((b0 & 3) << 4) | ((b1 ?? 0) >> 4)];
-        if (b1 === undefined)
-            break;
-        out += A[((b1 & 15) << 2) | ((b2 ?? 0) >> 6)];
-        if (b2 === undefined)
-            break;
-        out += A[b2 & 63];
-    }
-    return out;
-}
+import {b64url} from '../../_harness.js';
 
 function fakeJwt(claims) {
     return `${b64url(JSON.stringify({alg: 'none', typ: 'JWT'}))}.${b64url(JSON.stringify(claims))}.sig`;

@@ -1,24 +1,9 @@
-import GLib from 'gi://GLib';
 import system from 'system';
 
 import {withMutex, staleResult, MAX_STALE_MS, RETRY_AFTER_MS, underBackoff, backoffResult, redactHttpError, recordHttpError,
     redactingCache, redactResult, redactedFetch} from '../../../lib/vendors/fetch-common.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
-
-// The `it` harness is synchronous, so resolve promises against a main loop.
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
-}
+import {runSync} from '../../_harness.js';
 
 function fakeCache({payload = null, lastError = null, ageMs = null, retryAfter = null} = {}) {
     return {

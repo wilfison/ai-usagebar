@@ -1,11 +1,10 @@
 import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
-import {Cache} from '../../../../lib/cache.js';
 import {parseUsage, snapshotToCacheJson, CACHE_VERSION} from '../../../../lib/vendors/openai/parser.js';
 import {fetchSnapshot, resetCreditsUrl, USAGE_URL, USER_AGENT} from '../../../../lib/vendors/openai/main.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
+import {runSync, httpStub, res, resTransport, chmod, backdate, readText, writeText, withCacheHome, fakeJwt, retryArmed} from '../../../_harness.js';
 
 const USAGE = JSON.stringify({
     plan_type: 'plus',
@@ -21,125 +20,21 @@ const CACHED = JSON.stringify({
 
 const cached = (raw) => snapshotToCacheJson(parseUsage(raw, null));
 
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
+function writeAuth(path, {accessToken = 'AT', refreshToken = 'RT', idToken}) {
+    const doc = {tokens: {access_token: accessToken, refresh_token: refreshToken, id_token: idToken, account_id: 'acc'}};
+    return writeText(path, JSON.stringify(doc));
 }
 
-function httpStub(responses) {
-    const seq = Array.isArray(responses) ? responses : [responses];
-    const calls = [];
-    let i = 0;
-    const fn = (opts) => {
-        calls.push(opts);
-        const r = seq[Math.min(i, seq.length - 1)];
-        i++;
-        return Promise.resolve(r);
-    };
-    fn.calls = calls;
-    return fn;
-}
-
-function res(status, text) {
-    return {status, headers: {}, bodyBytes: new TextEncoder().encode(text ?? ''), error: null};
-}
-function resTransport() {
-    return {status: 0, headers: {}, bodyBytes: new Uint8Array(0), error: {kind: 'transport', message: 'refused'}};
-}
-
-function b64url(str) {
-    const bytes = new TextEncoder().encode(str);
-    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-    let out = '';
-    for (let i = 0; i < bytes.length; i += 3) {
-        const b0 = bytes[i], b1 = bytes[i + 1], b2 = bytes[i + 2];
-        out += A[b0 >> 2];
-        out += A[((b0 & 3) << 4) | ((b1 ?? 0) >> 4)];
-        if (b1 === undefined) break;
-        out += A[((b1 & 15) << 2) | ((b2 ?? 0) >> 6)];
-        if (b2 === undefined) break;
-        out += A[b2 & 63];
-    }
-    return out;
-}
-function fakeJwt(claims) {
-    return `${b64url(JSON.stringify({alg: 'none'}))}.${b64url(JSON.stringify(claims))}.sig`;
-}
-
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) { return; }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        const en = f.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try { f.delete(null); } catch (_) { /* best-effort */ }
-}
-
-function withTemp(fn) {
-    return () => {
-        const dir = GLib.Dir.make_tmp('ai-usagebar-oai-XXXXXX');
-        const prev = GLib.getenv('XDG_CACHE_HOME');
-        GLib.setenv('XDG_CACHE_HOME', dir, true);
-        try {
-            const credsPath = GLib.build_filenamev([dir, 'auth.json']);
-            const jwt = fakeJwt({
-                exp: Math.trunc(Date.now() / 1000) + 3600,
-                'https://api.openai.com/auth': {chatgpt_plan_type: 'plus'},
-            });
-            const doc = {tokens: {access_token: 'AT', refresh_token: 'RT', id_token: jwt, account_id: 'acc'}};
-            Gio.File.new_for_path(credsPath).replace_contents(
-                new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
-            fn({cache: Cache.forVendor('openai'), credsPath, dir});
-        } finally {
-            if (prev !== null && prev !== undefined)
-                GLib.setenv('XDG_CACHE_HOME', prev, true);
-            else
-                GLib.unsetenv('XDG_CACHE_HOME');
-            rmRf(dir);
-        }
-    };
-}
-
-function backdate(cache, secs) {
-    const f = Gio.File.new_for_path(cache.payloadPath);
-    f.set_attribute_uint64('time::modified', Math.floor(Date.now() / 1000) - secs, Gio.FileQueryInfoFlags.NONE, null);
-    f.set_attribute_uint32('time::modified-usec', 0, Gio.FileQueryInfoFlags.NONE, null);
-}
-
-function readText(path) {
-    const [, contents] = Gio.File.new_for_path(path).load_contents(null);
-    return new TextDecoder().decode(contents);
-}
-
-function chmod(path, mode) {
-    Gio.File.new_for_path(path).set_attribute_uint32('unix::mode', mode, Gio.FileQueryInfoFlags.NONE, null);
-}
+const withTemp = fn => withCacheHome('openai', fn, {
+    setup: dir => ({
+        credsPath: writeAuth(GLib.build_filenamev([dir, 'auth.json']), {
+            idToken: fakeJwt({exp: Math.trunc(Date.now() / 1000) + 3600, 'https://api.openai.com/auth': {chatgpt_plan_type: 'plus'}}),
+        }),
+    }),
+});
 
 function expiredCreds(dir, rel) {
-    const path = GLib.build_filenamev([dir, rel]);
-    GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755);
-    const doc = {tokens: {access_token: 'AT', refresh_token: 'RT', id_token: fakeJwt({exp: 1}), account_id: 'acc'}};
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
-    return path;
+    return writeAuth(GLib.build_filenamev([dir, rel]), {idToken: fakeJwt({exp: 1})});
 }
 
 describe('fetchSnapshot (openai)', () => {
@@ -329,16 +224,8 @@ describe('fetchSnapshot (openai): reset credit details', () => {
 });
 
 
-function retryArmed(cache) {
-    return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.retry_after'])).query_exists(null);
-}
-
 function signedOutCreds(dir, {accessToken, refreshToken, exp}) {
-    const path = GLib.build_filenamev([dir, 'signed-out.json']);
-    const doc = {tokens: {access_token: accessToken, refresh_token: refreshToken, id_token: fakeJwt({exp}), account_id: 'acc'}};
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
-    return path;
+    return writeAuth(GLib.build_filenamev([dir, 'signed-out.json']), {accessToken, refreshToken, idToken: fakeJwt({exp})});
 }
 
 describe('fetchSnapshot (openai): a signed-out credentials file', () => {

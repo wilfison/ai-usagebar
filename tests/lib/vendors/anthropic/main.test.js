@@ -1,12 +1,11 @@
 import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
-import {Cache} from '../../../../lib/cache.js';
 import {parseUsage, snapshotToCacheJson} from '../../../../lib/vendors/anthropic/parser.js';
 import {fetchSnapshot, USAGE_URL, USAGE_BETA_HEADER, USAGE_USER_AGENT} from '../../../../lib/vendors/anthropic/main.js';
 import {readCreds, TOKEN_URL} from '../../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
+import {runSync, httpStub, res, resTransport, chmod, backdate, writeText, withCacheHome, retryArmed} from '../../../_harness.js';
 
 const USAGE = JSON.stringify({
     five_hour: {utilization: 42, resets_at: '2026-05-23T17:30:00Z'},
@@ -15,111 +14,14 @@ const USAGE = JSON.stringify({
 
 const cached = (raw) => snapshotToCacheJson(parseUsage(raw, 'Pro'));
 
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
+function writeCreds(dir, rel, {expiresAt, subscriptionType = 'pro', rateLimitTier = ''}) {
+    const doc = {claudeAiOauth: {accessToken: 'at', refreshToken: 'rt', expiresAt, subscriptionType, rateLimitTier}};
+    return writeText(GLib.build_filenamev([dir, rel]), JSON.stringify(doc));
 }
 
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) {
-        return;
-    }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        const en = f.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try { f.delete(null); } catch (_) { /* best-effort */ }
-}
-
-function chmod(path, mode) {
-    Gio.File.new_for_path(path).set_attribute_uint32('unix::mode', mode, Gio.FileQueryInfoFlags.NONE, null);
-}
-
-function writeCreds(dir, rel, {expiresAt, subscriptionType = 'pro'}) {
-    const path = GLib.build_filenamev([dir, rel]);
-    GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755);
-    const doc = {claudeAiOauth: {accessToken: 'at', refreshToken: 'rt', expiresAt, subscriptionType, rateLimitTier: ''}};
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
-    return path;
-}
-
-function withTemp(fn, {expiresAt = 9_999_999_999_000} = {}) {
-    return () => {
-        const dir = GLib.Dir.make_tmp('ai-usagebar-fetch-XXXXXX');
-        const prev = GLib.getenv('XDG_CACHE_HOME');
-        GLib.setenv('XDG_CACHE_HOME', dir, true);
-        try {
-            const credsPath = GLib.build_filenamev([dir, 'creds.json']);
-            const doc = {
-                claudeAiOauth: {
-                    accessToken: 'at',
-                    refreshToken: 'rt',
-                    expiresAt,
-                    subscriptionType: 'pro',
-                    rateLimitTier: 'tier_5x',
-                },
-            };
-            Gio.File.new_for_path(credsPath).replace_contents(
-                new TextEncoder().encode(JSON.stringify(doc)), null, false,
-                Gio.FileCreateFlags.NONE, null
-            );
-            fn({cache: Cache.forVendor('anthropic'), credsPath, dir});
-        } finally {
-            if (prev !== null && prev !== undefined)
-                GLib.setenv('XDG_CACHE_HOME', prev, true);
-            else
-                GLib.unsetenv('XDG_CACHE_HOME');
-            rmRf(dir);
-        }
-    };
-}
-
-function httpStub(responses) {
-    const seq = Array.isArray(responses) ? responses : [responses];
-    const calls = [];
-    let i = 0;
-    const fn = (opts) => {
-        calls.push(opts);
-        const r = seq[Math.min(i, seq.length - 1)];
-        i++;
-        return Promise.resolve(r);
-    };
-    fn.calls = calls;
-    return fn;
-}
-
-function res(status, text) {
-    return {status, headers: {}, bodyBytes: new TextEncoder().encode(text ?? ''), error: null};
-}
-function resTransport() {
-    return {status: 0, headers: {}, bodyBytes: new Uint8Array(0), error: {kind: 'transport', message: 'connection refused'}};
-}
-
-function backdate(cache, secs) {
-    const f = Gio.File.new_for_path(cache.payloadPath);
-    const past = Math.floor(Date.now() / 1000) - secs;
-    f.set_attribute_uint64('time::modified', past, Gio.FileQueryInfoFlags.NONE, null);
-    f.set_attribute_uint32('time::modified-usec', 0, Gio.FileQueryInfoFlags.NONE, null);
-}
+const withTemp = (fn, {expiresAt = 9_999_999_999_000} = {}) => withCacheHome('anthropic', fn, {
+    setup: dir => ({credsPath: writeCreds(dir, 'creds.json', {expiresAt, rateLimitTier: 'tier_5x'})}),
+});
 
 describe('fetchSnapshot', () => {
     it('fresh cache skips the network', withTemp(({cache, credsPath}) => {
@@ -291,16 +193,9 @@ describe('fetchSnapshot', () => {
 });
 
 
-function retryArmed(cache) {
-    return Gio.File.new_for_path(GLib.build_filenamev([cache.dir, '.retry_after'])).query_exists(null);
-}
-
 function blankCreds(dir, {accessToken = '  ', refreshToken = 'rt', expiresAt = 9_999_999_999_000} = {}) {
-    const path = GLib.build_filenamev([dir, 'blank.json']);
     const doc = {claudeAiOauth: {accessToken, refreshToken, expiresAt, subscriptionType: 'pro', rateLimitTier: ''}};
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(JSON.stringify(doc)), null, false, Gio.FileCreateFlags.NONE, null);
-    return path;
+    return writeText(GLib.build_filenamev([dir, 'blank.json']), JSON.stringify(doc));
 }
 
 describe('fetchSnapshot: a signed-out credentials file', () => {

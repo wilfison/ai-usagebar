@@ -4,49 +4,9 @@ import system from 'system';
 
 import {writeActiveVendorMirror} from '../lib/active-vendor.js';
 import {describe, it, assertEqual, summary} from './_assert.js';
+import {withCacheHome} from './_harness.js';
 
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) {
-        return;
-    }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        const en = f.enumerate_children(
-            'standard::name',
-            Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
-            null
-        );
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try {
-        f.delete(null);
-    } catch (_) { /* best-effort */ }
-}
-
-function withTempCache(fn) {
-    return () => {
-        const dir = GLib.Dir.make_tmp('ai-usagebar-test-XXXXXX');
-        const prev = GLib.getenv('XDG_CACHE_HOME');
-        GLib.setenv('XDG_CACHE_HOME', dir, true);
-        try {
-            fn(dir);
-        } finally {
-            if (prev !== null && prev !== undefined)
-                GLib.setenv('XDG_CACHE_HOME', prev, true);
-            else
-                GLib.unsetenv('XDG_CACHE_HOME');
-            rmRf(dir);
-        }
-    };
-}
+const withTempCache = fn => withCacheHome(null, ({dir}) => fn(dir));
 
 function bytesToString(u8) {
     return new TextDecoder().decode(u8);

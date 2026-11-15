@@ -1,96 +1,17 @@
 import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
 import {
     refresh, needsRefresh, readAuth, writeBack, applyRefresh, expiresAtSecs, planType, TOKEN_URL,
 } from '../../../lib/oauth/openai.js';
 import {describe, it, assertEqual, assertThrows, summary} from '../../_assert.js';
+import {
+    runSync, httpStub, res, readText, fakeJwt, writeText as writeFile, withTempDir as withTempDirIn,
+} from '../../_harness.js';
 
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
-}
+const withTempDir = fn => withTempDirIn(fn, {setup: dir => ({path: GLib.build_filenamev([dir, 'auth.json'])})});
 
-function httpStub(response) {
-    const calls = [];
-    const fn = (opts) => {
-        calls.push(opts);
-        return Promise.resolve(response);
-    };
-    fn.calls = calls;
-    return fn;
-}
-
-function res(status, text) {
-    return {status, headers: {}, bodyBytes: new TextEncoder().encode(text ?? ''), error: null};
-}
-
-function b64url(str) {
-    const bytes = new TextEncoder().encode(str);
-    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-    let out = '';
-    for (let i = 0; i < bytes.length; i += 3) {
-        const b0 = bytes[i], b1 = bytes[i + 1], b2 = bytes[i + 2];
-        out += A[b0 >> 2];
-        out += A[((b0 & 3) << 4) | ((b1 ?? 0) >> 4)];
-        if (b1 === undefined) break;
-        out += A[((b1 & 15) << 2) | ((b2 ?? 0) >> 6)];
-        if (b2 === undefined) break;
-        out += A[b2 & 63];
-    }
-    return out;
-}
-function fakeJwt(claims) {
-    return `${b64url(JSON.stringify({alg: 'none'}))}.${b64url(JSON.stringify(claims))}.sig`;
-}
-
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) { return; }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        const en = f.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try { f.delete(null); } catch (_) { /* best-effort */ }
-}
-
-function withTempDir(fn) {
-    return () => {
-        const dir = GLib.Dir.make_tmp('ai-usagebar-codex-XXXXXX');
-        try {
-            fn({dir, path: GLib.build_filenamev([dir, 'auth.json'])});
-        } finally {
-            rmRf(dir);
-        }
-    };
-}
-
-function writeText(path, text) {
-    Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(text), null, false, Gio.FileCreateFlags.PRIVATE, null);
-}
-function readText(path) {
-    const [, contents] = Gio.File.new_for_path(path).load_contents(null);
-    return new TextDecoder().decode(contents);
-}
+const writeText = (path, text) => writeFile(path, text, {private: true});
 
 describe('needsRefresh', () => {
     it('true inside the 300s buffer', () => assertEqual(needsRefresh(1_000_000 + 100, 1_000_000), true));

@@ -1,22 +1,8 @@
-import GLib from 'gi://GLib';
 import system from 'system';
 
 import {refresh, TOKEN_URL, CLIENT_ID, BETA_HEADER, USER_AGENT} from '../../../lib/oauth/anthropic.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../../_assert.js';
-
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
-}
+import {runSync} from '../../_harness.js';
 
 function utf8(s) {
     return new TextEncoder().encode(s);

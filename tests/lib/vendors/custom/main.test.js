@@ -1,12 +1,10 @@
-import GLib from 'gi://GLib';
-import Gio from 'gi://Gio';
 import system from 'system';
 
-import {Cache} from '../../../../lib/cache.js';
 import {parseUsage, snapshotToCacheJson, requestHeaders} from '../../../../lib/vendors/custom/parser.js';
 import {fetchSnapshot} from '../../../../lib/vendors/custom/main.js';
 import {customAdapter} from '../../../../lib/vendors/custom/adapter.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
+import {runSync, httpStub, res, backdate, withCacheHome} from '../../../_harness.js';
 
 const URL = 'https://api.example.com/usage';
 const MAPPING = {planPath: '/account/tier', metrics: [{label: 'Requests', used: '/usage/used', limit: '/usage/limit'}]};
@@ -15,73 +13,7 @@ const SEED = JSON.stringify({account: {tier: 'Seed'}, usage: {used: 10, limit: 1
 const HEADERS = requestHeaders({authHeader: 'Authorization', authScheme: 'Bearer', extraHeaders: {'X-Team': 'core'}}, 'k');
 const cached = (raw) => snapshotToCacheJson({...parseUsage(raw, MAPPING), name: 'Team API'});
 
-function runSync(promise) {
-    const loop = GLib.MainLoop.new(null, false);
-    let value, err, done = false;
-    Promise.resolve(promise).then(
-        v => { value = v; done = true; loop.quit(); },
-        e => { err = e; done = true; loop.quit(); }
-    );
-    if (!done)
-        loop.run();
-    if (err)
-        throw err;
-    return value;
-}
-
-function httpStub(response) {
-    const calls = [];
-    const fn = (opts) => {
-        calls.push(opts);
-        return Promise.resolve(response);
-    };
-    fn.calls = calls;
-    return fn;
-}
-function res(status, text) {
-    return {status, headers: {}, bodyBytes: new TextEncoder().encode(text ?? ''), error: null};
-}
-
-function rmRf(path) {
-    const f = Gio.File.new_for_path(path);
-    if (!f.query_exists(null))
-        return;
-    let info;
-    try {
-        info = f.query_info('standard::type', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-    } catch (_) { return; }
-    if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-        const en = f.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null);
-        let child;
-        while ((child = en.next_file(null)))
-            rmRf(GLib.build_filenamev([path, child.get_name()]));
-        en.close(null);
-    }
-    try { f.delete(null); } catch (_) { /* best-effort */ }
-}
-
-function withTemp(fn) {
-    return () => {
-        const dir = GLib.Dir.make_tmp('ai-usagebar-custom-XXXXXX');
-        const prev = GLib.getenv('XDG_CACHE_HOME');
-        GLib.setenv('XDG_CACHE_HOME', dir, true);
-        try {
-            fn({cache: Cache.forVendor('custom'), dir});
-        } finally {
-            if (prev !== null && prev !== undefined)
-                GLib.setenv('XDG_CACHE_HOME', prev, true);
-            else
-                GLib.unsetenv('XDG_CACHE_HOME');
-            rmRf(dir);
-        }
-    };
-}
-
-function backdate(cache, secs) {
-    const f = Gio.File.new_for_path(cache.payloadPath);
-    f.set_attribute_uint64('time::modified', Math.floor(Date.now() / 1000) - secs, Gio.FileQueryInfoFlags.NONE, null);
-    f.set_attribute_uint32('time::modified-usec', 0, Gio.FileQueryInfoFlags.NONE, null);
-}
+const withTemp = fn => withCacheHome('custom', fn);
 
 function deps(cache, http, extra = {}) {
     return {cache, http, url: URL, allowHttp: false, headers: HEADERS, mapping: MAPPING, name: 'Team API', ...extra};
