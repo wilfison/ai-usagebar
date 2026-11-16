@@ -496,6 +496,7 @@ class Indicator extends PanelMenu.Button {
 
     _onPopupClose() {
         this._clearSource('_renderTimeoutId');
+        this._tooltip.hide();
     }
 
     // Symbolic name (-symbolic.svg) so St recolors it to the menu foreground;

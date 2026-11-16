@@ -17,6 +17,12 @@ export class Tooltip {
     // `text` is a string, or a function read at show time.
     attach(button, text) {
         button.connect('notify::hover', () => this._onHover(button, text));
+        // St can re-raise `hover` on a hidden button (the refresh button turns
+        // reactive again when its fetch ends, after the popup has closed).
+        button.connect('notify::mapped', () => {
+            if (!button.mapped)
+                this.hide();
+        });
         // A button rebuilt mid-hover must not leave its tooltip behind.
         button.connect('destroy', () => this.hide());
     }
@@ -30,7 +36,7 @@ export class Tooltip {
         if (this._destroyed)
             return;
         this.hide();
-        if (!button.hover)
+        if (!button.hover || !button.mapped)
             return;
         this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOOLTIP_DELAY_MS, () => {
             this._timeoutId = null;
@@ -40,7 +46,7 @@ export class Tooltip {
     }
 
     _show(button, text) {
-        if (this._destroyed || !button.hover || !text)
+        if (this._destroyed || !button.hover || !button.mapped || !text)
             return;
         if (!this._label) {
             this._label = new St.Label({style_class: 'aiusagebar-tooltip'});
