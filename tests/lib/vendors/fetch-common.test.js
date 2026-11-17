@@ -246,6 +246,7 @@ function memCache({fresh = null, payload = null, ageMs = 0, lastError = null, re
         readRetryAfter: () => retryAfter,
         markStale: () => log.push(['markStale']),
         writeLastError: (code, msg) => log.push(['lastError', code, msg]),
+        clearLastError: () => log.push(['clearLastError']),
         writePayload: bytes => log.push(['payload', bytes]),
     };
 }
@@ -492,14 +493,15 @@ describe('settleRefresh', () => {
 
 describe('authorizeOAuth', () => {
     const NOW = 1_000_000;
-    const run = ({accessToken = 'AT', refreshToken = 'RT', expiresAtSecs = NOW + 3600, rr = {ok: true, accessToken: 'NEW'}} = {}) => {
+    const run = ({accessToken = 'AT', refreshToken = 'RT', expiresAtSecs = NOW + 3600, rr = {ok: true, accessToken: 'NEW'}, retiredRefreshContinues = false, cache = memCache()} = {}) => {
         const tokens = {accessToken, refreshToken};
         const calls = [];
         const r = runSync(authorizeOAuth({
             tokens,
             expiresAtSecs,
             nowSecs: NOW,
-            cache: memCache(),
+            cache,
+            retiredRefreshContinues,
             loginCommand: 'claude',
             extras: {plan: 'Pro'},
             refresh: token => {
@@ -550,6 +552,32 @@ describe('authorizeOAuth', () => {
         assertEqual(r.kind, 'loading');
         assertEqual(r.plan, undefined);
     });
+    it('a retired refresh token stops the fetch by default', () => {
+        const {r} = run({expiresAtSecs: NOW, rr: {ok: false, kind: 'http', status: 400, body: 'expired'}});
+        assertEqual(r.code, 'token-refresh-failed');
+    });
+    it('a retired refresh token goes on with the current token when asked, clearing the error', () => {
+        const cache = memCache();
+        const {r, tokens} = run({expiresAtSecs: NOW, retiredRefreshContinues: true, cache,
+            rr: {ok: false, kind: 'http', status: 400, body: 'Refresh token expired'}});
+        assertEqual(r, null);
+        assertEqual(tokens.accessToken, 'AT');
+        assertDeepEqual(writes(cache), [['clearLastError']]);
+    });
+    it('a retired refresh token with a blank access token still asks to log in', () => {
+        const {r} = run({expiresAtSecs: NOW, retiredRefreshContinues: true, accessToken: '',
+            rr: {ok: false, kind: 'http', status: 401, body: 'no'}});
+        assertEqual(r.code, 'no-access-token');
+        assertEqual(r.plan, 'Pro');
+    });
+    for (const status of [429, 500]) {
+        it(`a token-endpoint ${status} still stops the fetch when asked to go on`, () => {
+            const {r} = run({expiresAtSecs: NOW, retiredRefreshContinues: true,
+                rr: {ok: false, kind: 'http', status, body: 'x'}});
+            assertEqual(r.code, 'token-refresh-failed');
+            assertEqual(r.status, status);
+        });
+    }
 });
 
 describe('vendorFetch', () => {

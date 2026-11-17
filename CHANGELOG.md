@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Claude: a retired refresh token no longer freezes the weekly reading.**
+  When the token endpoint rejected the stored refresh token (for example
+  "Refresh token expired"), the fetch stopped before reading usage and kept
+  showing the last cached figure. It now goes on with the current access token
+  and shows the live reading, or that request's own error. A rate limit or an
+  outage on the token endpoint still stops the fetch (upstream v1.52.2).
+
 ## [1.8.1] - 2026-11-16
 
 ### Fixed

@@ -1,5 +1,9 @@
 # Log
 
+## 2026-11-17
+
+- Upstream sync to v1.52.2: an Anthropic refresh token the token endpoint retired (a 4xx other than 429) no longer stops the fetch and serves the cached weekly figure; `authorizeOAuth()` takes `retiredRefreshContinues`, set by Anthropic only, clears the token error and goes on with the current access token. Updated Anthropic and fetch pipeline.
+
 ## 2026-11-15
 
 - Review refactor, fetch and OAuth: every vendor `fetchSnapshot` comes from `vendorFetch()` (mutex, redaction, `httpGet()`, `optionalRequest()`); both OAuth vendors share `authorizeOAuth()` and `lib/oauth/creds-file.js`, redact their tokens (`redactedRun`), never POST an empty refresh token and carry `loginCommand` on errors (`no-access-token`, `token-refresh-failed`, a rejected token). The fetch slots and results moved to the pure, tested `VendorPoller`. Updated fetch pipeline, snapshot cache, panel and popup.

@@ -12,6 +12,11 @@ const USAGE = JSON.stringify({
     seven_day: {utilization: 10},
 });
 
+const STALE_USAGE = JSON.stringify({
+    five_hour: {utilization: 5},
+    seven_day: {utilization: 77},
+});
+
 const cached = (raw) => snapshotToCacheJson(parseUsage(raw, 'Pro'));
 
 function writeCreds(dir, rel, {expiresAt, subscriptionType = 'pro', rateLimitTier = ''}) {
@@ -67,6 +72,45 @@ describe('fetchSnapshot', () => {
         assertEqual(r.ok, true);
         // Rotated token was written back to disk.
         assertEqual(runSync(readCreds(credsPath)).oauth.accessToken, 'new-at');
+    }, {expiresAt: 0}));
+
+    it('a retired refresh token still fetches the live usage', withTemp(({cache, credsPath}) => {
+        runSync(cache.writePayload(cached(STALE_USAGE)));
+        backdate(cache, 120);
+        const http = httpStub([res(400, '{"error":"invalid_grant","error_description":"Refresh token expired"}'), res(200, USAGE)]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 2);
+        assertEqual(http.calls[1].url, USAGE_URL);
+        assertEqual(http.calls[1].headers.Authorization, 'Bearer at');
+        assertEqual(r.ok, true);
+        assertEqual(r.stale, false);
+        assertEqual(r.snapshot.weekly.utilizationPct, 10);
+        assertEqual(runSync(cache.readLastError()), null);
+    }, {expiresAt: 0}));
+
+    it('a retired refresh token leaves no error when usage cannot connect', withTemp(({cache, credsPath}) => {
+        runSync(cache.writePayload(cached(STALE_USAGE)));
+        backdate(cache, 120);
+        const http = httpStub([res(400, 'Refresh token expired'), resTransport()]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 2);
+        assertEqual(r.ok, true);
+        assertEqual(r.stale, true);
+        assertEqual(r.snapshot.weekly.utilizationPct, 77);
+        assertEqual(r.lastError, null);
+        assertEqual(runSync(cache.readLastError()), null);
+    }, {expiresAt: 0}));
+
+    it('a token-endpoint 429 makes no usage request and arms the backoff', withTemp(({cache, credsPath}) => {
+        runSync(cache.writePayload(cached(STALE_USAGE)));
+        backdate(cache, 120);
+        const http = httpStub([res(429, 'slow down'), res(200, USAGE)]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 1);
+        assertEqual(r.stale, true);
+        assertEqual(r.snapshot.weekly.utilizationPct, 77);
+        assertEqual(r.lastError.code, 429);
+        assertEqual(retryArmed(cache), true);
     }, {expiresAt: 0}));
 
     it('usage failure with no cache carries the plan from the credentials', withTemp(({cache, credsPath}) => {

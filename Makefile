@@ -80,9 +80,9 @@ headless:
 headless-stop:
 	@./tools/headless.sh stop
 
-# What the upstream Rust widget changed since a tag: make upstream-diff FROM=v1.52.1
+# What the upstream Rust widget changed since a tag: make upstream-diff FROM=v1.52.2
 upstream-diff:
-	@./tools/upstream-diff.sh $(or $(FROM),$(error FROM=<tag> is required, e.g. make upstream-diff FROM=v1.52.1))
+	@./tools/upstream-diff.sh $(or $(FROM),$(error FROM=<tag> is required, e.g. make upstream-diff FROM=v1.52.2))
 
 # Extract every marked string into the tracked .pot template.
 pot:
