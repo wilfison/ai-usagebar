@@ -3,8 +3,8 @@
   "description": "Monitor AI plan usage in the top panel: Claude, OpenAI Codex, Z.AI/GLM, OpenRouter, DeepSeek, Kimi, Ollama Cloud, and a custom JSON provider - inspired by akitaonrails/ai-usagebar",
   "uuid": "ai-usagebar@wilfison",
   "url": "https://github.com/wilfison/ai-usagebar",
-  "version": 12,
-  "version-name": "1.8.1",
+  "version": 13,
+  "version-name": "1.8.2",
   "settings-schema": "org.gnome.shell.extensions.ai-usagebar",
   "gettext-domain": "ai-usagebar@wilfison",
   "shell-version": [
