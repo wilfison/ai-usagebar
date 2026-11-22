@@ -1,5 +1,9 @@
 # Log
 
+## 2026-11-22
+
+- Upstream sync to v1.53.0: a Codex refresh token the token endpoint retired (a 4xx other than 429) no longer stops the fetch and serves the cached reading; OpenAI now sets `retiredRefreshContinues` like Anthropic. Updated OpenAI and fetch pipeline.
+
 ## 2026-11-17
 
 - Upstream sync to v1.52.2: an Anthropic refresh token the token endpoint retired (a 4xx other than 429) no longer stops the fetch and serves the cached weekly figure; `authorizeOAuth()` takes `retiredRefreshContinues`, set by Anthropic only, clears the token error and goes on with the current access token. Updated Anthropic and fetch pipeline.

@@ -3,6 +3,7 @@ import system from 'system';
 
 import {parseUsage, snapshotToCacheJson, CACHE_VERSION} from '../../../../lib/vendors/openai/parser.js';
 import {fetchSnapshot, resetCreditsUrl, USAGE_URL, USER_AGENT} from '../../../../lib/vendors/openai/main.js';
+import {TOKEN_URL} from '../../../../lib/oauth/openai.js';
 import {describe, it, assertEqual, summary} from '../../../_assert.js';
 import {runSync, httpStub, res, resTransport, chmod, backdate, readText, writeText, withCacheHome, fakeJwt, retryArmed} from '../../../_harness.js';
 
@@ -133,6 +134,52 @@ describe('fetchSnapshot (openai)', () => {
         } finally {
             chmod(GLib.path_get_dirname(credsPath), 0o755);
         }
+    }));
+
+    it('a retired refresh token still fetches the live usage', withTemp(({cache, dir}) => {
+        runSync(cache.writePayload(cached(CACHED)));
+        backdate(cache, 120);
+        const credsPath = expiredCreds(dir, 'auth.json');
+        const retired = res(401, '{"error":{"message":"Token reused","code":"refresh_token_reused"}}');
+        const http = httpStub([retired, res(200, USAGE)]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 2);
+        assertEqual(http.calls[0].url, TOKEN_URL);
+        assertEqual(http.calls[1].url, USAGE_URL);
+        assertEqual(http.calls[1].headers.Authorization, 'Bearer AT');
+        assertEqual(r.ok, true);
+        assertEqual(r.stale, false);
+        assertEqual(r.snapshot.session.utilizationPct, 1);
+        assertEqual(r.lastError, null);
+        assertEqual(runSync(cache.readLastError()), null);
+    }));
+
+    it('a retired refresh token leaves no error when usage cannot connect', withTemp(({cache, dir}) => {
+        runSync(cache.writePayload(cached(CACHED)));
+        backdate(cache, 120);
+        const credsPath = expiredCreds(dir, 'auth.json');
+        const http = httpStub([res(400, '{"error":"invalid_grant","error_description":"Refresh token expired"}'), resTransport()]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 2);
+        assertEqual(r.ok, true);
+        assertEqual(r.stale, true);
+        assertEqual(r.snapshot.session.utilizationPct, 50);
+        assertEqual(r.lastError, null);
+        assertEqual(runSync(cache.readLastError()), null);
+        assertEqual(retryArmed(cache), false);
+    }));
+
+    it('a token-endpoint 429 makes no usage request and arms the backoff', withTemp(({cache, dir}) => {
+        runSync(cache.writePayload(cached(CACHED)));
+        backdate(cache, 120);
+        const credsPath = expiredCreds(dir, 'auth.json');
+        const http = httpStub([res(429, '{"error":{"message":"slow down"}}'), res(200, USAGE)]);
+        const r = runSync(fetchSnapshot({cache, http, credsPath}));
+        assertEqual(http.calls.length, 1);
+        assertEqual(r.stale, true);
+        assertEqual(r.snapshot.session.utilizationPct, 50);
+        assertEqual(r.lastError.code, 429);
+        assertEqual(retryArmed(cache), true);
     }));
 
     it('an unsaved access token alone stays best-effort', withTemp(({cache, dir}) => {
