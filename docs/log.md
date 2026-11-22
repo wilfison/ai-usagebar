@@ -2,6 +2,7 @@
 
 ## 2026-11-22
 
+- Upstream sync to v1.53.0, provider status: the Claude and Codex cards take the colour of their official status page with a `▲` and the incident title while it flags one of that provider's components (`lib/incident.js`, `provider-status` setting, `AI_USAGEBAR_FAKE_INCIDENT`). Last synced tag is now v1.53.0. Added provider status; updated cache, headless, update check, Anthropic, OpenAI and upstream sync.
 - Upstream sync to v1.53.0: a Codex refresh token the token endpoint retired (a 4xx other than 429) no longer stops the fetch and serves the cached reading; OpenAI now sets `retiredRefreshContinues` like Anthropic. Updated OpenAI and fetch pipeline.
 
 ## 2026-11-17

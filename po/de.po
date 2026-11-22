@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-15 15:53-0300\n"
+"POT-Creation-Date: 2026-11-22 20:19-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: German\n"
@@ -84,6 +84,22 @@ msgid "%d reset available"
 msgid_plural "%d resets available"
 msgstr[0] "%d Reset verfügbar"
 msgstr[1] "%d Resets verfügbar"
+
+#: lib/incident.js
+msgid "Major outage"
+msgstr "Schwerer Ausfall"
+
+#: lib/incident.js
+msgid "Partial outage"
+msgstr "Teilausfall"
+
+#: lib/incident.js
+msgid "Degraded performance"
+msgstr "Beeinträchtigte Leistung"
+
+#: lib/incident.js
+msgid "Under maintenance"
+msgstr "In Wartung"
 
 #. Translators: "Claude: Session at 97%": the vendor, the usage window, then the percentage.
 #: lib/notify.js
@@ -996,6 +1012,20 @@ msgstr "Nach Aktualisierungen suchen"
 #: prefs/general.js
 msgid "Once a day, ask GitHub whether a newer release exists"
 msgstr "Fragt einmal täglich bei GitHub nach, ob eine neuere Version existiert"
+
+#: prefs/general.js
+msgid "Service status"
+msgstr "Dienststatus"
+
+#: prefs/general.js
+msgid "Show provider status"
+msgstr "Anbieterstatus anzeigen"
+
+#: prefs/general.js
+msgid "Mark Claude and Codex when their official status page reports a problem"
+msgstr ""
+"Claude und Codex markieren, wenn ihre offizielle Statusseite ein Problem "
+"meldet"
 
 #: prefs/general.js
 msgid "Reset"

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Provider status from the official status page.** While
+  `status.claude.com` or `status.openai.com` flags Claude Code, the Claude API,
+  Codex or the OpenAI login, the provider's name in the popup takes the page's
+  colour (yellow degraded, orange partial outage, red major outage, blue
+  maintenance) with a `▲`, and its card opens with the incident title. Trouble
+  in a neighbouring product on the same page does not mark it. The status
+  request is unauthenticated, runs beside the usage fetch with its own
+  4-second timeout and is cached for 5 minutes; a page that does not answer
+  is not asked again for 5 minutes and shows no mark meanwhile. Turn it off
+  with *Show provider status* under *Behavior* (upstream v1.53.0).
+
 ### Fixed
 
 - **Codex: a retired refresh token no longer freezes the reading.** When the

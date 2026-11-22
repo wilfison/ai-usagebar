@@ -29,6 +29,7 @@ import {tooltipRows, vformat} from '../lib/format.js';
 import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
 import {settingsEffects} from '../lib/settings-effect.js';
+import {fetchIncident, incidentColor, incidentRow, incidentStatusLabel, statusPageFor} from '../lib/incident.js';
 
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
@@ -80,6 +81,7 @@ class Indicator extends PanelMenu.Button {
             onResult: (id, out, {all}) => this._onVendorResult(id, out, all),
         });
         this._sessions = null;          // last context scan for CONTEXT_VENDOR
+        this._incidents = new Map();    // vendorId -> status page incident, or null
         this._vendorItems = new Map();  // vendorId -> VendorCard
         this._enabledSig = '';
 
@@ -187,6 +189,8 @@ class Indicator extends PanelMenu.Button {
             this._poller.refresh(id).catch(warnOnFailure('refresh'));
         if (effects.rebuildTheme)
             this._rebuildTheme();
+        if (!this._config.providerStatus)
+            this._incidents.clear();
         this._reRenderFromCache();
     }
 
@@ -234,6 +238,8 @@ class Indicator extends PanelMenu.Button {
         const card = this._vendorItems.get(id);
         if (!card)
             return;
+        const incident = this._config.providerStatus ? this._incidents.get(id) ?? null : null;
+        card.setIncident(incident, incident ? this._textColor(incidentColor(incident.severity, this._theme)) : null);
         const res = this._poller.result(id);
         if (!res) {
             card.setMessage(_('No data: use "Refresh all"'), {dim: true});
@@ -258,6 +264,8 @@ class Indicator extends PanelMenu.Button {
                 if (extra.length)
                     model.rows = [...extra, ...model.rows];
             }
+            if (incident)
+                model.rows = [incidentRow(incident, this._theme, _), ...model.rows];
             card.setModel(model, {showPace: this._config.showPaceMarker, textColor: c => this._textColor(c)});
         } else if (res.kind === 'loading') {
             card.setMessage(_('Loading…'), {dim: true});
@@ -348,14 +356,31 @@ class Indicator extends PanelMenu.Button {
         const adapter = getAdapter(id);
         const cache = new Cache(adapter.cacheId);
         const config = this._config;
-        return this._devFetch.run(adapter, {config, cache, http: request, signal: this._cancellable})
-            .then(res => ({res, adapter, cache, config}));
+        return Promise.all([
+            this._devFetch.run(adapter, {config, cache, http: request, signal: this._cancellable}),
+            this._fetchIncident(id, config),
+        ]).then(([res, incident]) => ({res, adapter, cache, config, incident}));
+    }
+
+    // Overlaps the usage fetch; its own 4 s timeout bounds the wait.
+    _fetchIncident(id, config) {
+        const page = statusPageFor(id);
+        if (!config.providerStatus || !page)
+            return Promise.resolve(null);
+        return this._devFetch.incident(id, () => fetchIncident(id, {
+            http: request,
+            cache: new Cache(page.cacheId),
+            signal: this._cancellable,
+            statusLabel: s => incidentStatusLabel(s, _),
+        }));
     }
 
     // A fresh result notifies only while its vendor is still polled (or when
     // "Refresh all" asked for it), so one scrolled away from mid-fetch stays quiet.
-    _onVendorResult(id, {res, adapter, cache, config}, all) {
+    _onVendorResult(id, {res, adapter, cache, config, incident}, all) {
         this._vendorItems.get(id)?.setBusy(false);
+        if (incident !== undefined)
+            this._incidents.set(id, incident);
         // A run that threw carries only `res`.
         this._maybeScanContext(id, res, config ?? this._config).catch(warnOnFailure('context scan'));
         const polled = this._pollIds.includes(id);
@@ -526,6 +551,7 @@ class Indicator extends PanelMenu.Button {
         this._settings = null;
         this._notifier = null;
         this._vendorItems.clear();
+        this._incidents.clear();
         this._poller.destroy();
 
         super._onDestroy();

@@ -5,7 +5,7 @@ description: make upstream-diff lists the Rust upstream changes since a tag that
 tags: [gnome-shell]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-17T12:00:00Z
+  at: 2026-11-22T12:00:00Z
 sources:
   - id: tool
     title: tools/upstream-diff.sh
@@ -14,7 +14,7 @@ sources:
 
 # Overview
 
-`make upstream-diff FROM=<last synced tag>` clones or fast-forwards [akitaonrails/ai-usagebar](https://github.com/akitaonrails/ai-usagebar) into `tmp/ai-usagebar-rust` and prints the CHANGELOG entries since that tag, then the commits and files touching code this port mirrors (our vendors, shared pacing/format/notify logic, its `gnome-extension/`), and only counts the rest (macOS, Windows, TUI, vendors we lack).[^tool] Triage starts from that list. The last synced tag is v1.52.2.
+`make upstream-diff FROM=<last synced tag>` clones or fast-forwards [akitaonrails/ai-usagebar](https://github.com/akitaonrails/ai-usagebar) into `tmp/ai-usagebar-rust` and prints the CHANGELOG entries since that tag, then the commits and files touching code this port mirrors (our vendors, shared pacing/format/notify logic, its `gnome-extension/`), and only counts the rest (macOS, Windows, TUI, vendors we lack).[^tool] Triage starts from that list. The last synced tag is v1.53.0. On a sync, also check that the [provider status](/features/provider-status.md) component names still exist on the live status pages.
 
 # GNOME Shell sources
 

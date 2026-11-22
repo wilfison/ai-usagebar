@@ -136,6 +136,12 @@
       <description>When enabled, the extension asks the GitHub API once a day for the latest release and shows a link in the popup when it is newer than the installed version. No request is made while this is off.</description>
     </key>
 
+    <key name="provider-status" type="b">
+      <default>true</default>
+      <summary>Show provider status</summary>
+      <description>When enabled, the Claude and Codex cards ask their official status page (status.claude.com, status.openai.com) at most every 5 minutes, alongside the usage fetch, and colour the provider name with a mark and the incident title while the page flags one of that provider's components. No request is made while this is off.</description>
+    </key>
+
     <key name="context-enabled" type="b">
       <default>false</default>
       <summary>Show Claude Code session context</summary>

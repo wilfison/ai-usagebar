@@ -47,6 +47,7 @@ describe('readConfig: schema defaults', () => {
     it('notifications on by default', () => assertEqual(cfg.notifications.enabled, true));
     it('notify threshold defaults to 97', () => assertEqual(cfg.notifications.threshold, 97));
     it('update check on by default', () => assertEqual(cfg.updateCheck.enabled, true));
+    it('provider status on by default', () => assertEqual(cfg.providerStatus, true));
     it('openrouter env var name default', () =>
         assertEqual(cfg.vendors.openrouter.apiKeyEnv, 'OPENROUTER_API_KEY'));
     it('openrouter management key env default', () =>
@@ -77,6 +78,7 @@ describe('readConfig: overrides', () => {
     settings.set_boolean('notify-enabled', true);
     settings.set_int('notify-threshold', 75);
     settings.set_boolean('update-check-enabled', false);
+    settings.set_boolean('provider-status', false);
     const cfg = readConfig(settings);
     it('honors the creds-path override', () =>
         assertEqual(cfg.vendors.anthropic.credentialsPath, '/tmp/x.json'));
@@ -102,6 +104,7 @@ describe('readConfig: overrides', () => {
     it('honors the notify-enabled toggle', () => assertEqual(cfg.notifications.enabled, true));
     it('honors the notify-threshold override', () => assertEqual(cfg.notifications.threshold, 75));
     it('honors the update-check toggle', () => assertEqual(cfg.updateCheck.enabled, false));
+    it('honors the provider-status toggle', () => assertEqual(cfg.providerStatus, false));
 });
 
 describe('readConfig: custom provider', () => {

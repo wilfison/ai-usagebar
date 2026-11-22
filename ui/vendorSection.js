@@ -175,6 +175,12 @@ export class VendorCard {
         this.item.menu.addMenuItem(holder);
     }
 
+    // A status page incident colours the name and marks it; null clears both.
+    setIncident(incident, color) {
+        this.item.label.text = incident ? `${this._name} ▲` : this._name;
+        this.item.label.set_style(incident && color ? `color: ${color};` : null);
+    }
+
     // The header button is held while this vendor's fetch is in flight.
     setBusy(busy) {
         this._refresh.reactive = !busy;

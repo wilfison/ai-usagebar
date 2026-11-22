@@ -172,6 +172,11 @@ export function buildBehaviorPage(settings) {
         _('Once a day, ask GitHub whether a newer release exists')));
     page.add(updateGroup);
 
+    const statusGroup = new Adw.PreferencesGroup({title: _('Service status')});
+    statusGroup.add(switchRow(settings, 'provider-status', _('Show provider status'),
+        _('Mark Claude and Codex when their official status page reports a problem')));
+    page.add(statusGroup);
+
     const resetGroup = new Adw.PreferencesGroup({
         title: _('Reset'),
         description: _('Restore every setting (vendor toggles, paths, keys, formats, and colors) to its built-in default.'),

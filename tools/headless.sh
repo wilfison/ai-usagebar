@@ -5,7 +5,7 @@
 # D-Bus session bus, a virtual 1920x1080 monitor, and this checkout linked in
 # as the extension. A helper extension turns on unsafe mode so Eval works.
 #
-#   start [--lang LL] [--fake-pct N] [--fake-error ID[:stale],...] [--fake-delay MS]
+#   start [--lang LL] [--fake-pct N] [--fake-error ID[:stale],...] [--fake-delay MS] [--fake-incident SEVERITY]
 #                         launch it (rebuilds the state dir; LL e.g. pt_BR)
 #   stop                  stop the shell and its prefs process
 #   status                running or not, plus the JS error count
@@ -117,13 +117,14 @@ PROBE='(() => {
 })()'
 
 start() {
-    local lang="" fake_pct="" fake_error="" fake_delay=""
+    local lang="" fake_pct="" fake_error="" fake_delay="" fake_incident=""
     while [ $# -gt 0 ]; do
         case "$1" in
         --lang) lang="$2"; shift 2 ;;
         --fake-pct) fake_pct="$2"; shift 2 ;;
         --fake-error) fake_error="$2"; shift 2 ;;
         --fake-delay) fake_delay="$2"; shift 2 ;;
+        --fake-incident) fake_incident="$2"; shift 2 ;;
         *) die "unknown option: $1" ;;
         esac
     done
@@ -175,6 +176,7 @@ EOF
         ${fake_pct:+AI_USAGEBAR_FAKE_PCT="$fake_pct"} \
         ${fake_error:+AI_USAGEBAR_FAKE_ERROR="$fake_error"} \
         ${fake_delay:+AI_USAGEBAR_FAKE_DELAY_MS="$fake_delay"} \
+        ${fake_incident:+AI_USAGEBAR_FAKE_INCIDENT="$fake_incident"} \
         dbus-run-session -- "$STATE/session.sh" >"$STATE/shell.log" 2>&1 </dev/null &
 
     # Probes run in a subshell: js dies while the shell is not on the bus yet,
@@ -196,7 +198,7 @@ EOF
     # harmless move rather than on the caller's first click.
     js "$INPUT_PRELUDE I.pointer.notify_absolute_motion(I.now(), 960, 700);" >/dev/null
     sleep 0.5
-    echo "headless: running (locale $locale${fake_pct:+, fake pct $fake_pct}${fake_error:+, fake error $fake_error}${fake_delay:+, fake delay ${fake_delay}ms}); state in $STATE"
+    echo "headless: running (locale $locale${fake_pct:+, fake pct $fake_pct}${fake_error:+, fake error $fake_error}${fake_delay:+, fake delay ${fake_delay}ms}${fake_incident:+, fake incident $fake_incident}); state in $STATE"
 }
 
 stop() {
