@@ -36,15 +36,18 @@ Requires **GNOME Shell 47–51** (developed and tested on 50; please
 elsewhere). It is distributed only through GitHub releases, not
 extensions.gnome.org.
 
-1. Download `ai-usagebar@wilfison.shell-extension.zip` from the
-   [latest release](https://github.com/wilfison/ai-usagebar/releases/latest).
-2. Install it:
+1. Download the [latest release](https://github.com/wilfison/ai-usagebar/releases/latest),
+   check its SHA256 and install it:
 
    ```bash
+   cd /tmp
+   curl -fsSLO https://github.com/wilfison/ai-usagebar/releases/latest/download/ai-usagebar@wilfison.shell-extension.zip
+   curl -fsSLO https://github.com/wilfison/ai-usagebar/releases/latest/download/ai-usagebar@wilfison.shell-extension.zip.sha256
+   sha256sum -c ai-usagebar@wilfison.shell-extension.zip.sha256
    gnome-extensions install --force ai-usagebar@wilfison.shell-extension.zip
    ```
 
-3. Log out and back in (required on Wayland), then enable it:
+2. Log out and back in (required on Wayland), then enable it:
 
    ```bash
    gnome-extensions enable ai-usagebar@wilfison

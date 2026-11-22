@@ -122,7 +122,10 @@ jobs:
             echo "## Install"
             echo
             echo '```bash'
+            echo "cd /tmp"
             echo "curl -fsSLO https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/ai-usagebar@wilfison.shell-extension.zip"
+            echo "curl -fsSLO https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/ai-usagebar@wilfison.shell-extension.zip.sha256"
+            echo "sha256sum -c ai-usagebar@wilfison.shell-extension.zip.sha256"
             echo "gnome-extensions install --force ai-usagebar@wilfison.shell-extension.zip"
             echo '```'
             echo
