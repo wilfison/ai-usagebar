@@ -7,8 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A GNOME Shell extension (GJS, ES modules, `shell-version` 47 to 51, developed on 50) that shows AI plan
 usage in the top panel for Anthropic, OpenAI, Z.AI, OpenRouter, DeepSeek, Kimi, Ollama Cloud and one
 user-mapped custom provider. Port of the Rust Waybar widget
-[ai-usagebar](https://github.com/akitaonrails/ai-usagebar). This checkout IS the installed extension
-(`~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison`); there is no build step.
+[ai-usagebar](https://github.com/akitaonrails/ai-usagebar). There is no build step: gnome-shell loads
+the JS as-is. This checkout is NOT the installed extension: `~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison`
+is a separate copy, so editing here does not change the running shell. `tools/headless.sh` symlinks
+this checkout into its isolated HOME, so check changes there.
 
 ## Commands
 

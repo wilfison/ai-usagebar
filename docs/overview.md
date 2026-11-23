@@ -6,7 +6,7 @@ resource: https://github.com/wilfison/ai-usagebar
 tags: [gnome-shell, distribution, privacy]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-14T12:00:00Z
+  at: 2026-11-22T21:30:00Z
 sources:
   - id: readme
     title: README.md
@@ -26,7 +26,7 @@ It is a GNOME port of the Rust Waybar widget [akitaonrails/ai-usagebar](https://
 
 - The panel shows one label per vendor segment, coloured by severity; clicking opens a popup with a collapsible section per enabled vendor. See [panel and popup](/architecture/panel-and-popup.md).
 - Every vendor is driven through one uniform interface, the [vendor adapter](/architecture/vendor-adapters.md).
-- There is no build step: the checkout is the installed extension (`~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison`) and gnome-shell loads the JS directly.
+- There is no build step: gnome-shell loads the JS directly. The development checkout is not the installed extension (`~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison` is a separate copy); [headless](/development/headless.md) symlinks the checkout into its own isolated HOME instead.
 
 # Distribution
 
