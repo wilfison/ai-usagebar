@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-22 20:19-0300\n"
+"POT-Creation-Date: 2026-11-25 10:14-0300\n"
 "PO-Revision-Date: 2026-06-06 12:00+0000\n"
 "Last-Translator: ai-usagebar contributors\n"
 "Language-Team: French\n"
@@ -710,6 +710,13 @@ msgstr "%d pts d’avance"
 msgid "%dpts under"
 msgstr "%d pts de retard"
 
+#. Translators: "42% elapsed · 3pts ahead · on pace for 79%": how much of the window
+#. has passed, the pace, then the usage at the reset if that pace holds.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "%d%% elapsed · %s · on pace for %d%%"
+msgstr "%d%% écoulé · %s · au rythme actuel, %d%%"
+
 #. Translators: "42% elapsed · 3pts ahead": how much of the window has passed, then the pace.
 #: lib/vendors/section-common.js
 #, javascript-format
@@ -915,6 +922,17 @@ msgid ""
 msgstr ""
 "Un repère indiquant la part écoulée de la fenêtre. L’usage au-delà devient "
 "orange ou rouge s’il serait épuisé avant la réinitialisation."
+
+#: prefs/general.js
+msgid "Show usage trend"
+msgstr "Afficher la tendance d’utilisation"
+
+#: prefs/general.js
+msgid ""
+"A line of recent readings under each usage window, kept in the local cache"
+msgstr ""
+"Une ligne des relevés récents sous chaque fenêtre d’utilisation, conservée "
+"dans le cache local"
 
 #: prefs/general.js
 msgid "Shortcut to open"

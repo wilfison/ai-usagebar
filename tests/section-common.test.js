@@ -281,6 +281,26 @@ describe('paceFootnote', () => {
         assertEqual(paceFootnote(pace('estimating'), bracket), '[Estimating…]');
     });
 
+    it('adds the projection once a tenth of the window has passed', () => {
+        assertEqual(paceFootnote({...pace('ok', 3), projectedPct: 79.4}), '42% elapsed · 3pts ahead · on pace for 79%');
+        assertEqual(paceFootnote({...pace('ok', 18), projectedPct: 119.6}), '42% elapsed · 18pts ahead · on pace for 120%');
+        assertEqual(paceFootnote({...pace('ok', 3, 10), projectedPct: 79}), '10% elapsed · 3pts ahead · on pace for 79%');
+        assertEqual(paceFootnote({...pace('ok', 3, 9), projectedPct: 79}), '9% elapsed · 3pts ahead');
+    });
+
+    it('no usage, a null projection or a non-ok state has no projection', () => {
+        assertEqual(paceFootnote({...pace('ok', -42), projectedPct: 0}), '42% elapsed · 42pts under');
+        assertEqual(paceFootnote({...pace('ok', 3), projectedPct: null}), '42% elapsed · 3pts ahead');
+        assertEqual(paceFootnote({...pace('estimating'), projectedPct: 79}), 'Estimating…');
+        assertEqual(paceFootnote({...pace('limit'), projectedPct: 120}), '');
+    });
+
+    it('caps the projection at 999%', () =>
+        assertEqual(paceFootnote({...pace('ok', 30, 10), projectedPct: 4000}), '10% elapsed · 30pts ahead · on pace for 999%'));
+
+    it('translates the projection', () =>
+        assertEqual(paceFootnote({...pace('ok', 3), projectedPct: 79}, bracket), '[42% elapsed · [3pts ahead] · on pace for 79%]'));
+
     it('keeps the elapsed line whatever the verdict', () => {
         for (const verdict of ['calm', 'over', 'critical', null])
             assertEqual(paceFootnote({...pace('ok', 18), verdict}), '42% elapsed · 18pts ahead');

@@ -23,7 +23,7 @@ TO="${2:-origin/main}"
 PORTED=(
     src/anthropic src/openai src/zai src/openrouter src/deepseek src/kimi src/ollama src/custom
     src/pacing.rs src/countdown.rs src/format.rs src/display.rs src/notify.rs src/severity.rs
-    src/context src/jwt.rs src/cache.rs
+    src/context src/jwt.rs src/cache.rs src/history.rs
     gnome-extension
 )
 

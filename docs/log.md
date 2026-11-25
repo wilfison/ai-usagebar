@@ -1,5 +1,9 @@
 # Log
 
+## 2026-11-25
+
+- Upstream sync to v1.55.0 (#674 pace forecasts and trend sparklines; the rest of v1.54.0 and v1.55.0 is tray, macOS, Windows, Omarchy and Antigravity, which this port lacks). The pace footnote adds "on pace for N%" once a tenth of the window has passed. A new `usage-trend` setting, on by default, keeps up to 20 samples per window in the vendor's `.trend` cache file on each fresh fetch and draws the recent ones as a line under the window (`lib/trend.js`). Last synced tag is now v1.55.0; `tools/upstream-diff.sh` now also follows `src/history.rs`. Added usage trend; updated pace, cache and upstream sync.
+
 ## 2026-11-22
 
 - Overview: the development checkout is not the installed extension; `~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison` is a separate copy and headless symlinks the checkout into its isolated HOME. Updated overview.

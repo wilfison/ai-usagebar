@@ -44,6 +44,7 @@ describe('readConfig: schema defaults', () => {
     it('active vendor defaults to anthropic', () => assertEqual(cfg.activeVendor, 'anthropic'));
     it('pace marker off by default', () => assertEqual(cfg.showPaceMarker, false));
     it('pace arrows off by default', () => assertEqual(cfg.showPaceArrows, false));
+    it('usage trend on by default', () => assertEqual(cfg.usageTrend, true));
     it('notifications on by default', () => assertEqual(cfg.notifications.enabled, true));
     it('notify threshold defaults to 97', () => assertEqual(cfg.notifications.threshold, 97));
     it('update check on by default', () => assertEqual(cfg.updateCheck.enabled, true));
@@ -73,6 +74,7 @@ describe('readConfig: overrides', () => {
     settings.set_string('active-vendor', 'zai');
     settings.set_boolean('show-pace-marker', true);
     settings.set_boolean('show-pace-arrows', true);
+    settings.set_boolean('usage-trend', false);
     settings.set_int('refresh-interval', 600);
     settings.set_boolean('deepseek-enabled', true);
     settings.set_boolean('notify-enabled', true);
@@ -99,6 +101,7 @@ describe('readConfig: overrides', () => {
     it('honors the active-vendor override', () => assertEqual(cfg.activeVendor, 'zai'));
     it('honors the pace-marker toggle', () => assertEqual(cfg.showPaceMarker, true));
     it('honors the pace-arrows toggle', () => assertEqual(cfg.showPaceArrows, true));
+    it('honors the usage-trend toggle', () => assertEqual(cfg.usageTrend, false));
     it('honors the refresh-interval override', () => assertEqual(cfg.refreshIntervalSecs, 600));
     it('honors a vendor enable toggle', () => assertEqual(cfg.vendors.deepseek.enabled, true));
     it('honors the notify-enabled toggle', () => assertEqual(cfg.notifications.enabled, true));

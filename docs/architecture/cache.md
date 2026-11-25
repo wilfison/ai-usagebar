@@ -5,7 +5,7 @@ description: Per-vendor cache directory holding the projected snapshot plus stal
 tags: [cache, errors]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-22T12:00:00Z
+  at: 2026-11-25T12:00:00Z
 sources:
   - id: cache
     title: lib/cache.js
@@ -20,7 +20,7 @@ sources:
 
 # Layout
 
-Under `$XDG_CACHE_HOME/ai-usagebar/` (usually `~/.cache/ai-usagebar/`), each vendor has a directory with `usage.json` plus `.stale`, `.last_error` and `.retry_after` sidecars,[^cache] and the `.notified` state of [notifications](/features/notifications.md). The [provider status](/features/provider-status.md) pages reuse the same class under `incidents/<host>`, with only the payload and `.retry_after`.
+Under `$XDG_CACHE_HOME/ai-usagebar/` (usually `~/.cache/ai-usagebar/`), each vendor has a directory with `usage.json` plus `.stale`, `.last_error` and `.retry_after` sidecars,[^cache] the `.notified` state of [notifications](/features/notifications.md) and the `.trend` samples of the [usage trend](/features/usage-trend.md); a payload write keeps those two. The [provider status](/features/provider-status.md) pages reuse the same class under `incidents/<host>`, with only the payload and `.retry_after`.
 
 # Rules
 
