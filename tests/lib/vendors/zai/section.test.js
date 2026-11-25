@@ -85,8 +85,8 @@ describe('buildSection (zai): pace footnote', () => {
 
     it('every window carries its footnote', () => {
         assertEqual(windows[0].paceAlert, '~20% over pace'); // 60% at half time projects 120%
-        assertEqual(windows[0].paceFootnote, '50% elapsed · 10pts ahead');
-        assertEqual(windows[2].paceFootnote, '50% elapsed · 40pts under');
+        assertEqual(windows[0].paceFootnote, '50% elapsed · 10pts ahead · on pace for 120%');
+        assertEqual(windows[2].paceFootnote, '50% elapsed · 40pts under · on pace for 20%');
     });
 
     it('a window at its cap: Limit reached, no marker, no glyph', () => {

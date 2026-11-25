@@ -31,11 +31,16 @@ export class DevFetch {
             log(`ai-usagebar: ${FAKE_INCIDENT_ENV}=${this._fakeIncident}, faking every status page`);
     }
 
+    // Whether run() answers synthetic usage for `adapter`, never to be persisted.
+    fakesUsage(adapter) {
+        return this._fakePct !== null && typeof adapter.fakeSnapshot === 'function';
+    }
+
     async run(adapter, ctx) {
         if (this._fakeDelayMs !== null)
             await this._delay(this._fakeDelayMs);
         const failure = this._fakeErrors?.get(adapter.id) ?? null;
-        if (this._fakePct !== null && typeof adapter.fakeSnapshot === 'function')
+        if (this.fakesUsage(adapter))
             return fakeResult(failure, () => adapter.fakeSnapshot(this._fakePct, new Date(), ctx.config));
         if (failure !== null)
             return adapter.fetchSnapshot({...ctx, http: () => Promise.resolve(fakeHttpFailure())});

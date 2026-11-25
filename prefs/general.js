@@ -104,6 +104,8 @@ export function buildPopupPage(settings, cleanups) {
     popupGroup.add(entryRow(settings, 'tooltip-format', _('Popup format')));
     popupGroup.add(switchRow(settings, 'show-pace-marker', _('Show pace marker'),
         _('A tick at how much of the window has passed. Usage past it turns orange or red when it would run out before the reset.')));
+    popupGroup.add(switchRow(settings, 'usage-trend', _('Show usage trend'),
+        _('A line of recent readings under each usage window, kept in the local cache')));
     popupGroup.add(shortcutRow(settings, 'toggle-menu', _('Shortcut to open'), cleanups));
     page.add(popupGroup);
     return page;

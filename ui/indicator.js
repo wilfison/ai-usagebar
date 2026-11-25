@@ -30,6 +30,7 @@ import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
 import {settingsEffects} from '../lib/settings-effect.js';
 import {fetchIncident, incidentColor, incidentRow, incidentStatusLabel, statusPageFor} from '../lib/incident.js';
+import {attachTrends, emptyTrend, pruneTrend, recordTrend} from '../lib/trend.js';
 
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
@@ -82,6 +83,8 @@ class Indicator extends PanelMenu.Button {
         });
         this._sessions = null;          // last context scan for CONTEXT_VENDOR
         this._incidents = new Map();    // vendorId -> status page incident, or null
+        this._trends = new Map();       // vendorId -> usage trend history, while usage-trend is on
+        this._trendWrites = new Map();  // vendorId -> tail of its read/record/write chain
         this._vendorItems = new Map();  // vendorId -> VendorCard
         this._enabledSig = '';
 
@@ -174,6 +177,7 @@ class Indicator extends PanelMenu.Button {
     _applySettings() {
         const effects = settingsEffects([...this._pendingKeys]);
         this._pendingKeys.clear();
+        const trendWasOn = this._config.usageTrend;
         this._config = readConfig(this._settings);
         if (effects.interval)
             this._rearmPollTimer(this._config.refreshIntervalSecs);
@@ -191,6 +195,10 @@ class Indicator extends PanelMenu.Button {
             this._rebuildTheme();
         if (!this._config.providerStatus)
             this._incidents.clear();
+        if (!this._config.usageTrend)
+            this._trends.clear();
+        else if (!trendWasOn)
+            this._loadTrends();
         this._reRenderFromCache();
     }
 
@@ -264,6 +272,8 @@ class Indicator extends PanelMenu.Button {
                 if (extra.length)
                     model.rows = [...extra, ...model.rows];
             }
+            if (this._config.usageTrend)
+                attachTrends(model.rows, adapter.notifyRows(res.snapshot, _), this._trends.get(id));
             if (incident)
                 model.rows = [incidentRow(incident, this._theme, _), ...model.rows];
             card.setModel(model, {showPace: this._config.showPaceMarker, textColor: c => this._textColor(c)});
@@ -386,6 +396,9 @@ class Indicator extends PanelMenu.Button {
         const polled = this._pollIds.includes(id);
         if (adapter && (all || polled))
             this._notifier.maybeNotify(adapter, cache, res, config).catch(warnOnFailure('notification'));
+        // The live config: the option may have been turned off mid-fetch.
+        if (adapter && res.ok && this._config.usageTrend)
+            this._updateTrend(id, adapter, cache, !res.stale && res.cacheAgeMs === 0 ? res.snapshot : null);
         if ((all || polled) && !res.ok && res.kind === 'error')
             console.warn(`ai-usagebar: ${errorText(res)}`);
         try {
@@ -393,6 +406,57 @@ class Indicator extends PanelMenu.Button {
             this._renderVendorSection(id);
         } catch (e) {
             console.warn(`ai-usagebar: render failed: ${e}`);
+        }
+    }
+
+    // A fresh `snapshot` adds a sample; without one (a cached or stale
+    // result, the option just turned on) the history is only loaded, once, so
+    // the line is back right after a shell restart. Chained per vendor so two
+    // writes of the same file never interleave. Fake data stays in memory.
+    _updateTrend(id, adapter, cache, snapshot) {
+        if (!snapshot && this._trends.has(id))
+            return;
+        const tail = this._trendWrites.get(id) ?? Promise.resolve();
+        const next = tail.then(async () => {
+            if (this._destroyed || !this._config.usageTrend)
+                return;
+            let trend = this._trends.get(id) ?? await this._readTrend(adapter, cache);
+            // The option may have been turned off while the disk was busy.
+            if (this._destroyed || !this._config.usageTrend)
+                return;
+            if (snapshot) {
+                trend = recordTrend(trend, adapter.notifyRows(snapshot, _), new Date());
+                if (!this._devFetch.fakesUsage(adapter))
+                    await cache.writeTrend(trend);
+                if (this._destroyed || !this._config.usageTrend)
+                    return;
+            }
+            this._trends.set(id, trend);
+            this._renderVendorSection(id);
+        }).catch(warnOnFailure('usage trend'));
+        this._trendWrites.set(id, next);
+    }
+
+    // Fake data starts from nothing rather than mixing with real samples. An
+    // unreadable file is an empty history, which the next sample overwrites.
+    async _readTrend(adapter, cache) {
+        if (this._devFetch.fakesUsage(adapter))
+            return emptyTrend();
+        try {
+            return pruneTrend(await cache.readTrend(), new Date());
+        } catch (e) {
+            console.warn(`ai-usagebar: usage trend read failed: ${e}`);
+            return emptyTrend();
+        }
+    }
+
+    // Turning the option on draws the saved lines without waiting for a fetch.
+    _loadTrends() {
+        for (const id of this._vendorItems.keys()) {
+            if (this._poller.result(id)?.ok) {
+                const adapter = getAdapter(id);
+                this._updateTrend(id, adapter, new Cache(adapter.cacheId), null);
+            }
         }
     }
 
@@ -552,6 +616,8 @@ class Indicator extends PanelMenu.Button {
         this._notifier = null;
         this._vendorItems.clear();
         this._incidents.clear();
+        this._trends.clear();
+        this._trendWrites.clear();
         this._poller.destroy();
 
         super._onDestroy();

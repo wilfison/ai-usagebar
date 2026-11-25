@@ -3,6 +3,7 @@ import Gio from 'gi://Gio';
 import system from 'system';
 
 import {Cache, atomicWrite, isNotFound} from '../lib/cache.js';
+import {emptyTrend, recordTrend, trendPoints} from '../lib/trend.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from './_assert.js';
 import {runSync, withCacheHome, isStale} from './_harness.js';
 
@@ -106,6 +107,23 @@ describe('Cache', () => {
         Gio.File.new_for_path(path).replace_contents(new TextEncoder().encode('95\n1700000000000\n'),
             null, false, Gio.FileCreateFlags.NONE, null);
         assertDeepEqual(runSync(c.readNotified()), empty);
+    }));
+
+    it('writeTrend / readTrend round-trip; absent or corrupt → empty; writePayload keeps .trend', withTempCache((dir) => {
+        const c = new Cache('test');
+        assertEqual(runSync(c.readTrend()).series.size, 0);
+
+        let trend = emptyTrend();
+        for (const [i, pct] of [10, 20, 30].entries())
+            trend = recordTrend(trend, [{key: 'weekly', percent: pct, resetsAt: null}], new Date(1700000000000 + i * 60000));
+        runSync(c.writeTrend(trend));
+        runSync(c.writePayload('{}'));
+        assertDeepEqual(trendPoints(runSync(c.readTrend()), {key: 'weekly', resetsAt: null}), [10, 20, 30]);
+
+        const path = GLib.build_filenamev([dir, 'ai-usagebar', 'test', '.trend']);
+        Gio.File.new_for_path(path).replace_contents(new TextEncoder().encode('garbage'),
+            null, false, Gio.FileCreateFlags.NONE, null);
+        assertEqual(runSync(c.readTrend()).series.size, 0);
     }));
 
     it('atomic write: orphan sibling tempfile leaves usage.json unchanged', withTempCache(() => {

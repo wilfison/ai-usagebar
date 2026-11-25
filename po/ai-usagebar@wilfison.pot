@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ai-usagebar@wilfison\n"
 "Report-Msgid-Bugs-To: https://github.com/wilfison/ai-usagebar/issues\n"
-"POT-Creation-Date: 2026-11-22 20:19-0300\n"
+"POT-Creation-Date: 2026-11-25 10:14-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -696,6 +696,13 @@ msgstr ""
 msgid "%dpts under"
 msgstr ""
 
+#. Translators: "42% elapsed · 3pts ahead · on pace for 79%": how much of the window
+#. has passed, the pace, then the usage at the reset if that pace holds.
+#: lib/vendors/section-common.js
+#, javascript-format
+msgid "%d%% elapsed · %s · on pace for %d%%"
+msgstr ""
+
 #. Translators: "42% elapsed · 3pts ahead": how much of the window has passed, then the pace.
 #: lib/vendors/section-common.js
 #, javascript-format
@@ -872,6 +879,15 @@ msgstr ""
 msgid ""
 "A tick at how much of the window has passed. Usage past it turns orange or "
 "red when it would run out before the reset."
+msgstr ""
+
+#: prefs/general.js
+msgid "Show usage trend"
+msgstr ""
+
+#: prefs/general.js
+msgid ""
+"A line of recent readings under each usage window, kept in the local cache"
 msgstr ""
 
 #: prefs/general.js

@@ -73,9 +73,51 @@ function buildWindowRow(model, showPace, textColor) {
     }
     m.add_child(detail);
 
-    if (model.paceFootnote)
-        m.add_child(label(model.paceFootnote, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail'}));
+    const trend = model.trend?.length >= 3;
+    // Beside a sparkline the footnote wraps instead of being cut short: the
+    // popup's width is fixed and the projection sits at its end.
+    const footnote = model.paceFootnote
+        ? label(model.paceFootnote, {styleClass: 'aiusagebar-dim aiusagebar-metric-detail', wrap: trend})
+        : null;
+    if (trend) {
+        const line = row();
+        if (footnote)
+            line.add_child(footnote);
+        line.add_child(sparkline(model.trend));
+        m.add_child(line);
+    } else if (footnote) {
+        m.add_child(footnote);
+    }
     return m;
+}
+
+// Recent readings as a line scaled to their own range, in the dimmed text
+// colour; a flat series sits at mid height.
+function sparkline(values) {
+    const area = new St.DrawingArea({
+        style_class: 'aiusagebar-dim aiusagebar-spark',
+        x_expand: true,
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    area.connect('repaint', () => {
+        const cr = area.get_context();
+        const [width, height] = area.get_surface_size();
+        if (width > 2 && height > 2) {
+            const min = Math.min(...values);
+            const span = Math.max(...values) - min;
+            const x = i => 1 + (i / (values.length - 1)) * (width - 2);
+            const y = v => (span === 0 ? height / 2 : height - 1 - ((v - min) / span) * (height - 2));
+            const fg = area.get_theme_node().get_foreground_color();
+            cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, fg.alpha / 255);
+            cr.setLineWidth(1.5);
+            cr.moveTo(x(0), y(values[0]));
+            for (let i = 1; i < values.length; i++)
+                cr.lineTo(x(i), y(values[i]));
+            cr.stroke();
+        }
+        cr.$dispose();
+    });
+    return area;
 }
 
 function buildGaugeRow(model, textColor) {

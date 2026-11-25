@@ -70,6 +70,11 @@
     opacity: 0.55;
 }
 
+.aiusagebar-spark {
+    height: 14px;
+    min-width: 48px;
+}
+
 .aiusagebar-bar {
     height: 6px;
     border-radius: 3px;

@@ -117,6 +117,12 @@
       <description>When enabled, each popup window bar draws a thin marker at the fraction of the window that has elapsed, so usage can be compared against pace at a glance.</description>
     </key>
 
+    <key name="usage-trend" type="b">
+      <default>true</default>
+      <summary>Show the usage trend</summary>
+      <description>When enabled, each fresh fetch keeps a sample of every usage window in the local cache (.trend, at most 20 per window, none older than 8 days), and the popup draws the recent readings as a line under the window once there are three. Nothing is written while this is off.</description>
+    </key>
+
     <key name="notify-enabled" type="b">
       <default>true</default>
       <summary>Notify when usage crosses the threshold</summary>
