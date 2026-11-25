@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    attachTrends, emptyTrend, parseTrend, pruneTrend, recordTrend, serializeTrend, trendPoints,
+    attachTrends, emptyTrend, parseTrend, pruneTrend, recordTrend, seedTrend, serializeTrend, trendPoints,
     MAX_AGE_MS, MAX_BYTES, MAX_POINTS, MAX_SERIES, MAX_SKEW_MS, SPARK_POINTS,
 } from '../../lib/trend.js';
 import {RESET_MOVE_TOLERANCE_MS} from '../../lib/notify.js';
@@ -193,6 +193,37 @@ describe('attachTrends', () => {
             const unmatched = [...titles].filter(t => !adapter.notifyRows(snap, s => s).some(r => r.label === t));
             assertDeepEqual([id, unmatched], [id, []]);
         }
+    });
+});
+
+describe('seedTrend', () => {
+    const NOW = new Date('2026-06-14T20:00:00Z');
+    const RESET = new Date(NOW.getTime() + 2 * 3600 * 1000);
+    const rows = [
+        {key: 'session', label: 'Session', percent: 90, resetsAt: RESET},
+        {key: 'weekly', label: 'Weekly', percent: 40, resetsAt: RESET},
+        {key: 'none', label: 'None', percent: null, resetsAt: RESET},
+    ];
+
+    it('draws a rising line ending at each percent, at once', () => {
+        const trend = seedTrend(rows, NOW);
+        const line = trendPoints(trend, rows[0]);
+        assertEqual(line.length, SPARK_POINTS);
+        assertEqual(line[line.length - 1], 90);
+        assertEqual(line.every((v, i) => i === 0 || v >= line[i - 1]), true);
+        assertEqual(line[0] < 45, true);
+        assertEqual(trendPoints(trend, rows[1]).at(-1), 40);
+    });
+
+    it('skips rows without a percent and ends at now', () => {
+        const trend = seedTrend(rows, NOW);
+        assertEqual(trend.series.has('none'), false);
+        assertEqual(trend.series.get('session').points.at(-1).at, NOW.getTime());
+    });
+
+    it('a real sample at now replaces the last point instead of adding one', () => {
+        const trend = recordTrend(seedTrend(rows, NOW), rows, NOW);
+        assertEqual(trend.series.get('session').points.length, SPARK_POINTS);
     });
 });
 

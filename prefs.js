@@ -1,9 +1,11 @@
 import Adw from 'gi://Adw';
 import Gdk from 'gi://Gdk';
+import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import {initialPageIndex, PREFS_PAGE_ENV} from './lib/debug.js';
 import {prefsNav, prefsNavItems} from './lib/prefs-nav.js';
 import {vendorPageSpec} from './lib/prefs-pages.js';
 import {specPage} from './prefs/widgets.js';
@@ -98,7 +100,8 @@ export default class AiUsagebarPreferences extends ExtensionPreferences {
             content.set_title(item.title);
         });
         list.connect('row-activated', () => splitView.set_show_content(true));
-        list.select_row(list.get_row_at_index(0));
+        // AI_USAGEBAR_PREFS_PAGE (dev, screenshots) opens on another page.
+        list.select_row(list.get_row_at_index(initialPageIndex(items, GLib.getenv(PREFS_PAGE_ENV))));
 
         const narrow = new Adw.Breakpoint({
             condition: Adw.BreakpointCondition.parse('max-width: 560sp'),

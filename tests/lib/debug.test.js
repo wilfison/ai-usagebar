@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseFakePct, parseFakePcts, fakePctEnv, formatFakePcts, FAKE_PCT_KINDS, parseFakeErrorVendors, parseFakeDelayMs, FakeFailure, fakeResult, fakeHttpFailure, FAKE_ERROR_MESSAGE,
+    parseFakePct, parseFakePcts, fakePctEnv, formatFakePcts, FAKE_PCT_KINDS, parseFakeFlag, initialPageIndex, parseFakeErrorVendors, parseFakeDelayMs, FakeFailure, fakeResult, fakeHttpFailure, FAKE_ERROR_MESSAGE,
 } from '../../lib/debug.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../_assert.js';
 
@@ -64,6 +64,39 @@ describe('fakePctEnv / formatFakePcts', () => {
     it('lists the base and the kinds that differ from it', () => {
         const env = {AI_USAGEBAR_FAKE_PCT: '40', AI_USAGEBAR_FAKE_PCT_WEEKLY: '95'};
         assertEqual(formatFakePcts(parseFakePcts(name => env[name] ?? null)), 'base=40 weekly=95');
+    });
+    it('adds the elapsed share when set', () => {
+        const env = {AI_USAGEBAR_FAKE_PCT: '40', AI_USAGEBAR_FAKE_ELAPSED: '60'};
+        assertEqual(formatFakePcts(parseFakePcts(name => env[name] ?? null)), 'base=40 elapsed=60');
+    });
+});
+
+describe('FAKE_ELAPSED', () => {
+    const from = env => name => env[name] ?? null;
+    it('defaults to 0 and is clamped', () => {
+        assertEqual(parseFakePcts(from({AI_USAGEBAR_FAKE_PCT: '40'})).elapsed, 0);
+        assertEqual(parseFakePcts(from({AI_USAGEBAR_FAKE_PCT: '40', AI_USAGEBAR_FAKE_ELAPSED: '150'})).elapsed, 100);
+    });
+    it('alone fakes nothing', () => assertEqual(parseFakePcts(from({AI_USAGEBAR_FAKE_ELAPSED: '60'})), null));
+});
+
+describe('parseFakeFlag', () => {
+    it('off when unset, blank, 0 or false', () => {
+        for (const raw of [null, undefined, '', ' ', '0', 'false', 'FALSE'])
+            assertEqual(parseFakeFlag(raw), false, String(raw));
+    });
+    it('on otherwise', () => {
+        for (const raw of ['1', 'yes', 'true'])
+            assertEqual(parseFakeFlag(raw), true, raw);
+    });
+});
+
+describe('initialPageIndex', () => {
+    const items = [{id: 'panel'}, {id: 'popup'}, {id: 'anthropic'}];
+    it('the index of the named page', () => assertEqual(initialPageIndex(items, ' popup '), 1));
+    it('0 when unset or unknown', () => {
+        assertEqual(initialPageIndex(items, null), 0);
+        assertEqual(initialPageIndex(items, 'nope'), 0);
     });
 });
 

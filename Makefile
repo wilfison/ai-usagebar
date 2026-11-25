@@ -13,8 +13,9 @@ help:
 	@echo "  validate        Validate metadata.json + compile schema with --strict"
 	@echo "  watch           Re-run 'make test' on changes under lib/ ui/ prefs/ tests/"
 	@echo "  run             Launch a nested gnome-shell (Wayland) to test the extension"
-	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, FAKE_PCT_<KIND>, LANG_UNDER_TEST)"
+	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, FAKE_PCT_<KIND>, FAKE_ELAPSED, FAKE_TREND=1, DARK=1, LANG_UNDER_TEST)"
 	@echo "  headless-stop   Stop it"
+	@echo "  screenshots     Regenerate screenshots/ from the headless shell (SESSION, WEEKLY, SCOPED, ELAPSED)"
 	@echo "  pot             Extract translatable strings into po/$(UUID).pot"
 	@echo "  update-po       Merge each po/*.po against the refreshed template"
 	@echo "  compile-locale  Compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo"
@@ -65,6 +66,8 @@ watch:
 # AI_USAGEBAR_FAKE_PCT=23 (synthetic snapshot at that percentage),
 # AI_USAGEBAR_FAKE_PCT_WEEKLY=95 (one window kind: SESSION, WEEKLY, MONTHLY,
 #   SONNET, SCOPED, MCP, CODE_REVIEW, CREDITS; unset kinds take FAKE_PCT, else 0),
+# AI_USAGEBAR_FAKE_ELAPSED=62 (share of every fake window already passed),
+# AI_USAGEBAR_FAKE_TREND=1 (seed each fake window's trend line),
 # AI_USAGEBAR_FAKE_ERROR=zai,openai:stale or * (fail, or serve stale data),
 # AI_USAGEBAR_FAKE_DELAY_MS=3000 (every fetch waits first).
 run:
@@ -76,16 +79,22 @@ run:
 
 # An isolated headless gnome-shell driven from the command line (eval, probe,
 # click, keys, prefs, shot): see tools/headless.sh for every subcommand.
-# make headless FAKE_PCT=40 FAKE_PCT_WEEKLY=95 LANG_UNDER_TEST=pt_BR
+# make headless FAKE_PCT=40 FAKE_PCT_WEEKLY=95 FAKE_ELAPSED=60 FAKE_TREND=1 DARK=1 LANG_UNDER_TEST=pt_BR
 FAKE_PCT_KINDS := session weekly monthly sonnet scoped mcp code-review credits
 fake_pct_var = FAKE_PCT_$(subst -,_,$(shell echo $(1) | tr a-z A-Z))
 headless:
 	@./tools/headless.sh start $(if $(FAKE_PCT),--fake-pct $(FAKE_PCT)) \
 		$(foreach k,$(FAKE_PCT_KINDS),$(if $($(call fake_pct_var,$(k))),--fake-pct-$(k) $($(call fake_pct_var,$(k))))) \
+		$(if $(FAKE_ELAPSED),--fake-elapsed $(FAKE_ELAPSED)) $(if $(FAKE_TREND),--fake-trend) $(if $(DARK),--dark) \
 		$(if $(LANG_UNDER_TEST),--lang $(LANG_UNDER_TEST))
 
 headless-stop:
 	@./tools/headless.sh stop
+
+# The README images (screenshots/), from the headless shell with fake data:
+# make screenshots SESSION=90 WEEKLY=75 SCOPED=45 ELAPSED=62
+screenshots:
+	@./tools/screenshots/capture.sh
 
 # What the upstream Rust widget changed since a tag: make upstream-diff FROM=v1.52.2
 upstream-diff:
@@ -118,4 +127,4 @@ info:
 	gnome-extensions info $(UUID)
 
 .PHONY: help schemas enable disable reload logs test lint eslint validate watch \
-	run headless headless-stop upstream-diff pot update-po compile-locale i18n-check i18n-todo pack info
+	run headless headless-stop screenshots upstream-diff pot update-po compile-locale i18n-check i18n-todo pack info

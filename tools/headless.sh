@@ -5,10 +5,14 @@
 # D-Bus session bus, a virtual 1920x1080 monitor, and this checkout linked in
 # as the extension. A helper extension turns on unsafe mode so Eval works.
 #
-#   start [--lang LL] [--fake-pct N] [--fake-pct-KIND N]... [--fake-error ID[:stale],...] [--fake-delay MS] [--fake-incident SEVERITY]
+#   start [--lang LL] [--fake-pct N] [--fake-pct-KIND N]... [--fake-elapsed N] [--fake-trend]
+#         [--fake-error ID[:stale],...] [--fake-delay MS] [--fake-incident SEVERITY]
+#         [--dark] [--refresh-interval S]
 #                         launch it (rebuilds the state dir; LL e.g. pt_BR; KIND one of
 #                         session weekly monthly sonnet scoped mcp code-review credits,
-#                         e.g. --fake-pct-weekly 95; unset kinds take --fake-pct, else 0)
+#                         e.g. --fake-pct-weekly 95; unset kinds take --fake-pct, else 0;
+#                         --fake-elapsed: % of each fake window passed; --fake-trend:
+#                         seed each fake window's trend line; --dark: dark style)
 #   stop                  stop the shell and its prefs process
 #   status                running or not, plus the JS error count
 #   eval CODE             run JS in the shell; prints the value (JSON unless a string)
@@ -16,8 +20,11 @@
 #   probe                 the indicator's state as JSON
 #   click X Y | tap X Y | scroll X Y up|down | move X Y
 #   keys KEY...           press and release in order, e.g. keys Super_L u
-#   prefs                 (re)open the preferences window, fresh translations
+#   prefs [--page ID]     (re)open the preferences window, fresh translations,
+#                         on page ID (panel, popup, anthropic...)
 #   shot NAME [X Y W H]   screenshot into tmp/screenshots/NAME.png
+#   shot-popup NAME       screenshot of the open popup, cropped to its border
+#   shot-window NAME      screenshot of the first window (the preferences), frame only
 #   log [PATTERN]         the shell log, or its lines matching PATTERN
 #
 # The state dir is $AI_USAGEBAR_HEADLESS_DIR (default /tmp/ai-usagebar-headless).
@@ -122,11 +129,16 @@ PROBE='(() => {
 
 start() {
     local lang="" fake_pct="" fake_error="" fake_delay="" fake_incident="" kind
+    local fake_elapsed="" fake_trend="" dark="" refresh=""
     local -a fake_kind_envs=()
     while [ $# -gt 0 ]; do
         case "$1" in
         --lang) lang="$2"; shift 2 ;;
         --fake-pct) fake_pct="$2"; shift 2 ;;
+        --fake-elapsed) fake_elapsed="$2"; shift 2 ;;
+        --fake-trend) fake_trend=1; shift ;;
+        --dark) dark=1; shift ;;
+        --refresh-interval) refresh="$2"; shift 2 ;;
         --fake-pct-*)
             kind="${1#--fake-pct-}"
             [[ " $FAKE_PCT_KINDS " == *" $kind "* ]] || die "unknown fake pct kind: $kind (one of: $FAKE_PCT_KINDS)"
@@ -177,6 +189,8 @@ gsettings set org.gnome.shell enabled-extensions "['$HELPER', '$UUID']"
 gsettings set org.gnome.shell welcome-dialog-last-shown-version '999'
 gsettings --schemadir "$ROOT/schemas" set $SCHEMA update-check-enabled false
 gsettings --schemadir "$ROOT/schemas" set $SCHEMA notify-enabled false
+${dark:+gsettings set org.gnome.desktop.interface color-scheme prefer-dark}
+${refresh:+gsettings --schemadir "$ROOT/schemas" set $SCHEMA refresh-interval $refresh}
 exec gnome-shell --headless --virtual-monitor 1920x1080 --wayland-display $DISPLAY_NAME --no-x11
 EOF
     chmod +x "$STATE/session.sh"
@@ -187,6 +201,8 @@ EOF
         LANG="$locale" LANGUAGE="${lang:-en_US}" \
         ${fake_pct:+AI_USAGEBAR_FAKE_PCT="$fake_pct"} \
         ${fake_kind_envs[@]+"${fake_kind_envs[@]}"} \
+        ${fake_elapsed:+AI_USAGEBAR_FAKE_ELAPSED="$fake_elapsed"} \
+        ${fake_trend:+AI_USAGEBAR_FAKE_TREND=1} \
         ${fake_error:+AI_USAGEBAR_FAKE_ERROR="$fake_error"} \
         ${fake_delay:+AI_USAGEBAR_FAKE_DELAY_MS="$fake_delay"} \
         ${fake_incident:+AI_USAGEBAR_FAKE_INCIDENT="$fake_incident"} \
@@ -210,8 +226,10 @@ EOF
     # A fresh virtual device drops its first events, so they are spent here on a
     # harmless move rather than on the caller's first click.
     js "$INPUT_PRELUDE I.pointer.notify_absolute_motion(I.now(), 960, 700);" >/dev/null
+    # A session starts in the overview; leave it so shots show the desktop.
+    js 'Main.overview.hide();' >/dev/null
     sleep 0.5
-    echo "headless: running (locale $locale${fake_pct:+, fake pct $fake_pct}${fake_kind_envs[*]:+, ${fake_kind_envs[*]}}${fake_error:+, fake error $fake_error}${fake_delay:+, fake delay ${fake_delay}ms}${fake_incident:+, fake incident $fake_incident}); state in $STATE"
+    echo "headless: running (locale $locale${fake_pct:+, fake pct $fake_pct}${fake_kind_envs[*]:+, ${fake_kind_envs[*]}}${fake_elapsed:+, fake elapsed $fake_elapsed}${fake_trend:+, fake trend}${fake_error:+, fake error $fake_error}${fake_delay:+, fake delay ${fake_delay}ms}${fake_incident:+, fake incident $fake_incident}); state in $STATE"
 }
 
 stop() {
@@ -276,6 +294,15 @@ keys)
         for (const k of [...keys].reverse()) I.keyboard.notify_keyval(I.now(), k, Clutter.KeyState.RELEASED);" >/dev/null
     ;;
 prefs)
+    page=""
+    if [ "${1:-}" = "--page" ]; then
+        page="${2:?usage: $0 prefs [--page ID]}"
+    fi
+    # The prefs service is D-Bus activated, so the page travels in the
+    # activation environment of its next (fresh) process.
+    DBUS_SESSION_BUS_ADDRESS="$(bus)" gdbus call --session --dest org.freedesktop.DBus \
+        --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.UpdateActivationEnvironment \
+        "{'AI_USAGEBAR_PREFS_PAGE': '$page'}" >/dev/null
     # The prefs service outlives its window and keeps the .mo it loaded, so a
     # fresh process is the only way to see new translations.
     for pid in $(own_pids WAYLAND_DISPLAY "$DISPLAY_NAME" 'org.gnome.Shell.Extensions'); do
@@ -305,6 +332,28 @@ shot)
         "${2:-0}" "${3:-0}" "${4:-1920}" "${5:-1080}" false "$file" >/dev/null
     echo "$file"
     ;;
+shot-popup)
+    name="${1:?usage: $0 shot-popup NAME}"
+    geometry="$(js 'const i = Main.panel.statusArea["'"$UUID"'"];
+        if (!i?.menu.isOpen)
+            throw new Error("the popup is not open");
+        const b = i.menu.box;
+        const [x, y] = b.get_transformed_position();
+        const [w, h] = b.get_transformed_size();
+        [x, y, w, h].map(Math.round).join(" ")')" || die "$geometry"
+    # shellcheck disable=SC2086  # four numbers.
+    "$0" shot "$name" $geometry
+    ;;
+shot-window)
+    name="${1:?usage: $0 shot-window NAME}"
+    geometry="$(js 'const a = global.get_window_actors()[0];
+        if (!a)
+            throw new Error("no window open");
+        const r = a.meta_window.get_frame_rect();
+        [r.x, r.y, r.width, r.height].join(" ")')" || die "$geometry"
+    # shellcheck disable=SC2086  # four numbers.
+    "$0" shot "$name" $geometry
+    ;;
 log)
     if [ -n "${1:-}" ]; then
         grep -E "$1" "$STATE/shell.log" || true
@@ -313,7 +362,7 @@ log)
     fi
     ;;
 *)
-    sed -n '3,22p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n "3,$(grep -n '^# The state dir' "$0" | cut -d: -f1)p" "$0" | sed 's/^# \{0,1\}//'
     [ -z "$cmd" ] || exit 2
     ;;
 esac

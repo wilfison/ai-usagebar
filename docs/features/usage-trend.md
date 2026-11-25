@@ -5,7 +5,7 @@ description: A line of recent readings under each usage window, sampled on fresh
 tags: [cache, pure-modules]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-25T12:00:00Z
+  at: 2026-11-25T14:30:00Z
 sources:
   - id: trend
     title: lib/trend.js
@@ -39,4 +39,4 @@ The limits are upstream's:[^trend][^upstream]
 
 # Storage
 
-The samples live in the vendor's [cache](/architecture/cache.md) directory as `.trend` (JSON, written atomically), which a payload write keeps. Reads and writes for one vendor are chained so they never interleave. A malformed, oversized or unreadable file reads as an empty history, which the next sample overwrites. With the option off nothing is read, written or drawn, and the history held in memory is dropped; the file stays until the next sample overwrites it. Turning it back on reloads the file for every card that has a result, without waiting for a fetch. Samples of `AI_USAGEBAR_FAKE_PCT` (or `AI_USAGEBAR_FAKE_PCT_<KIND>`) data start from an empty history, are drawn, and are never written.[^indicator]
+The samples live in the vendor's [cache](/architecture/cache.md) directory as `.trend` (JSON, written atomically), which a payload write keeps. Reads and writes for one vendor are chained so they never interleave. A malformed, oversized or unreadable file reads as an empty history, which the next sample overwrites. With the option off nothing is read, written or drawn, and the history held in memory is dropped; the file stays until the next sample overwrites it. Turning it back on reloads the file for every card that has a result, without waiting for a fetch. Samples of `AI_USAGEBAR_FAKE_PCT` (or `AI_USAGEBAR_FAKE_PCT_<KIND>`) data start from an empty history (or, with `AI_USAGEBAR_FAKE_TREND`, a seeded rising line), are drawn, and are never written.[^indicator]
