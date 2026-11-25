@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Usage Bar: README card</title>
+<style>
+  :root {
+    --green: #2ec27e;
+    --ink: #ffffff;
+    --muted: rgba(255, 255, 255, .72);
+    --popup-scale: {{POPUP_SCALE}};
+    --popup-w: calc({{POPUP_W}}px * var(--popup-scale));
+    --popup-h: calc({{POPUP_H}}px * var(--popup-scale));
+    --popup-right: 76px;
+    --bar-h: 40px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; background: #0b1024; }
+  body {
+    position: relative;
+    font-family: 'Ubuntu Sans', 'Ubuntu', sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  .bg {
+    position: absolute; inset: -20px;
+    background: url({{HERE}}/bg.png) center 0% / cover no-repeat;
+    filter: saturate(1.15);
+  }
+  .shade {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(0deg, rgba(8, 10, 26, .5) 0%, rgba(8, 10, 26, 0) 38%),
+      linear-gradient(90deg, rgba(8, 10, 26, .74) 0%, rgba(8, 10, 26, .5) 40%, rgba(8, 10, 26, .08) 72%, rgba(8, 10, 26, .08) 100%);
+  }
+
+  /* The top panel, redrawn */
+  .panel {
+    position: absolute; left: 0; top: 0; width: 100%; height: var(--bar-h);
+    background: #000;
+    font-size: 15.5px; font-weight: 700;
+  }
+  .workspaces { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); display: flex; gap: 7px; align-items: center; }
+  .workspaces i { display: block; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .55); }
+  .workspaces i:first-child { width: 30px; height: 9px; border-radius: 5px; background: #fff; }
+  .center {
+    position: absolute; top: 0; height: 100%;
+    right: calc(var(--popup-right) + var(--popup-w) / 2);
+    transform: translateX(calc(var(--pill-w) / 2));
+    --pill-w: 158px;
+    display: flex; align-items: center; gap: 30px; white-space: nowrap;
+  }
+  .clock span { margin-left: 9px; }
+  .pill {
+    width: var(--pill-w); height: 30px; border-radius: 15px;
+    background: #474848; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: {{PILL_COLOR}};
+  }
+  .pill img { width: 17px; height: 17px; }
+
+  /* The popup, cut from the headless shot */
+  .popup {
+    position: absolute;
+    right: var(--popup-right); top: calc(var(--bar-h) + 8px);
+    width: var(--popup-w); height: var(--popup-h);
+    border-radius: calc(16px * var(--popup-scale));
+    background: url({{POPUP}}) center / 100% 100% no-repeat;
+    box-shadow:
+      inset 0 0 0 1.5px #46464b,
+      0 2px 6px rgba(0, 0, 0, .45),
+      0 28px 70px rgba(0, 0, 0, .6);
+  }
+
+  /* Copy */
+  .copy {
+    position: absolute; left: 76px; top: calc(var(--bar-h) + 78px); width: 590px;
+  }
+  .eyebrow {
+    font-family: 'Ubuntu Sans Mono', 'Ubuntu Mono', monospace;
+    font-size: 16px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--green);
+  }
+  h1 {
+    margin-top: 14px;
+    font-size: 96px; line-height: 1; font-weight: 800; letter-spacing: -.025em;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, .45);
+  }
+  .meter {
+    position: relative; margin-top: 30px; width: 520px; height: 9px; border-radius: 5px;
+    background: rgba(255, 255, 255, .16);
+  }
+  .meter b { position: absolute; left: 0; top: 0; bottom: 0; width: 40%; border-radius: 5px; background: var(--green); }
+  .meter u { position: absolute; left: 61%; top: -4px; bottom: -4px; width: 2.5px; border-radius: 2px; background: rgba(255, 255, 255, .85); }
+  .tagline {
+    margin-top: 28px; width: 540px;
+    font-size: 28px; line-height: 1.32; font-weight: 400; color: rgba(255, 255, 255, .92);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, .5);
+  }
+  .tagline strong { font-weight: 700; color: #fff; }
+
+  .vendors { position: absolute; left: 76px; bottom: 52px; }
+  .chips { display: flex; gap: 12px; }
+  .chips span {
+    width: 50px; height: 50px; border-radius: 14px;
+    display: grid; place-items: center;
+    background: rgba(255, 255, 255, .1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14);
+  }
+  /* Some icons fill with currentColor, which an <img> draws black. */
+  .chips img, .pill img { filter: brightness(0) invert(1); }
+  .chips img { width: 25px; height: 25px; opacity: .95; }
+  .vendors p {
+    margin-top: 14px; font-size: 15.5px; font-weight: 500; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="shade"></div>
+
+  <div class="panel">
+    <div class="workspaces"><i></i><i></i><i></i><i></i></div>
+    <div class="center">
+      <div class="clock">{{CLOCK_DATE}}<span>{{CLOCK_TIME}}</span></div>
+      <div class="pill"><img src="{{ICONS}}/anthropic-symbolic.svg" alt="">{{PILL_TEXT}}</div>
+    </div>
+  </div>
+
+  <div class="popup"></div>
+
+  <div class="copy">
+    <div class="eyebrow">GNOME Shell extension</div>
+    <h1>AI Usage Bar</h1>
+    <div class="meter"><b></b><u></u></div>
+    <p class="tagline">Your AI plan usage, pace and reset countdowns, <strong>live in the top panel.</strong></p>
+  </div>
+
+  <div class="vendors">
+    <div class="chips">
+      <span><img src="{{ICONS}}/anthropic-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/openai-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/zai-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/openrouter-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/deepseek-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/kimi-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/ollama-symbolic.svg" alt=""></span>
+      <span><img src="{{ICONS}}/ai-symbolic.svg" alt=""></span>
+    </div>
+    <p>Claude · OpenAI Codex · Z.AI · OpenRouter · DeepSeek · Kimi · Ollama · custom JSON</p>
+  </div>
+</body>
+</html>

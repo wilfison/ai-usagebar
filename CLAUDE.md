@@ -24,6 +24,7 @@ make eslint      # needs `npm ci`
 make validate    # metadata.json + gschema --strict
 make i18n-check  # stale .pot / malformed .po
 make headless    # isolated headless gnome-shell (tools/headless.sh)
+make screenshots # regenerate screenshots/ (README images) from it
 make run         # nested gnome-shell (logs to this terminal)
 make pack        # release zip
 ```
@@ -81,7 +82,9 @@ Keep it in sync by hand when a change alters documented behavior (no OKF tooling
 - **Pure modules stay `gi://`-free**, gettext included: they take an injected `_ = (s) => s` (and
   `ngettext`). Pure code must have tests; shell-bound code is checked live with `tools/headless.sh`
   (`start --fake-pct 40`, `probe`, `shot`, `log`; `stop` + `start` after JS changes).
-  Dev env overrides: `AI_USAGEBAR_FAKE_PCT`, `AI_USAGEBAR_FAKE_ERROR`, `AI_USAGEBAR_FAKE_DELAY_MS`.
+  Dev env overrides: `AI_USAGEBAR_FAKE_PCT`, `AI_USAGEBAR_FAKE_PCT_<KIND>` (`_WEEKLY`, `_CREDITS`...), `AI_USAGEBAR_FAKE_ELAPSED`,
+  `AI_USAGEBAR_FAKE_TREND`, `AI_USAGEBAR_FAKE_ERROR`, `AI_USAGEBAR_FAKE_DELAY_MS`, `AI_USAGEBAR_PREFS_PAGE`.
+  README images: `make screenshots` (`tools/screenshots/`).
 - **i18n.** Strings are `_('plain literal')`, never template literals; interpolate with `vformat()`
   from `lib/format.js`. After adding a string: `make pot`, `make update-po`, translate
   (`make i18n-todo`, `tools/i18n.sh fill`), `make i18n-check`. Brand names, `{tokens}` and `%s` stay

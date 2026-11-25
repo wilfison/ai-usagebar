@@ -30,7 +30,7 @@ import {severityColor, Severity} from '../lib/severity.js';
 import {defaultTheme, withOverrides, luminance, legibleOnDark} from '../lib/theme.js';
 import {settingsEffects} from '../lib/settings-effect.js';
 import {fetchIncident, incidentColor, incidentRow, incidentStatusLabel, statusPageFor} from '../lib/incident.js';
-import {attachTrends, emptyTrend, pruneTrend, recordTrend} from '../lib/trend.js';
+import {attachTrends, emptyTrend, pruneTrend, recordTrend, seedTrend} from '../lib/trend.js';
 
 const RERENDER_INTERVAL_S = 60;
 // Claude Code transcripts belong to the Claude section only.
@@ -420,7 +420,7 @@ class Indicator extends PanelMenu.Button {
         const next = tail.then(async () => {
             if (this._destroyed || !this._config.usageTrend)
                 return;
-            let trend = this._trends.get(id) ?? await this._readTrend(adapter, cache);
+            let trend = this._trends.get(id) ?? await this._readTrend(adapter, cache, snapshot);
             // The option may have been turned off while the disk was busy.
             if (this._destroyed || !this._config.usageTrend)
                 return;
@@ -437,11 +437,15 @@ class Indicator extends PanelMenu.Button {
         this._trendWrites.set(id, next);
     }
 
-    // Fake data starts from nothing rather than mixing with real samples. An
-    // unreadable file is an empty history, which the next sample overwrites.
-    async _readTrend(adapter, cache) {
-        if (this._devFetch.fakesUsage(adapter))
-            return emptyTrend();
+    // Fake data starts from nothing (or a seeded line, with FAKE_TREND) rather
+    // than mixing with real samples. An unreadable file is an empty history,
+    // which the next sample overwrites.
+    async _readTrend(adapter, cache, snapshot) {
+        if (this._devFetch.fakesUsage(adapter)) {
+            return snapshot && this._devFetch.seedsTrend(adapter)
+                ? seedTrend(adapter.notifyRows(snapshot, _), new Date())
+                : emptyTrend();
+        }
         try {
             return pruneTrend(await cache.readTrend(), new Date());
         } catch (e) {

@@ -319,6 +319,16 @@ describe('fakeSnapshot', () => {
     });
 });
 
+describe('fakeSnapshot: per-kind percentages', () => {
+    it('the 5h window follows session, weekly its own kind', () => {
+        const s = fakeSnapshot({base: 0, session: 85, weekly: 15});
+        assertEqual(s.window.utilizationPct, 85);
+        assertEqual(s.weekly.utilizationPct, 15);
+        assertEqual(s.monthly, null);
+        assertEqual(kimiPeakUsage(s).percent, 85);
+    });
+});
+
 const PACE_NOW = new Date('2026-06-05T12:00:00Z');
 const halfway = windowMs => new Date(PACE_NOW.getTime() + windowMs / 2);
 

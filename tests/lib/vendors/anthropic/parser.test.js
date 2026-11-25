@@ -364,6 +364,18 @@ describe('fakeSnapshot', () => {
     });
 });
 
+describe('fakeSnapshot: per-kind percentages', () => {
+    const s = fakeSnapshot({base: 10, session: 10, weekly: 95, sonnet: 30, scoped: 50, credits: 80});
+    it('each window takes its own kind', () => {
+        assertEqual(s.session.utilizationPct, 10);
+        assertEqual(s.weekly.utilizationPct, 95);
+        assertEqual(s.sonnet.utilizationPct, 30);
+        assertEqual(s.scoped[0].utilizationPct, 50);
+        assertEqual(anthropicPeakUsage(s).percent, 95);
+    });
+    it('cloud credits follow credits', () => assertEqual(s.cloudCredits.remainingCents, 5000));
+});
+
 function withGrants(cedarEmber) {
     return JSON.stringify({
         five_hour: {utilization: 2, resets_at: '2026-09-24T17:49:59Z'},

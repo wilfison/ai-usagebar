@@ -7,7 +7,7 @@ import {
 import {ollamaAdapter} from '../../../../lib/vendors/ollama/adapter.js';
 import {Severity} from '../../../../lib/severity.js';
 import {substitute} from '../../../../lib/format.js';
-import {describe, it, assertEqual, assertThrows, summary} from '../../../_assert.js';
+import {describe, it, assertEqual, assertDeepEqual, assertThrows, summary} from '../../../_assert.js';
 
 // Real `/api/balance` captures pinned by the upstream project
 // (tests/fixtures/ollama/balance_quota.json and balance_credits.json).
@@ -197,6 +197,13 @@ describe('fakeSnapshot', () => {
         }
     });
     it('carries a credits block', () => assertEqual(f.credits.balanceUsd, 36));
+});
+
+describe('fakeSnapshot: per-kind percentages', () => {
+    const f = fakeSnapshot({base: 0, session: 10, weekly: 20, monthly: 30, credits: 50}, NOW);
+    it('each window takes its own kind', () =>
+        assertDeepEqual(['session', 'weekly', 'monthly'].map(w => f[w].utilizationPct), [10, 20, 30]));
+    it('the credits balance follows credits', () => assertEqual(f.credits.balanceUsd, 30));
 });
 
 system.exit(summary());

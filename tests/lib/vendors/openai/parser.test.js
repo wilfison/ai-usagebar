@@ -283,6 +283,16 @@ describe('fakeSnapshot', () => {
     });
 });
 
+describe('fakeSnapshot: per-kind percentages', () => {
+    it('each window takes its own kind', () => {
+        const s = fakeSnapshot({base: 0, session: 70, weekly: 20, code_review: 90});
+        assertEqual(s.session.utilizationPct, 70);
+        assertEqual(s.weekly.utilizationPct, 20);
+        assertEqual(s.codeReview.utilizationPct, 90);
+        assertEqual(openaiPeakUsage(s).percent, 90);
+    });
+});
+
 const SAME_TITLE = 'Full reset (Weekly + 5 hr)';
 
 function withResetBlock(block) {

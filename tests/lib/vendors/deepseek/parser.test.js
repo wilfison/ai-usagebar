@@ -136,6 +136,10 @@ describe('fakeSnapshot', () => {
     });
 });
 
+describe('fakeSnapshot: per-kind percentages', () => {
+    it('the balance follows credits', () => assertEqual(fakeSnapshot({base: 10, credits: 60}).balance, 40));
+});
+
 describe('placeholders: elapsed aliases', () => {
     it('no window → 0', () => {
         const m = placeholders({isAvailable: true, balance: 5, granted: 5, toppedUp: 0, currency: 'USD'}, new Date());
