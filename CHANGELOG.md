@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.10.0] - 2026-11-25
 
 ### Added
 
@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   passed, its footnote also says where the current pace leads, for example
   "42% elapsed · 3pts ahead · on pace for 79%" (capped at 999%). Until now
   the projection only showed up as the "~N% over pace" warning
-  (upstream v1.54.0).
+  ([#6](https://github.com/wilfison/ai-usagebar/pull/6), upstream v1.54.0).
 - **Usage trend line.** Each usage window in the popup draws its recent
   readings as a small line beside the footnote, once it has three of them.
   Every fresh fetch keeps one sample per window in the provider's cache
@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still there after a shell restart. A reset that moves only slightly
   between fetches keeps the same line; a new window starts a new one. Turn it
   off with *Show usage trend* under *Popup*, which also stops writing the
-  samples (upstream v1.54.0).
+  samples ([#6](https://github.com/wilfison/ai-usagebar/pull/6), upstream
+  v1.54.0).
 
 ## [1.9.0] - 2026-11-22
 
