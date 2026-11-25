@@ -10,7 +10,7 @@ colored by severity. Click it for a popup with a section per enabled vendor;
 scroll over it to cycle between them. Or pin several vendors to see them side
 by side, each with its own logo and label; clicking one opens the popup on it.
 
-![AI Usage Bar: the popup under the panel label, showing plan usage, pace and reset countdowns](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshots/popup.png)
+![AI Usage Bar: the popup under the panel label as usage rises, its bars turning from green to orange and red, with pace and reset countdowns](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshots/popup.webp)
 
 ## Vendors
 

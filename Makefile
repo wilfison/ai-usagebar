@@ -15,7 +15,7 @@ help:
 	@echo "  run             Launch a nested gnome-shell (Wayland) to test the extension"
 	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, FAKE_PCT_<KIND>, FAKE_ELAPSED, FAKE_TREND=1, DARK=1, LANG_UNDER_TEST)"
 	@echo "  headless-stop   Stop it"
-	@echo "  screenshots     Regenerate screenshots/ from the headless shell (SESSION, WEEKLY, SCOPED, ELAPSED)"
+	@echo "  screenshots     Regenerate screenshots/, static and animated (SESSION, WEEKLY, SCOPED, ELAPSED, FRAMES)"
 	@echo "  pot             Extract translatable strings into po/$(UUID).pot"
 	@echo "  update-po       Merge each po/*.po against the refreshed template"
 	@echo "  compile-locale  Compile po/*.po into locale/<lang>/LC_MESSAGES/*.mo"
@@ -92,7 +92,7 @@ headless-stop:
 	@./tools/headless.sh stop
 
 # The README images (screenshots/), from the headless shell with fake data:
-# make screenshots SESSION=90 WEEKLY=75 SCOPED=45 ELAPSED=62
+# make screenshots SESSION=90 WEEKLY=75 SCOPED=45 ELAPSED=62 FRAMES=18
 screenshots:
 	@./tools/screenshots/capture.sh
 

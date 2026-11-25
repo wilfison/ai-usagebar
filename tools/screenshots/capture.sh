@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 #
-# Regenerates screenshots/popup.png and screenshots/preferences.png from the
-# headless shell (tools/headless.sh) with fake data, then build.py.
+# Regenerates screenshots/ from the headless shell (tools/headless.sh) with
+# fake data, then build.py: popup.png (the static card, also the Open Graph
+# cover), popup.webp (the card animated as usage rises, for the README) and
+# preferences.png.
 #
 #   tools/screenshots/capture.sh     (or: make screenshots SESSION=90 WEEKLY=75)
 #
 # SESSION, WEEKLY, SCOPED: fake usage per window kind (default 90, 75, 45);
-# ELAPSED: how much of each window has passed (default 62). Stops a running
+# ELAPSED: how much of each window has passed (default 62); FRAMES: animation
+# frames (default 18, the last at those values). Stops a running
 # headless shell first. Needs jq, Pillow and Chrome (see build.py).
 
 set -euo pipefail
@@ -35,11 +38,28 @@ sleep 1
 sleep 0.5
 "$H" shot-popup readme-popup >/dev/null
 
-# The panel as it was in the shot, for the card's redrawn bar.
+# The panel as it was in a shot, for the card's redrawn bar: label TAB colour.
+panel() {
+    "$H" probe | jq -r '[.segments[0].text, (.segments[0].style | capture("(?<c>#[0-9a-fA-F]{6})").c // "#2ec27e")] | @tsv'
+}
 clock="$("$H" eval 'Main.panel.statusArea.dateMenu._clockDisplay.text.replace(/\s+/g, " ").trim()')"
-probe="$("$H" probe)"
-pill="$(jq -r '.segments[0].text' <<<"$probe")"
-color="$(jq -r '.segments[0].style | capture("(?<c>#[0-9a-fA-F]{6})").c // "#2ec27e"' <<<"$probe")"
+IFS=$'\t' read -r pill color < <(panel)
+
+# Usage rising linearly from under a tenth of each target to the target.
+FRAMES_DIR="$SHOTS/readme-frames"
+rm -rf "$FRAMES_DIR"
+mkdir -p "$FRAMES_DIR"
+n="${FRAMES:-18}"
+[ "$n" -ge 2 ] || n=2
+for k in $(seq 0 $((n - 1))); do
+    step() { echo $(( $1 * 8 / 100 + ($1 - $1 * 8 / 100) * k / (n - 1) )); }
+    first=$([ "$k" -eq 0 ] && echo true || echo false)
+    "$H" eval "globalThis.__aiubFrame = {session: $(step "${SESSION:-90}"), weekly: $(step "${WEEKLY:-75}"), scoped: $(step "${SCOPED:-45}"), first: $first}; $(cat "$ROOT/tools/screenshots/anim-frame.js")" >/dev/null
+    sleep 0.3
+    name="$(printf '%02d' "$k")"
+    "$H" shot-popup "readme-frames/$name" >/dev/null
+    printf '%s\t%s\n' "$name.png" "$(panel)" >>"$FRAMES_DIR/frames.tsv"
+done
 
 "$H" keys Escape
 "$H" prefs --page popup >/dev/null
@@ -49,5 +69,5 @@ sleep 0.5
 
 python3 "$ROOT/tools/screenshots/build.py" \
     --popup "$SHOTS/readme-popup.png" --prefs "$SHOTS/readme-prefs.png" \
-    --clock "$clock" --pill "$pill" --pill-color "$color"
-rm -f "$SHOTS/readme-popup.png" "$SHOTS/readme-prefs.png"
+    --clock "$clock" --pill "$pill" --pill-color "$color" --frames "$FRAMES_DIR"
+rm -rf "$SHOTS/readme-popup.png" "$SHOTS/readme-prefs.png" "$FRAMES_DIR"

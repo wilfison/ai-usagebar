@@ -9,6 +9,9 @@ preferences.png is the window shot with rounded corners and a drop shadow on
 transparency, reduced to 256 colors. Needs Pillow and google-chrome (or
 chromium, or $CHROME).
 
+With --frames DIR (popup shots plus a frames.tsv of name, label and colour
+per line) it also renders one card per frame into popup.webp, animated.
+
   build.py --background WALLPAPER.jpg
 
 replaces bg.png, the card's backdrop, with the wallpaper scaled and blurred.
@@ -30,6 +33,9 @@ POPUP_TOP, POPUP_BOTTOM = 48, 24
 WINDOW_RADIUS = 14
 SHADOW_PAD, SHADOW_BLUR, SHADOW_ALPHA = 21, 8, 110
 BG_WIDTH, BG_BLUR = 1280, 5
+# Hold the first frame, step through the rest, rest on the last.
+FIRST_MS, STEP_MS, LAST_MS = 1200, 220, 2500
+WEBP_QUALITY = 90
 
 
 def chrome():
@@ -87,6 +93,22 @@ def window(args, out):
     im.quantize(256, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)
 
 
+def animation(args, out):
+    frames_dir = Path(args.frames)
+    frames = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for line in (frames_dir / 'frames.tsv').read_text().splitlines():
+            name, pill, color = line.split('\t')
+            card_png = Path(tmp) / name
+            card(argparse.Namespace(popup=str(frames_dir / name), clock=args.clock, pill=pill, pill_color=color), card_png)
+            frames.append(Image.open(card_png).convert('RGB'))
+    if len(frames) < 2:
+        raise SystemExit('build.py: an animation needs two frames or more')
+    durations = [FIRST_MS] + [STEP_MS] * (len(frames) - 2) + [LAST_MS]
+    frames[0].save(out, save_all=True, append_images=frames[1:], duration=durations,
+                   loop=0, quality=WEBP_QUALITY, method=6)
+
+
 def background(src):
     im = Image.open(src).convert('RGB')
     im = im.resize((BG_WIDTH, round(im.height * BG_WIDTH / im.width)), Image.Resampling.LANCZOS)
@@ -102,6 +124,7 @@ def main():
     p.add_argument('--clock', help='the panel clock, e.g. "Nov 25 11:07"')
     p.add_argument('--pill', help='the panel label, e.g. "90%% · 1h 53m"')
     p.add_argument('--pill-color', default='#2ec27e')
+    p.add_argument('--frames', help='a dir of animation frames, for popup.webp')
     p.add_argument('--out', default=str(ROOT / 'screenshots'))
     args = p.parse_args()
     if args.background:
@@ -113,9 +136,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     card(args, out / 'popup.png')
     window(args, out / 'preferences.png')
-    for name in ('popup.png', 'preferences.png'):
+    names = ['popup.png', 'preferences.png']
+    if args.frames:
+        animation(args, out / 'popup.webp')
+        names.append('popup.webp')
+    for name in names:
         im = Image.open(out / name)
-        print(out / name, im.size, im.mode)
+        print(out / name, im.size, im.mode, getattr(im, "n_frames", 1), "frames", round((out / name).stat().st_size / 1024), "KB")
 
 
 if __name__ == '__main__':
