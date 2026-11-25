@@ -1,228 +1,154 @@
+<div align="center">
+
 # AI Usage Bar
 
-A GNOME Shell extension that shows your AI plan usage in the top panel for
-**Anthropic (Claude)**, **OpenAI (Codex)**, **Z.AI / GLM**, **OpenRouter**,
-**DeepSeek**, **Kimi** and **Ollama Cloud**, plus one **custom provider** you
-map yourself.
+**See how much of your AI plan you have left, right in the GNOME top bar.**
 
-The panel shows a compact label for the active vendor (e.g. `42% · 3h12m`),
-colored by severity. Click it for a popup with a section per enabled vendor;
-scroll over it to cycle between them. Or pin several vendors to see them side
-by side, each with its own logo and label; clicking one opens the popup on it.
+[![Latest release](https://img.shields.io/github/v/release/wilfison/ai-usagebar?label=release&color=3584e4)](https://github.com/wilfison/ai-usagebar/releases/latest)
+[![GNOME Shell 47 to 51](https://img.shields.io/badge/GNOME%20Shell-47%20to%2051-4a86cf?logo=gnome&logoColor=white)](#-install)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ![AI Usage Bar: the popup under the panel label as usage rises, its bars turning from green to orange and red, with pace and reset countdowns](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshots/popup.webp)
 
-## Vendors
+</div>
 
-| Vendor | What is shown | Credentials |
+## ✨ What it does
+
+- 📊 Shows your usage as a small label in the top bar, like `42% · 3h12m`.
+- 🚦 Turns green, orange or red as you get close to the limit.
+- 🖱️ Click it for the full picture; scroll over it to switch providers.
+- 📌 Pin several providers to watch them side by side.
+- 🔔 Notifies you before you hit the limit.
+- 🔒 No tracking: your keys only go to the provider they belong to.
+
+## 🤖 Supported providers
+
+| Provider | What you see | What you need |
 | --- | --- | --- |
-| **Anthropic (Claude)** | Session + weekly usage (no session row on a verified Ultra plan), model-scoped caps, extra usage, cloud session credits, usage credits, banked resets, plan; optionally your Claude Code sessions' context | `~/.claude/.credentials.json` (OAuth, auto-refreshed) |
-| **OpenAI (Codex)** | 5h + weekly usage, code review, credits (a count, not dollars), banked resets | `~/.codex/auth.json` (OAuth) |
-| **Z.AI / GLM** | Plan usage and reset windows | API key: `ZAI_API_KEY` |
-| **OpenRouter** | Credit balance and usage; the two most recently used models with a management key | API key: `OPENROUTER_API_KEY`; optional management key: `OPENROUTER_MANAGEMENT_API_KEY` |
-| **DeepSeek** | Balance / credits | API key: `DEEPSEEK_API_KEY` |
-| **Kimi** | Weekly quota + 5h window, plan | API key: `KIMI_API_KEY` |
-| **Ollama Cloud** | Session + weekly usage, or the monthly included credits with purchased credits | API key: `OLLAMA_API_KEY` ([create one](https://ollama.com/settings/keys)) |
-| **Custom** | Metrics and texts you map from a JSON endpoint | Optional key in a header you choose |
+| **Anthropic (Claude)** | Session and weekly usage, model limits, extra usage, credits, plan | Be logged in to [Claude Code](https://claude.com/claude-code) |
+| **OpenAI (Codex)** | 5h and weekly usage, code review, credits | Be logged in to [Codex CLI](https://github.com/openai/codex) |
+| **Z.AI / GLM** | Plan usage and reset times | API key |
+| **OpenRouter** | Credit balance and usage | API key |
+| **DeepSeek** | Balance | API key |
+| **Kimi** | Weekly quota and 5h window, plan | API key |
+| **Ollama Cloud** | Session and weekly usage, or monthly credits | API key ([create one](https://ollama.com/settings/keys)) |
+| **Custom** | Anything from your own JSON endpoint | URL and an optional key |
 
-An API key is taken from the environment variable if it is set, otherwise from
-the key typed in preferences. The variable names and the two credential paths
-are configurable.
+Claude and Codex need no setup: the extension reads the login those tools already saved.
 
-## Install
+## 📦 Install
 
-Requires **GNOME Shell 47–51** (developed and tested on 50; please
-[report](https://github.com/wilfison/ai-usagebar/issues) anything that breaks
-elsewhere). It is distributed only through GitHub releases, not
-extensions.gnome.org.
+You need **GNOME Shell 47 to 51**. Releases are published only here on GitHub.
 
-1. Download the [latest release](https://github.com/wilfison/ai-usagebar/releases/latest),
-   check its SHA256 and install it:
+**1.** Download and install the latest release:
 
-   ```bash
-   cd /tmp
-   curl -fsSLO https://github.com/wilfison/ai-usagebar/releases/latest/download/ai-usagebar@wilfison.shell-extension.zip
-   curl -fsSLO https://github.com/wilfison/ai-usagebar/releases/latest/download/ai-usagebar@wilfison.shell-extension.zip.sha256
-   sha256sum -c ai-usagebar@wilfison.shell-extension.zip.sha256
-   gnome-extensions install --force ai-usagebar@wilfison.shell-extension.zip
-   ```
+```bash
+curl -fsSLO https://github.com/wilfison/ai-usagebar/releases/latest/download/ai-usagebar@wilfison.shell-extension.zip
+gnome-extensions install --force ai-usagebar@wilfison.shell-extension.zip
+```
 
-2. Log out and back in (required on Wayland), then enable it:
+**2.** Log out and back in, then turn it on:
 
-   ```bash
-   gnome-extensions enable ai-usagebar@wilfison
-   ```
+```bash
+gnome-extensions enable ai-usagebar@wilfison
+```
 
-## Configuration
+## ⚙️ Setup
 
-Open preferences with the gear button in the popup footer, or
-`gnome-extensions prefs ai-usagebar@wilfison`. The sidebar has two sections:
+Open the settings with the ⚙️ button at the bottom of the popup (or run
+`gnome-extensions prefs ai-usagebar@wilfison`).
 
-- **General**: *Panel* (position, label format, pace arrows and the vendors pinned to the panel), *Popup* (extra rows, pace
-  marker, the `Super+U` shortcut), *Display* (primary vendor, vendor logos,
-  severity colors) and *Behavior* (refresh interval, notifications, update check, provider
-  status, reset all).
-- **Vendors**: one page per vendor: enable it and set its credentials.
+1. Go to **Vendors** and switch on the providers you use.
+2. Paste the API key where one is needed. You can also set it as an environment
+   variable (`ZAI_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`,
+   `KIMI_API_KEY`, `OLLAMA_API_KEY`).
+3. Under **General**, pick where the label goes, what it shows and how often it
+   refreshes.
 
 ![The preferences window with its sidebar](https://raw.githubusercontent.com/wilfison/ai-usagebar/main/screenshots/preferences.png)
 
-Only the vendors on the panel are polled, every 300 s at the least (the
-endpoints rate-limit below that): the active one, or every pinned vendor plus
-the active one. The others refresh when you scroll to them or press "Refresh
-all".
+## 💡 Good to know
 
-### Several vendors on the panel
+| | |
+| --- | --- |
+| ⌨️ **Shortcut** | `Super+U` opens the popup. |
+| ⏸ **Offline** | If a refresh fails, the last numbers stay on screen with a `⏸` mark for up to 7 days. |
+| ⏳ **Refresh** | Every 5 minutes at most (providers block faster checks). If a provider asks to slow down, it waits 5 minutes. |
+| 🔔 **Alerts** | One notification per window at 97% (you can change it). Another only after usage drops or resets. |
+| ▲ **Outages** | When Claude or Codex has an incident, its name turns yellow, orange or red in the popup. |
+| 🆕 **Updates** | A link appears in the popup when a new version is out. |
 
-Under *Panel* → *Vendors on the panel*, switch on the vendors to pin. Each one
-gets a segment (its logo, or its short code with logos off, then its label) in
-the fixed vendor order, all filled from the same `bar-format`. Clicking a
-segment opens the popup on that vendor; `Super+U` opens it on the last one.
-While any pinned vendor is enabled, scrolling over the panel does nothing; with
-none, the panel goes back to one vendor and scrolling cycles them. A segment
-reads `…` while loading and `⚠` on an error, without touching the others. In
-the center area extra segments move the clock off center; a shorter format
-such as `{session_pct}%`, or the right area, keeps the bar compact.
+## 🔒 Privacy
 
-### Label placeholders
+- Keys and logins are read on your computer and sent **only** to their own provider, over HTTPS.
+- **No telemetry, no analytics.** The only other requests are a daily update check
+  to GitHub and the Claude / OpenAI status pages. Both can be turned off.
+- Only the numbers shown in the popup are cached, in `~/.cache/ai-usagebar/`.
+  Keys are never copied or logged.
 
-The panel label (`bar-format`, default `{session_pct}% · {session_reset}`) and
-the optional popup rows (`tooltip-format`) substitute `{token}` placeholders
-from the vendor being shown (each pinned vendor fills its own segment). An unknown token is left as is; a window the vendor did
-not report resolves to an empty string.
+## 🧩 Advanced
 
-Every vendor provides `{icon}`, `{vendor_short}`, `{plan}`, `{session_pct}`,
-`{session_reset}`, `{session_elapsed}`, `{weekly_pct}`, `{weekly_reset}` and
-`{weekly_elapsed}`. Reset tokens are countdowns such as `4h 05m`; `*_elapsed` is
-the share of the window that has passed. Vendors with a reset instant also give
-`{session_pace}` and `{weekly_pace}` (`↑` ahead of pace, `→` on track, `↓`
-under); **Pace arrows** under *Panel* appends the session arrow to the label
-without editing the format. OpenRouter and DeepSeek have no usage windows, so there `{session_pct}` /
-`{weekly_pct}` hold the consumed share (OpenRouter) or `0`, the `*_reset` tokens
-are `-` and the `*_elapsed` ones `0`.
+| Guide | What it covers |
+| --- | --- |
+| 🏷️ [Customize the label](docs/features/label-placeholders.md) | Every `{token}` you can put in the panel label and popup rows |
+| 🔌 [Add your own provider](docs/features/custom-provider-setup.md) | Turn any JSON endpoint into a provider, with a full example |
 
 <details>
-<summary>Vendor-specific tokens</summary>
+<summary><b>Several providers on the panel</b></summary>
 
-| Vendor | Its own tokens |
-| --- | --- |
-| Anthropic | `{sonnet_pct}`, `{sonnet_reset}`, `{sonnet_elapsed}`, `{sonnet_pace}`; for each of `session`, `weekly`, `sonnet`: `_pace_indicator`, `_pace_pct`, `_pace_pts`, `_pace_delta`, `_pace_abs_delta`; `{extra_spent}`, `{extra_limit}`, `{extra_pct}`; `{resets_available}` (banked resets), `{resets}` (`2 resets available`) |
-| OpenAI | `{oai_plan}`; `{oai_session_*}` and `{oai_weekly_*}` with `_pct`, `_reset`, `_elapsed`, `_pace`, `_pace_indicator`; `{oai_code_review_pct}`, `{oai_credit_balance}`, `{oai_local_msgs}`, `{oai_cloud_msgs}`; `{oai_resets_available}`, `{oai_resets}` |
-| Z.AI | `{zai_plan}`; `{zai_session_*}`, `{zai_weekly_*}`, `{zai_mcp_*}` with `_pct`, `_reset`, `_elapsed`, `_pace`, `_pace_indicator` |
-| OpenRouter | `{or_label}`, `{or_balance}`, `{or_total}`, `{or_used}`, `{or_used_today}`, `{or_used_week}`, `{or_used_month}`, `{or_consumed_pct}`, `{or_free_tier}`, `{or_limit}`, `{or_limit_remaining}` |
-| DeepSeek | `{ds_balance}`, `{ds_granted}`, `{ds_topped_up}`, `{ds_available}`, `{currency}` |
-| Kimi | `{kimi_plan}`, `{kimi_window_pct}`, `{kimi_window_reset}`, `{kimi_weekly_pct}`, `{kimi_weekly_reset}`, `{kimi_monthly_pct}`, `{kimi_monthly_reset}` |
-| Ollama Cloud | `{oll_plan}`; `{oll_session_*}`, `{oll_weekly_*}`, `{oll_monthly_*}` with `_pct`, `_reset`, `_elapsed`, `_pace`, `_pace_indicator`; on a credits plan `{oll_balance}`, `{oll_allowance}`, `{oll_purchased}`; `{oll_cost}` is always `-` (kept so older formats render) |
-| Custom provider | `{custom_plan}`, `{custom_<i>_pct}`, `{custom_<i>_reset}` for each metric from 0 |
+Under *Panel* → *Vendors on the panel*, switch on the ones to pin. Each gets its
+own logo and label; clicking one opens the popup on it. While any is pinned,
+scrolling does nothing. A segment shows `…` while loading and `⚠` on an error.
+Only providers on the panel are refreshed on a timer; the others refresh when
+you open them or press "Refresh all". In the center of the panel, a short format
+such as `{session_pct}%` keeps the clock in place.
 
 </details>
 
-### Custom provider
+<details>
+<summary><b>Claude Code context monitor</b></summary>
 
-The **Custom** page turns any endpoint that answers a `GET` with JSON into a
-vendor. Set a name, the URL (`https://`, unless you allow plain HTTP for a
-local service), an optional API key with its header and scheme (default
-`Authorization: Bearer`), optional extra headers as a JSON object, and a
-**mapping** that addresses fields of the response by
-[JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901). Given
+On the Anthropic page, **Show session context** lists your latest Claude Code
+sessions and how full each context window is. It reads `~/.claude/projects` only
+while the option is on. Set a window size to see a percentage instead of a token
+count.
 
-```json
-{
-  "account": {"tier": "Team"},
-  "requests": {"used": 420, "limit": 1000, "resets_at": "2026-10-01T00:00:00Z"},
-  "tokens": {"percent": 91.5, "seconds_left": 5400},
-  "status": {"region": "sa-east-1"}
-}
-```
+</details>
 
-this mapping shows two usage rows and a text row:
+<details>
+<summary><b>Credential paths and variables</b></summary>
 
-```json
-{
-  "planPath": "/account/tier",
-  "metrics": [
-    {"label": "Requests", "used": "/requests/used", "limit": "/requests/limit",
-     "resetsAt": "/requests/resets_at", "windowSecs": 86400},
-    {"label": "Tokens", "percent": "/tokens/percent", "resetsAfterSeconds": "/tokens/seconds_left"}
-  ],
-  "texts": [
-    {"label": "Region", "value": "/status/region"}
-  ]
-}
-```
+- Claude: `~/.claude/.credentials.json` (refreshed automatically).
+- Codex: `~/.codex/auth.json`.
+- OpenRouter also takes an optional management key
+  (`OPENROUTER_MANAGEMENT_API_KEY`) to list your two latest models.
+- An environment variable wins over the key typed in settings. Variable names and
+  both paths can be changed in settings.
 
-- A **metric** has either `used` + `limit` or a single `percent`. Numbers may be
-  JSON numbers or numeric strings.
-- `resetsAt` takes an RFC 3339 timestamp or a Unix epoch (seconds or
-  milliseconds); `resetsAfterSeconds` takes the seconds left. With `windowSecs`
-  (at least 60) and a reset, the row gets the pace marker.
-- An optional `currency` (a three-letter code such as `"USD"` or `"EUR"`)
-  formats a metric's `used` and `limit`, or a numeric text, as money:
-  `$12.50 of $60.00` instead of `12.5 of 60`. It cannot be set on a
-  `percent` metric.
-- A **text** shows a string, number or boolean. `plan` sets a fixed title;
-  `planPath` reads it from the response.
-- Labels are 1–64 characters and unique. The mapping is checked when the editor
-  loses focus, and the last valid one is kept.
-- A pointer that does not resolve fails the refresh; the last good figures stay
-  on screen, marked stale.
+</details>
 
-### Context monitor
+## 🛠️ For developers
 
-On the Anthropic page, **Show session context** lists your most recent Claude
-Code sessions with how much of the context window each one used. It reads the
-tail of the transcripts in `~/.claude/projects` only while the option is on. Set
-a default window size (and optionally per-model sizes) to get a percentage
-instead of a raw token count.
-
-## How it behaves
-
-- **Stale data.** When a refresh fails, the last good figures stay on screen
-  with a `⏸` mark for up to 7 days; after that the error is shown.
-- **Rate limits.** An HTTP 429 pauses that vendor for 5 minutes; the popup says
-  when the next attempt is.
-- **Notifications.** Each usage window notifies once when it reaches the
-  threshold (default 97%), and again only after usage drops 7 points below it or
-  the window resets. A banked reset is announced 48 hours before it expires.
-- **Updates.** Once a day the extension asks GitHub for the latest release; when
-  it is newer than the installed one, a link to it appears at the bottom of the
-  popup. Turn it off under *Behavior*.
-- **Provider status.** While the official status page of Claude
-  (`status.claude.com`) or Codex (`status.openai.com`) flags one of that
-  provider's own components, its name in the popup takes the page's colour
-  (yellow degraded, orange partial outage, red major outage, blue maintenance)
-  with a `▲`, and the card opens with the incident title. Turn it off under
-  *Behavior*.
-
-## Privacy
-
-- Credentials are read locally and sent only to the vendor they belong to, over
-  HTTPS (the custom provider may use plain HTTP if you allow it). A redirect to
-  another origin is never followed.
-- No telemetry, no analytics, no third parties. The daily update check is one
-  unauthenticated request to `api.github.com`, and the provider status is one
-  unauthenticated request to the Claude or OpenAI status page at most every 5
-  minutes; both can be turned off.
-- Only the figures shown in the popup are cached, under
-  `~/.cache/ai-usagebar/`; credentials are never copied or logged, and refreshed
-  OAuth tokens are written back only to the file they came from.
-
-## Development
-
-There is no build step: GNOME Shell loads the JS directly. Symlink the checkout
-as `~/.local/share/gnome-shell/extensions/ai-usagebar@wilfison` and use the
-`Makefile` (run `make` to list every target):
+There is no build step: GNOME Shell loads the JS as is. To see the extension in
+action, start a nested GNOME Shell in a window:
 
 ```bash
-make test      # pure-JS unit suite (gjs)
+make run
+```
+
+Other `Makefile` targets (`make` lists them all):
+
+```bash
+make test      # unit tests (gjs)
 make lint      # hygiene lint
 make eslint    # needs `npm ci`
 make validate  # metadata.json + schema
-make run       # nested gnome-shell (Wayland) to test live
 make logs      # follow the gnome-shell journal
 make pack      # build the installable zip
 ```
 
-Dependencies:
+<details>
+<summary>Dependencies</summary>
 
 ```bash
 # Ubuntu
@@ -231,18 +157,17 @@ sudo apt install gjs libglib2.0-bin gettext gir1.2-soup-3.0 mutter-dev-bin
 sudo pacman -S gjs glib2-devel gnome-shell gettext libsoup3 mutter
 ```
 
-How the extension is built (architecture, features, vendors, testing, i18n
-and release) is documented in [`docs/`](docs/index.md); the short version for
-contributors and coding agents is [`CLAUDE.md`](CLAUDE.md). Issues and pull
-requests are welcome.
+</details>
 
-## Credits & license
+How it works inside is in [`docs/`](docs/index.md); the short version is
+[`CLAUDE.md`](CLAUDE.md). Issues and pull requests are welcome. Found a bug?
+[Open an issue](https://github.com/wilfison/ai-usagebar/issues).
 
-A GNOME Shell port inspired by the
-[`akitaonrails/ai-usagebar`](https://github.com/akitaonrails/ai-usagebar) Waybar
-widget. MIT license, see [`LICENSE`](LICENSE).
+## 📄 Credits and license
 
-Vendor names and the monochrome logos under [`icons/`](icons/) (sources in
-[`icons/README.md`](icons/README.md)) are used only to identify each service;
-the marks belong to their owners and no affiliation or endorsement is implied.
-Turn **Show vendor logos** off to show plain short codes instead.
+Inspired by the [`akitaonrails/ai-usagebar`](https://github.com/akitaonrails/ai-usagebar)
+Waybar widget. [MIT license](LICENSE).
+
+Provider names and logos in [`icons/`](icons/) ([sources](icons/README.md)) only
+identify each service; they belong to their owners, with no affiliation implied.
+Turn **Show vendor logos** off to show short codes instead.

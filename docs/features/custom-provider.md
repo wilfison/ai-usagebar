@@ -5,7 +5,7 @@ description: Turns any GET JSON endpoint into a vendor through a user mapping of
 tags: [vendors, errors]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-15T18:57:13Z
+  at: 2026-11-25T15:00:00Z
 sources:
   - id: parser
     title: lib/vendors/custom/parser.js
@@ -16,9 +16,6 @@ sources:
   - id: pointer
     title: lib/json-pointer.js
     resource: lib/json-pointer.js
-  - id: readme
-    title: README.md
-    resource: https://github.com/wilfison/ai-usagebar/blob/main/README.md
 ---
 
 # Overview
@@ -27,7 +24,7 @@ The custom provider maps a user-chosen endpoint through `lib/json-pointer.js` (R
 
 # Mapping
 
-The user documentation of the mapping lives in the README.[^readme] The rules that matter for code:
+The user documentation of the mapping, with a worked example, is [custom provider setup](/features/custom-provider-setup.md). The rules that matter for code:
 
 - A metric has either `used` + `limit` or a single `percent`; numbers may be numeric strings.
 - `resetsAt` takes RFC 3339 or a Unix epoch (s or ms); `resetsAfterSeconds` the seconds left. With `windowSecs` (at least 60) and a reset, the row gets [pace](/features/pace.md).

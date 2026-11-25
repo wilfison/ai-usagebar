@@ -5,20 +5,20 @@ description: Credit balance and usage from the OpenRouter API; a management key 
 tags: [api-key, vendors]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-15T18:57:13Z
+  at: 2026-11-25T15:00:00Z
 sources:
   - id: main
     title: lib/vendors/openrouter/main.js
     resource: lib/vendors/openrouter/main.js
-  - id: readme
-    title: README.md
-    resource: https://github.com/wilfison/ai-usagebar/blob/main/README.md
+  - id: parser
+    title: lib/vendors/openrouter/parser.js
+    resource: lib/vendors/openrouter/parser.js
 ---
 
 # Overview
 
 Calls `/credits` and `/key` under `https://openrouter.ai/api/v1` with `OPENROUTER_API_KEY`. `/activity` answers only to a management key (`OPENROUTER_MANAGEMENT_API_KEY`), which adds the two most recently used models.[^main]
 
-It has no usage windows, so the shared `session_` / `weekly_` placeholders hold the consumed share.[^readme] Snapshot `CACHE_VERSION` is 1 ([cache](/architecture/cache.md)).
+It has no usage windows, so the shared `session_` / `weekly_` [placeholders](/features/label-placeholders.md) hold the consumed share.[^parser] Snapshot `CACHE_VERSION` is 1 ([cache](/architecture/cache.md)).
 
 Wired through the [vendor adapter](/architecture/vendor-adapters.md); failures follow the [fetch pipeline](/architecture/fetch-pipeline.md).

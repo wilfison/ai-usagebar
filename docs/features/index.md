@@ -7,3 +7,5 @@
 * [Provider status](provider-status.md) - Claude and Codex cards marked from their official status page.
 * [Context monitor](context-monitor.md) - Claude Code session context usage in the Anthropic section.
 * [Custom provider](custom-provider.md) - Any JSON endpoint mapped into a vendor through JSON Pointer.
+* [Custom provider setup](custom-provider-setup.md) - How to turn your own JSON endpoint into a vendor, with a worked mapping example.
+* [Label placeholders](label-placeholders.md) - The {token} placeholders of the panel label and popup rows, shared and per vendor.

@@ -2,6 +2,7 @@
 
 ## 2026-11-25
 
+- README rewritten for end users first, developers last. Its label placeholder reference and custom provider example moved to the bundle; vendor concepts now cite code instead of the README. Added label placeholders and custom provider setup; updated custom provider, Anthropic, OpenAI, Z.AI, OpenRouter, DeepSeek and Ollama Cloud.
 - Screenshots: `make screenshots` also animates the card as usage rises (`screenshots/popup.webp`, WebP at quality 90, the README's top image); `screenshots/popup.png` stays as the static card and Open Graph cover. Updated screenshots.
 - Screenshots: `make screenshots` (`tools/screenshots/`) rebuilds the README images from the headless shell. New dev overrides `AI_USAGEBAR_FAKE_ELAPSED` (share of each fake window passed), `AI_USAGEBAR_FAKE_TREND` (seeded trend line) and `AI_USAGEBAR_PREFS_PAGE` (preferences start page); `tools/headless.sh` gains `start --fake-elapsed/--fake-trend/--dark/--refresh-interval`, `prefs --page`, `shot-popup` and `shot-window`, and leaves the overview on start. `build.py --background` rebuilds the card's backdrop from a wallpaper. Added screenshots; updated headless and usage trend.
 - Fake data: `AI_USAGEBAR_FAKE_PCT_<KIND>` (`SESSION`, `WEEKLY`, `MONTHLY`, `SONNET`, `SCOPED`, `MCP`, `CODE_REVIEW`, `CREDITS`) sets one window kind across vendors, falling back to `AI_USAGEBAR_FAKE_PCT`, or 0; any of them turns synthetic usage on. `tools/headless.sh start --fake-pct-<kind> N` and `make headless FAKE_PCT_<KIND>=N` pass them. Updated headless and usage trend.
