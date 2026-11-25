@@ -1,6 +1,6 @@
 import system from 'system';
 
-import {clampPct, fakeWindow} from '../../../lib/vendors/fake.js';
+import {clampPct, fakePct, fakeWindow} from '../../../lib/vendors/fake.js';
 import {describe, it, assertEqual, summary} from '../../_assert.js';
 
 describe('clampPct', () => {
@@ -39,6 +39,15 @@ describe('fakeWindow', () => {
     it('accepts a numeric now', () => {
         const w = fakeWindow(10, HOUR, NOW.getTime());
         assertEqual(w.resetsAt.getTime(), NOW.getTime() + HOUR);
+    });
+});
+
+describe('fakePct', () => {
+    it('a plain number applies to every kind', () => assertEqual(fakePct(23, 'weekly'), 23));
+    it('an object gives the kind its own value', () => assertEqual(fakePct({base: 10, weekly: 95}, 'weekly'), 95));
+    it('a missing kind falls back to the base, then 0', () => {
+        assertEqual(fakePct({base: 10}, 'mcp'), 10);
+        assertEqual(fakePct({}, 'mcp'), 0);
     });
 });
 

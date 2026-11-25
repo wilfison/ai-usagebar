@@ -13,7 +13,7 @@ help:
 	@echo "  validate        Validate metadata.json + compile schema with --strict"
 	@echo "  watch           Re-run 'make test' on changes under lib/ ui/ prefs/ tests/"
 	@echo "  run             Launch a nested gnome-shell (Wayland) to test the extension"
-	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, LANG_UNDER_TEST)"
+	@echo "  headless        Start an isolated headless gnome-shell (tools/headless.sh; FAKE_PCT, FAKE_PCT_<KIND>, LANG_UNDER_TEST)"
 	@echo "  headless-stop   Stop it"
 	@echo "  pot             Extract translatable strings into po/$(UUID).pot"
 	@echo "  update-po       Merge each po/*.po against the refreshed template"
@@ -63,19 +63,26 @@ watch:
 
 # Launch a throwaway nested gnome-shell to test live. Dev overrides:
 # AI_USAGEBAR_FAKE_PCT=23 (synthetic snapshot at that percentage),
+# AI_USAGEBAR_FAKE_PCT_WEEKLY=95 (one window kind: SESSION, WEEKLY, MONTHLY,
+#   SONNET, SCOPED, MCP, CODE_REVIEW, CREDITS; unset kinds take FAKE_PCT, else 0),
 # AI_USAGEBAR_FAKE_ERROR=zai,openai:stale or * (fail, or serve stale data),
 # AI_USAGEBAR_FAKE_DELAY_MS=3000 (every fetch waits first).
 run:
-	@if [ -n "$$AI_USAGEBAR_FAKE_PCT" ]; then \
-		echo "run: AI_USAGEBAR_FAKE_PCT=$$AI_USAGEBAR_FAKE_PCT, overriding usage fetch"; \
+	@fake="$$(env | grep -E '^AI_USAGEBAR_FAKE_PCT(_[A-Z_]+)?=.' | sort | tr '\n' ' ')"; \
+	if [ -n "$$fake" ]; then \
+		echo "run: $${fake}overriding usage fetch"; \
 	fi
 	dbus-run-session -- gnome-shell --wayland --devkit
 
 # An isolated headless gnome-shell driven from the command line (eval, probe,
 # click, keys, prefs, shot): see tools/headless.sh for every subcommand.
-# make headless FAKE_PCT=40 LANG_UNDER_TEST=pt_BR
+# make headless FAKE_PCT=40 FAKE_PCT_WEEKLY=95 LANG_UNDER_TEST=pt_BR
+FAKE_PCT_KINDS := session weekly monthly sonnet scoped mcp code-review credits
+fake_pct_var = FAKE_PCT_$(subst -,_,$(shell echo $(1) | tr a-z A-Z))
 headless:
-	@./tools/headless.sh start $(if $(FAKE_PCT),--fake-pct $(FAKE_PCT)) $(if $(LANG_UNDER_TEST),--lang $(LANG_UNDER_TEST))
+	@./tools/headless.sh start $(if $(FAKE_PCT),--fake-pct $(FAKE_PCT)) \
+		$(foreach k,$(FAKE_PCT_KINDS),$(if $($(call fake_pct_var,$(k))),--fake-pct-$(k) $($(call fake_pct_var,$(k))))) \
+		$(if $(LANG_UNDER_TEST),--lang $(LANG_UNDER_TEST))
 
 headless-stop:
 	@./tools/headless.sh stop

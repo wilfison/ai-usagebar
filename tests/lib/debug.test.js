@@ -1,7 +1,7 @@
 import system from 'system';
 
 import {
-    parseFakePct, parseFakeErrorVendors, parseFakeDelayMs, FakeFailure, fakeResult, fakeHttpFailure, FAKE_ERROR_MESSAGE,
+    parseFakePct, parseFakePcts, fakePctEnv, formatFakePcts, FAKE_PCT_KINDS, parseFakeErrorVendors, parseFakeDelayMs, FakeFailure, fakeResult, fakeHttpFailure, FAKE_ERROR_MESSAGE,
 } from '../../lib/debug.js';
 import {describe, it, assertEqual, assertDeepEqual, summary} from '../_assert.js';
 
@@ -30,6 +30,40 @@ describe('parseFakePct', () => {
         assertEqual(parseFakePct('-10'), 0);
         assertEqual(parseFakePct('150'), 100);
         assertEqual(parseFakePct('100'), 100);
+    });
+});
+
+describe('parseFakePcts', () => {
+    const from = env => name => env[name] ?? null;
+    it('null when no FAKE_PCT env is set or every one is invalid', () => {
+        assertEqual(parseFakePcts(from({})), null);
+        assertEqual(parseFakePcts(from({AI_USAGEBAR_FAKE_PCT_WEEKLY: 'abc'})), null);
+    });
+    it('the base fills every kind', () => {
+        const p = parseFakePcts(from({AI_USAGEBAR_FAKE_PCT: '40'}));
+        assertEqual(p.base, 40);
+        for (const kind of FAKE_PCT_KINDS)
+            assertEqual(p[kind], 40, kind);
+    });
+    it('a kind overrides the base, clamped', () => {
+        const p = parseFakePcts(from({AI_USAGEBAR_FAKE_PCT: '40', AI_USAGEBAR_FAKE_PCT_WEEKLY: '95', AI_USAGEBAR_FAKE_PCT_CODE_REVIEW: '150'}));
+        assertEqual(p.weekly, 95);
+        assertEqual(p.code_review, 100);
+        assertEqual(p.session, 40);
+    });
+    it('a kind alone turns faking on, the rest at 0', () => {
+        const p = parseFakePcts(from({AI_USAGEBAR_FAKE_PCT_SESSION: '85'}));
+        assertEqual(p.base, 0);
+        assertEqual(p.session, 85);
+        assertEqual(p.weekly, 0);
+    });
+});
+
+describe('fakePctEnv / formatFakePcts', () => {
+    it('names the env in upper case', () => assertEqual(fakePctEnv('code_review'), 'AI_USAGEBAR_FAKE_PCT_CODE_REVIEW'));
+    it('lists the base and the kinds that differ from it', () => {
+        const env = {AI_USAGEBAR_FAKE_PCT: '40', AI_USAGEBAR_FAKE_PCT_WEEKLY: '95'};
+        assertEqual(formatFakePcts(parseFakePcts(name => env[name] ?? null)), 'base=40 weekly=95');
     });
 });
 

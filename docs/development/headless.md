@@ -5,7 +5,7 @@ description: tools/headless.sh runs an isolated headless gnome-shell with its ow
 tags: [testing, gnome-shell]
 generated:
   by: claude/opus-5-5
-  at: 2026-11-22T12:00:00Z
+  at: 2026-11-25T12:00:00Z
 sources:
   - id: headless
     title: tools/headless.sh
@@ -16,6 +16,9 @@ sources:
   - id: devfetch
     title: ui/devFetch.js
     resource: ui/devFetch.js
+  - id: vendor-fakes
+    title: lib/vendors (each parser's fakeSnapshot)
+    resource: lib/vendors
 ---
 
 # Overview
@@ -23,7 +26,7 @@ sources:
 A gnome-shell with its own HOME, dconf, cache and D-Bus session, a virtual 1920x1080 monitor, and this checkout linked in; nothing touches the real session.[^headless] State lives in `$AI_USAGEBAR_HEADLESS_DIR` (default `/tmp/ai-usagebar-headless`). Run the script with no arguments for every subcommand.
 
 ```bash
-tools/headless.sh start --fake-pct 40      # --lang pt_BR, --fake-error zai,openai:stale, --fake-delay 3000, --fake-incident partial_outage
+tools/headless.sh start --fake-pct 40 --fake-pct-weekly 95   # --lang pt_BR, --fake-error zai,openai:stale, --fake-delay 3000, --fake-incident partial_outage
 tools/headless.sh gsettings set org.gnome.shell.extensions.ai-usagebar panel-vendors "['anthropic','openai']"
 tools/headless.sh probe                    # active vendor, poll set, segments, results (JSON)
 tools/headless.sh click 900 16; tools/headless.sh keys Super_L u
@@ -44,9 +47,12 @@ Also honoured by `make run`:[^fake]
 
 | Variable | Effect |
 | --- | --- |
-| `AI_USAGEBAR_FAKE_PCT` | Every adapter returns `fakeSnapshot(pct, now, config)`, custom provider included |
+| `AI_USAGEBAR_FAKE_PCT` | Every adapter returns `fakeSnapshot(pcts, now, config)`, custom provider included |
+| `AI_USAGEBAR_FAKE_PCT_<KIND>` | One window kind, for every vendor that has it: `SESSION`, `WEEKLY`, `MONTHLY`, `SONNET`, `SCOPED`, `MCP`, `CODE_REVIEW`, `CREDITS`. Any of them turns synthetic usage on; an unset kind takes `AI_USAGEBAR_FAKE_PCT`, or 0 without it. `tools/headless.sh start --fake-pct-<kind> N` (`--fake-pct-code-review`) and `make headless FAKE_PCT_<KIND>=N` pass them |
 | `AI_USAGEBAR_FAKE_ERROR` | `zai,openai:stale` (`*` for all): with FAKE_PCT, `id` is an error and `id:stale` a stale snapshot with an HTTP 503 `lastError`; without it, the real fetch runs against an HTTP 503 (and writes that cache) |
 | `AI_USAGEBAR_FAKE_DELAY_MS` | Every fetch waits first, to see loading states |
 | `AI_USAGEBAR_FAKE_INCIDENT` | A Statuspage severity (`partial_outage`, `major_outage`, `degraded_performance`, `under_maintenance`): every [provider status](/features/provider-status.md) lookup answers with a fake incident, no request made |
+
+Kimi's 5h window and the custom provider's paced metric read `SESSION`. `CREDITS` is the consumed share of a balance or pool: OpenRouter, DeepSeek, Ollama credits, Anthropic cloud credits and the custom provider's money metric. This lets one session test mixes such as a capped weekly with a quiet session, or a drained balance next to idle windows.[^vendor-fakes]
 
 The parsing is pure (`lib/debug.js`); `DevFetch` in `ui/devFetch.js` reads the variables once per indicator and wraps every vendor fetch with them.[^devfetch]

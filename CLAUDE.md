@@ -81,7 +81,7 @@ Keep it in sync by hand when a change alters documented behavior (no OKF tooling
 - **Pure modules stay `gi://`-free**, gettext included: they take an injected `_ = (s) => s` (and
   `ngettext`). Pure code must have tests; shell-bound code is checked live with `tools/headless.sh`
   (`start --fake-pct 40`, `probe`, `shot`, `log`; `stop` + `start` after JS changes).
-  Dev env overrides: `AI_USAGEBAR_FAKE_PCT`, `AI_USAGEBAR_FAKE_ERROR`, `AI_USAGEBAR_FAKE_DELAY_MS`.
+  Dev env overrides: `AI_USAGEBAR_FAKE_PCT`, `AI_USAGEBAR_FAKE_PCT_<KIND>` (`_WEEKLY`, `_CREDITS`...), `AI_USAGEBAR_FAKE_ERROR`, `AI_USAGEBAR_FAKE_DELAY_MS`.
 - **i18n.** Strings are `_('plain literal')`, never template literals; interpolate with `vformat()`
   from `lib/format.js`. After adding a string: `make pot`, `make update-po`, translate
   (`make i18n-todo`, `tools/i18n.sh fill`), `make i18n-check`. Brand names, `{tokens}` and `%s` stay

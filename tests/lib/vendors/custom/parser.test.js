@@ -278,4 +278,12 @@ describe('fakeSnapshot', () => {
     });
 });
 
+describe('fakeSnapshot: per-kind percentages', () => {
+    it('Requests follows session, Budget credits', () => {
+        const s = fakeSnapshot({base: 0, session: 70, credits: 40}, NOW);
+        assertDeepEqual(s.metrics.map(m => m.pct), [70, 40]);
+        assertEqual(s.metrics[1].amount.used, 20);
+    });
+});
+
 system.exit(summary());

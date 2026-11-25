@@ -5,8 +5,10 @@
 # D-Bus session bus, a virtual 1920x1080 monitor, and this checkout linked in
 # as the extension. A helper extension turns on unsafe mode so Eval works.
 #
-#   start [--lang LL] [--fake-pct N] [--fake-error ID[:stale],...] [--fake-delay MS] [--fake-incident SEVERITY]
-#                         launch it (rebuilds the state dir; LL e.g. pt_BR)
+#   start [--lang LL] [--fake-pct N] [--fake-pct-KIND N]... [--fake-error ID[:stale],...] [--fake-delay MS] [--fake-incident SEVERITY]
+#                         launch it (rebuilds the state dir; LL e.g. pt_BR; KIND one of
+#                         session weekly monthly sonnet scoped mcp code-review credits,
+#                         e.g. --fake-pct-weekly 95; unset kinds take --fake-pct, else 0)
 #   stop                  stop the shell and its prefs process
 #   status                running or not, plus the JS error count
 #   eval CODE             run JS in the shell; prints the value (JSON unless a string)
@@ -29,6 +31,8 @@ STATE="${AI_USAGEBAR_HEADLESS_DIR:-/tmp/ai-usagebar-headless}"
 HOME_DIR="$STATE/home"
 DISPLAY_NAME="ai-usagebar-headless"
 HELPER="ai-usagebar-headless-helper@local"
+# Mirrors FAKE_PCT_KINDS in lib/debug.js, hyphenated.
+FAKE_PCT_KINDS="session weekly monthly sonnet scoped mcp code-review credits"
 
 die() {
     echo "headless: $*" >&2
@@ -117,11 +121,19 @@ PROBE='(() => {
 })()'
 
 start() {
-    local lang="" fake_pct="" fake_error="" fake_delay="" fake_incident=""
+    local lang="" fake_pct="" fake_error="" fake_delay="" fake_incident="" kind
+    local -a fake_kind_envs=()
     while [ $# -gt 0 ]; do
         case "$1" in
         --lang) lang="$2"; shift 2 ;;
         --fake-pct) fake_pct="$2"; shift 2 ;;
+        --fake-pct-*)
+            kind="${1#--fake-pct-}"
+            [[ " $FAKE_PCT_KINDS " == *" $kind "* ]] || die "unknown fake pct kind: $kind (one of: $FAKE_PCT_KINDS)"
+            [ $# -ge 2 ] || die "$1 needs a value"
+            kind="${kind//-/_}"
+            fake_kind_envs+=("AI_USAGEBAR_FAKE_PCT_${kind^^}=$2")
+            shift 2 ;;
         --fake-error) fake_error="$2"; shift 2 ;;
         --fake-delay) fake_delay="$2"; shift 2 ;;
         --fake-incident) fake_incident="$2"; shift 2 ;;
@@ -174,6 +186,7 @@ EOF
         XDG_CACHE_HOME="$HOME_DIR/.cache" XDG_RUNTIME_DIR="$STATE/run" \
         LANG="$locale" LANGUAGE="${lang:-en_US}" \
         ${fake_pct:+AI_USAGEBAR_FAKE_PCT="$fake_pct"} \
+        ${fake_kind_envs[@]+"${fake_kind_envs[@]}"} \
         ${fake_error:+AI_USAGEBAR_FAKE_ERROR="$fake_error"} \
         ${fake_delay:+AI_USAGEBAR_FAKE_DELAY_MS="$fake_delay"} \
         ${fake_incident:+AI_USAGEBAR_FAKE_INCIDENT="$fake_incident"} \
@@ -198,7 +211,7 @@ EOF
     # harmless move rather than on the caller's first click.
     js "$INPUT_PRELUDE I.pointer.notify_absolute_motion(I.now(), 960, 700);" >/dev/null
     sleep 0.5
-    echo "headless: running (locale $locale${fake_pct:+, fake pct $fake_pct}${fake_error:+, fake error $fake_error}${fake_delay:+, fake delay ${fake_delay}ms}${fake_incident:+, fake incident $fake_incident}); state in $STATE"
+    echo "headless: running (locale $locale${fake_pct:+, fake pct $fake_pct}${fake_kind_envs[*]:+, ${fake_kind_envs[*]}}${fake_error:+, fake error $fake_error}${fake_delay:+, fake delay ${fake_delay}ms}${fake_incident:+, fake incident $fake_incident}); state in $STATE"
 }
 
 stop() {

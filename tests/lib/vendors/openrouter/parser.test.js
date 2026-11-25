@@ -138,6 +138,10 @@ describe('fakeSnapshot', () => {
     });
 });
 
+describe('fakeSnapshot: per-kind percentages', () => {
+    it('the pool follows credits', () => assertEqual(consumedPct(fakeSnapshot({base: 10, credits: 60})), 60));
+});
+
 describe('placeholders: elapsed aliases', () => {
     it('no window → 0', () => {
         const snap = combine({totalCredits: 100, totalUsage: 25.5},
